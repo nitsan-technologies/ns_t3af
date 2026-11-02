@@ -43,6 +43,7 @@ final class AgentRequestChecklistTest extends TestCase
             . 'Show a draft only — nothing is saved until I approve.';
 
         self::assertTrue(AgentRequestChecklist::isScanFindingFixRequest($prompt));
+        self::assertFalse(AgentCoreToolSet::isCreateContentRequest($prompt));
         self::assertSame([], AgentRequestChecklist::parse($prompt));
         self::assertSame([], AgentRequestChecklist::parse(
             'Please fix the Passive voice finding on this page. What to change: Passive sentences in body text.',

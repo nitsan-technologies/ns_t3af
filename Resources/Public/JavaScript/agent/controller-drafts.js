@@ -887,7 +887,11 @@ export const draftMethods = {
           });
           this.renderStream();
           this.refreshBackendContent();
-          this.queueContinuation(message, 'applied', String(payload.message ?? ''));
+          const appliedTool = String(result.tool ?? draft.tool ?? '');
+          const planSteps = typeof this.currentPlan === 'function' ? this.currentPlan() : [];
+          if (!draftApplySkipsFollowUp(appliedTool, String(payload.message ?? ''), planSteps)) {
+            this.queueContinuation(message, 'applied', String(payload.message ?? ''));
+          }
         }
       } catch (error) {
         draft.applying = false;

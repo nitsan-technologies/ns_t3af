@@ -172,6 +172,9 @@ final readonly class AgentCoreToolSet
         if ($q === '' || AgentRequestChecklist::isChatOnlyWritingRequest($query)) {
             return false;
         }
+        if (AgentRequestChecklist::isScanFindingFixRequest($query)) {
+            return false;
+        }
         if (preg_match('/\b(delete|remove|replace|clear|löschen|loeschen|entfernen|ersetzen)/u', $q)) {
             return false;
         }

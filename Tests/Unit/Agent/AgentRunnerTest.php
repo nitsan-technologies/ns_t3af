@@ -1131,10 +1131,48 @@ final class AgentRunnerTest extends TestCase
                 'meta' => ['type' => 'tool_result', 'tool' => 't3ai_fix_check', 'autoRan' => false],
             ]],
         );
-        self::assertStringContainsString('The scan finding draft is done.', $scanFix);
+        self::assertStringContainsString('The scan finding draft is done — do not rewrite again.', $scanFix);
         self::assertStringContainsString('Do not create a content element.', $scanFix);
-        self::assertStringContainsString('Do not rewrite the same bodytext again.', $scanFix);
+        self::assertStringNotContainsString('My request was only to add that content', $scanFix);
+        self::assertStringNotContainsString('the content element you just created', $scanFix);
         self::assertStringNotContainsString('Continue with the remaining steps', $scanFix);
+
+        $scanPrompt = "Please fix the Reading ease finding on this page.\n"
+            . "What to change: Body text (simplify wording)\n"
+            . "How: Call t3ai_fix_check. It drafts one bodytext rewrite.\n"
+            . "Use t3ai_fix_check with checkId SEO-11.\n"
+            . "Show a draft only — nothing is saved until I approve.\n"
+            . 'Keep meaning — never add new claims.';
+        $scanFixViaReadback = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Draft a fix for one scan finding', 'result' => 'Done: 2 records were updated.'],
+            [
+                ['role' => 'user', 'content' => $scanPrompt, 'meta' => ['type' => 'message']],
+                [
+                    'role' => 'assistant',
+                    'content' => 'Review this change',
+                    'meta' => [
+                        'type' => 'inline_draft',
+                        'draft' => ['tool' => 't3ai_fix_check', 'applied' => true],
+                    ],
+                ],
+                [
+                    'role' => 'assistant',
+                    'content' => 'Done: 2 records were updated.',
+                    'meta' => ['type' => 'readback_result'],
+                ],
+            ],
+        );
+        self::assertSame('t3ai_fix_check', AgentPromptBuilder::lastConfirmedTool([
+            [
+                'role' => 'assistant',
+                'meta' => ['type' => 'inline_draft', 'draft' => ['tool' => 't3ai_fix_check', 'applied' => true]],
+            ],
+            ['role' => 'assistant', 'meta' => ['type' => 'readback_result']],
+        ]));
+        self::assertFalse(AgentCoreToolSet::isCreateContentRequest($scanPrompt));
+        self::assertStringContainsString('The scan finding draft is done — do not rewrite again.', $scanFixViaReadback);
+        self::assertStringNotContainsString('My request was only to add that content', $scanFixViaReadback);
+        self::assertStringNotContainsString('the content element you just created', $scanFixViaReadback);
     }
 
     #[Test]

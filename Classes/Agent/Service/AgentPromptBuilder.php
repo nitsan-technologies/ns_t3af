@@ -508,6 +508,7 @@ readonly class AgentPromptBuilder
             );
         }
 
+        $requestText = self::latestUserRequestText($history);
         $confirmed = self::lastConfirmedTool($history);
         if ($confirmed === 't3as_search_settings') {
             return sprintf(
@@ -527,14 +528,16 @@ readonly class AgentPromptBuilder
                 $label,
             );
         }
-        if ($confirmed === 't3ai_fix_check') {
+        // Field-update Apply stores readback_result, not tool_result — lastConfirmedTool
+        // still sees t3ai_fix_check via the applied inline_draft. The Fix prompt also
+        // matches isScanFindingFixRequest when history meta is incomplete.
+        if ($confirmed === 't3ai_fix_check' || AgentRequestChecklist::isScanFindingFixRequest($requestText)) {
             return sprintf(
-                '[The editor confirmed "%s" and it was applied.] The scan finding draft is done. Confirm in one short sentence. Do not call any tools. Do not create a content element. Do not rewrite the same bodytext again.',
+                '[The editor confirmed "%s" and it was applied.] The scan finding draft is done — do not rewrite again. Confirm in one short sentence. Do not call any tools. Do not create a content element.',
                 $label,
             );
         }
 
-        $requestText = self::latestUserRequestText($history);
         // An edit of existing records ("change the header of element 5") has no create step: nothing new may follow.
         // Free multi-create wording ("intro and a team section") has an empty checklist but still creates.
         $changesExistingOnly = $requestText !== ''
@@ -578,11 +581,10 @@ readonly class AgentPromptBuilder
                 $lastCType,
             );
         }
-        $request = self::latestUserRequestText($history);
-        if ($request !== '') {
-            $message .= sprintf(' My request was: "%s".', mb_substr(preg_replace('/\s+/u', ' ', $request) ?? $request, 0, 300));
+        if ($requestText !== '') {
+            $message .= sprintf(' My request was: "%s".', mb_substr(preg_replace('/\s+/u', ' ', $requestText) ?? $requestText, 0, 300));
         }
-        $reminder = self::remainingWorkReminder($history, AgentPlan::latest($history), $request);
+        $reminder = self::remainingWorkReminder($history, AgentPlan::latest($history), $requestText);
 
         return $reminder !== '' ? $message . ' ' . $reminder : $message;
     }
@@ -594,13 +596,26 @@ readonly class AgentPromptBuilder
      */
     public static function lastConfirmedTool(array $history): string
     {
+        $sawApply = false;
         for ($i = count($history) - 1; $i >= 0; --$i) {
             $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
             if (($history[$i]['role'] ?? '') === 'user') {
                 break;
             }
-            if (($meta['type'] ?? '') === 'tool_result' && ($meta['autoRan'] ?? true) === false) {
+            $type = (string) ($meta['type'] ?? '');
+            if ($type === 'tool_result' && ($meta['autoRan'] ?? true) === false) {
                 return (string) ($meta['tool'] ?? '');
+            }
+            if ($type === 'readback_result') {
+                $sawApply = true;
+                continue;
+            }
+            if ($type !== 'inline_draft') {
+                continue;
+            }
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            if ($sawApply || ($draft['applied'] ?? false) === true) {
+                return (string) ($draft['tool'] ?? $meta['tool'] ?? '');
             }
         }
 
