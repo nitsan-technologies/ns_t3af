@@ -522,12 +522,18 @@ export const chromeMethods = {
      * opener element, since this call did not originate from a click in
      * this document.
      *
-     * @param {{chips?: Array<{key: string, label: string, value: string}>, promptText?: string, context?: Record<string, unknown>}} payload
+     * @param {{chips?: Array<{key: string, label: string, value: string}>, promptText?: string, context?: Record<string, unknown>, fresh?: boolean}} payload
      */
     openWithContext(payload) {
       this.pendingOpenPayload = payload && typeof payload === 'object' ? payload : null;
+      const wantsFresh = this.pendingOpenPayload?.fresh === true;
       // Panel already open: open() is a no-op, so apply chips/prompt here (Fix from a module).
+      // A fresh Fix must not resume the previous conversation (stale page / checkIds).
       if (this.isOpen) {
+        if (wantsFresh) {
+          void this.reloadSessionForCurrentScope({ fresh: true });
+          return;
+        }
         const openPayload = this.pendingOpenPayload;
         this.pendingOpenPayload = null;
         const openChips = Array.isArray(openPayload?.chips) ? openPayload.chips : [];
@@ -586,8 +592,12 @@ export const chromeMethods = {
 
       // Resume the last-viewed conversation for this conversation-scope key when remembered;
       // otherwise the server opens the latest of the configured scope (see restoreSession).
+      // Fix buttons pass fresh:true so each finding starts a new conversation.
       try {
-        await this.restoreSession(this.lastSessionOpenOptions());
+        const openOptions = this.pendingOpenPayload?.fresh === true
+          ? { fresh: true }
+          : this.lastSessionOpenOptions();
+        await this.restoreSession(openOptions);
       } finally {
         // Always clear loading chrome — a throw in restoreSession used to leave aria-busy stuck
         // so Fix/openWithContext looked like a hang with an empty composer.
