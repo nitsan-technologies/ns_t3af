@@ -527,6 +527,12 @@ readonly class AgentPromptBuilder
                 $label,
             );
         }
+        if ($confirmed === 't3ai_fix_check') {
+            return sprintf(
+                '[The editor confirmed "%s" and it was applied.] The scan finding draft is done. Confirm in one short sentence. Do not call any tools. Do not create a content element. Do not rewrite the same bodytext again.',
+                $label,
+            );
+        }
 
         $requestText = self::latestUserRequestText($history);
         // An edit of existing records ("change the header of element 5") has no create step: nothing new may follow.

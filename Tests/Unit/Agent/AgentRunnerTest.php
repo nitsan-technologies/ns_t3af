@@ -1122,6 +1122,19 @@ final class AgentRunnerTest extends TestCase
         self::assertStringContainsString('Chatbot settings saved.', $savedChatbot);
         self::assertStringContainsString('Do not say nothing was saved.', $savedChatbot);
         self::assertStringNotContainsString('turn off the source links', $savedChatbot);
+
+        $scanFix = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Change Page Content', 'result' => 'Saved.'],
+            [[
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ai_fix_check', 'autoRan' => false],
+            ]],
+        );
+        self::assertStringContainsString('The scan finding draft is done.', $scanFix);
+        self::assertStringContainsString('Do not create a content element.', $scanFix);
+        self::assertStringContainsString('Do not rewrite the same bodytext again.', $scanFix);
+        self::assertStringNotContainsString('Continue with the remaining steps', $scanFix);
     }
 
     #[Test]

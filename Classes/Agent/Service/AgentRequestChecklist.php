@@ -47,6 +47,9 @@ final class AgentRequestChecklist
         if (self::isFileMetadataOnlyRequest($message)) {
             return [];
         }
+        if (self::isScanFindingFixRequest($message)) {
+            return [];
+        }
         if (AgentToolTurnProcessor::asksForADataSource($message) && !AgentCoreToolSet::isCreateContentRequest($message)) {
             return [];
         }
@@ -204,6 +207,18 @@ final class AgentRequestChecklist
         }
 
         return false;
+    }
+
+    /**
+     * Scan Report Fix: rewrite existing fields. "Body text" / "Show a draft only" must not
+     * open a Create Text step that then drafts a new element after Apply.
+     */
+    public static function isScanFindingFixRequest(string $message): bool
+    {
+        $s = mb_strtolower($message);
+
+        return preg_match('/\bfix the\b.{0,120}\bfinding\b/u', $s) === 1
+            || preg_match('/\buse t3ai_fix_check\b/u', $s) === 1;
     }
 
     /**
@@ -424,6 +439,8 @@ final class AgentRequestChecklist
         );
         // "Alt text" is a field of an image, not a Text element.
         $s = (string) preg_replace('/\b(?:alt[\s-]?(?:texts?|tags?|attributes?)|alternative?\s+texts?)\b/u', ' ', $s);
+        // "Body text" / bodytext is the field a scan rewrite edits, not a new Text element.
+        $s = (string) preg_replace('/\bbody[\s-]?texts?\b|\bbodytext\b/u', ' ', $s);
         // "all images", "the images in the user_upload folder" are files that already exist, not an Images element.
         $s = (string) preg_replace(
             '/\b(?:all|existing|these|those|the|alle|vorhandenen?|diese)\s+(?:images|bilder)\b(?!\s+(?:content\s+)?elements?\b)'

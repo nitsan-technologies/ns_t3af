@@ -53,6 +53,11 @@ export function draftApplySkipsFollowUp(tool, content, planSteps = []) {
   if (tool === 't3cs_sync_datasource') {
     return true;
   }
+  // A scan-finding Apply already wrote the draft. A follow-up turn invents a second rewrite
+  // or a new Text element ("Create Text element" leftover in Progress).
+  if (tool === 't3ai_fix_check') {
+    return true;
+  }
   if (tool !== 't3ai_create_page_structure') {
     return false;
   }
