@@ -114,6 +114,18 @@
     stroke: var(--typo3-state-primary-bg, var(--typo3-link-color, #0078e6));
 }
 
+.aiu-progress-ring--success .aiu-progress-ring__value {
+    stroke: var(--typo3-state-success-border, #247554);
+}
+
+.aiu-progress-ring--warning .aiu-progress-ring__value {
+    stroke: var(--typo3-state-warning-border, #9a7800);
+}
+
+.aiu-progress-ring--danger .aiu-progress-ring__value {
+    stroke: var(--typo3-state-danger-border, #c83c3c);
+}
+
 .aiu-progress-ring__label {
     align-items: center;
     color: var(--typo3-text-color-base, inherit);

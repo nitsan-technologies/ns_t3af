@@ -388,7 +388,6 @@
 }
 
 .nst3af-agent-stream--empty {
-  justify-content: center;
   align-items: center;
   padding: 2rem 1.5rem;
 }
@@ -1484,6 +1483,7 @@
 .nst3af-agent-empty {
   width: 100%;
   max-width: 30rem;
+  margin-block: auto;
   text-align: center;
 }
 

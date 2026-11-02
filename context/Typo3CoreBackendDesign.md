@@ -493,7 +493,11 @@ Do **gradually**:
 2. **Phase 2:** Wrap the whole child `module-body` content in `<div class="aiu-module-page"><div class="aiu-module-content">…</div></div>` and load `base.css` once in the child layout or controller.
 3. **Phase 3:** Replace child-specific cards/buttons with patterns from this guide; delete duplicated CSS that fights core.
 
-Child-specific branding (tabs, breadcrumbs, product copy) stays in each extension. **Shared AI chrome** (checklist, AI Logs link, credits badge, provider drawer patterns) stays in `ns_t3af`.
+Child-specific branding (tabs, breadcrumbs, product copy) stays in each extension. **Shared AI chrome** (checklist, AI Logs link, credits badge, provider drawer patterns, **AI Agent composer provider select**) stays in `ns_t3af`.
+
+### AI Agent composer — provider select
+
+`Templates/Agent/MountPoint.html` `[data-nst3af-agent-provider]` (`.form-select.form-select-sm`). Options come from `AgentProviderOptions` (enabled tool-calling rows the editor may use). **Mistral is already a first-class adapter** (`symfony.mistral`); if a Mistral row is the default, the first option is “Default: mistral”. The select stays `hidden` until two or more usable providers exist. Child **Ask / Fix with AI Agent** buttons must not invent a second provider picker — they open this panel. See `context/features/ai-agent.md` and `context/features/providers.md`.
 
 ### Adding a new shared component (for all extensions)
 
