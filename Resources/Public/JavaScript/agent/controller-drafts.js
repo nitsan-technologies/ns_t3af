@@ -848,7 +848,7 @@ export const draftMethods = {
           const visibleNotice = notice !== ''
             ? notice
             : (contentText.includes('cannot create images') ? contentText.trim() : '');
-          const appliedTool = String(result.tool ?? draft.tool ?? '');
+          const appliedTool = String(result.tool || draft.tool || message.meta?.tool || '');
           const planSteps = typeof this.currentPlan === 'function' ? this.currentPlan() : [];
           const skipsFollowUp = draftApplySkipsFollowUp(appliedTool, message.content, planSteps);
           const willContinue = !skipsFollowUp
@@ -887,7 +887,7 @@ export const draftMethods = {
           });
           this.renderStream();
           this.refreshBackendContent();
-          const appliedTool = String(result.tool ?? draft.tool ?? '');
+          const appliedTool = String(result.tool || draft.tool || message.meta?.tool || '');
           const planSteps = typeof this.currentPlan === 'function' ? this.currentPlan() : [];
           if (!draftApplySkipsFollowUp(appliedTool, String(payload.message ?? ''), planSteps)) {
             this.queueContinuation(message, 'applied', String(payload.message ?? ''));

@@ -1940,6 +1940,12 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.field.hidden" resname="agent.field.hidden">
         <source>Hidden (1 = hidden, 0 = visible)</source>
       </trans-unit>
+      <trans-unit id="agent.field.contentType" resname="agent.field.contentType">
+        <source>Content type</source>
+      </trans-unit>
+      <trans-unit id="agent.field.headingType" resname="agent.field.headingType">
+        <source>Heading type</source>
+      </trans-unit>
       <trans-unit id="agent.field.copy" resname="agent.field.copy">
         <source>Copy</source>
       </trans-unit>

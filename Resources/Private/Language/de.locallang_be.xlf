@@ -2441,6 +2441,14 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>Hidden (1 = hidden, 0 = visible)</source>
                 <target>Versteckt (1 = versteckt, 0 = sichtbar)</target>
             </trans-unit>
+            <trans-unit id="agent.field.contentType">
+                <source>Content type</source>
+                <target>Inhaltstyp</target>
+            </trans-unit>
+            <trans-unit id="agent.field.headingType">
+                <source>Heading type</source>
+                <target>Überschriftstyp</target>
+            </trans-unit>
             <trans-unit id="agent.field.copy">
                 <source>Copy</source>
                 <target>Kopieren</target>

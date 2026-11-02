@@ -252,7 +252,14 @@ export const sessionMethods = {
 
       const backendContext = resolveBackendContext();
       const query = new URL(url, window.location.href);
-      query.searchParams.set('pageId', String(backendContext.pageId));
+      // F1: consume-and-clear the pending openWithContext() payload for this one load.
+      // A plain toolbar/hotkey open never sets this, so the query is unchanged for that case.
+      const openPayload = this.pendingOpenPayload;
+      this.pendingOpenPayload = null;
+      const openChips = Array.isArray(openPayload?.chips) ? openPayload.chips : [];
+      const openPromptText = typeof openPayload?.promptText === 'string' ? openPayload.promptText : '';
+      const openPageId = Number(openPayload?.context?.pageId ?? 0);
+      query.searchParams.set('pageId', String(openPageId > 0 ? openPageId : backendContext.pageId));
       query.searchParams.set('module', backendContext.module);
       const requestedUuid = String(options.sessionUuid ?? '').trim();
       if (requestedUuid !== '') {
@@ -261,13 +268,6 @@ export const sessionMethods = {
       if (options.fresh) {
         query.searchParams.set('fresh', '1');
       }
-
-      // F1: consume-and-clear the pending openWithContext() payload for this one load.
-      // A plain toolbar/hotkey open never sets this, so the query is unchanged for that case.
-      const openPayload = this.pendingOpenPayload;
-      this.pendingOpenPayload = null;
-      const openChips = Array.isArray(openPayload?.chips) ? openPayload.chips : [];
-      const openPromptText = typeof openPayload?.promptText === 'string' ? openPayload.promptText : '';
       if (openPayload && typeof openPayload.context === 'object' && openPayload.context !== null) {
         try {
           query.searchParams.set('openContext', JSON.stringify(openPayload.context));
@@ -287,6 +287,15 @@ export const sessionMethods = {
           meta: stripEphemeralWorkTraceMeta(message.meta ?? {}),
         }));
         this.context = payload.context ?? backendContext;
+        if (openPayload && typeof openPayload.context === 'object' && openPayload.context !== null) {
+          const openPage = Number(openPayload.context.pageId ?? 0);
+          const openLanguage = Number(openPayload.context.languageId ?? NaN);
+          this.context = {
+            ...this.context,
+            ...(openPage > 0 ? { pageId: openPage } : {}),
+            ...(Number.isFinite(openLanguage) ? { languageId: openLanguage } : {}),
+          };
+        }
         // F1: caller-supplied chips are additional, informational-only — appended after
         // whatever the server resolved, never replacing it (see AgentContextPresenter's chips()).
         if (openChips.length > 0) {
