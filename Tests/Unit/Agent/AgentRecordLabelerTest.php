@@ -89,4 +89,20 @@ final class AgentRecordLabelerTest extends TestCase
 
         self::assertStringStartsWith('Hidden', $labeler->fieldLabel('pages', 'hidden'));
     }
+
+    #[Test]
+    public function contentTypeAndHeadingTypeAreNotBothCalledType(): void
+    {
+        $GLOBALS['TCA']['tt_content'] = [
+            'ctrl' => ['title' => 'Page Content'],
+            'columns' => [
+                'CType' => ['label' => 'Type'],
+                'header_layout' => ['label' => 'Type'],
+            ],
+        ];
+        $labeler = new AgentRecordLabeler($this->createMock(UriBuilder::class), $this->createAgentTranslator());
+
+        self::assertSame('Content type', $labeler->fieldLabel('tt_content', 'CType'));
+        self::assertSame('Heading type', $labeler->fieldLabel('tt_content', 'header_layout'));
+    }
 }
