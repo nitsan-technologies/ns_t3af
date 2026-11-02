@@ -37,7 +37,7 @@ export const chromeMethods = {
           event.preventDefault();
           this.open(target.closest('[data-nst3af-agent-open]'));
         }
-        if (target.closest('[data-nst3af-agent-close]')) {
+        if (target.closest('[data-nst3af-agent-close]') || target.closest('[data-nst3af-agent-backdrop]')) {
           event.preventDefault();
           this.close();
         }
@@ -112,18 +112,6 @@ export const chromeMethods = {
               void this.openSession(openButton.dataset.nst3afAgentSessionOpen ?? '');
             }
           }
-        }
-        // The backdrop itself is pointer-events:none (see agent.css) so a real click over the
-        // module content iframe reaches the iframe's own DOM instead of being swallowed by this
-        // full-viewport overlay — a Fix button inside a report tab would otherwise be
-        // unclickable whenever the panel is already open. "Click outside the panel closes it"
-        // is therefore detected here instead of on the (now click-through) backdrop element.
-        if (
-          this.isOpen
-          && !target.closest('[data-nst3af-agent-panel]')
-          && !target.closest('[data-nst3af-agent-open]')
-        ) {
-          this.close();
         }
         if (target.closest('[data-nst3af-agent-starter]')) {
           const btn = target.closest('[data-nst3af-agent-starter]');
