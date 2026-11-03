@@ -28,6 +28,7 @@
                      class="aiu-ai-features-media-palette__panel is-active"
                      role="tabpanel"
                      data-aiu-features-palette-panel="{palette.id}">
+                    <h3 class="h5 mb-3">{palette.label}<f:if condition="{palette.id} == 'stability'"> settings</f:if></h3>
                     <f:render partial="AiFeatures/ExtConfCategoryForm" arguments="{extensionKey: extensionKey, extensionData: palette.extensionData}" />
                 </div>
             </f:then>
@@ -37,6 +38,7 @@
                      role="tabpanel"
                      data-aiu-features-palette-panel="{palette.id}"
                      hidden="hidden">
+                    <h3 class="h5 mb-3">{palette.label}<f:if condition="{palette.id} == 'stability'"> settings</f:if></h3>
                     <f:render partial="AiFeatures/ExtConfCategoryForm" arguments="{extensionKey: extensionKey, extensionData: palette.extensionData}" />
                 </div>
             </f:else>

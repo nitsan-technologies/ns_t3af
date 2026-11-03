@@ -157,6 +157,7 @@ final class SetupChecklistServiceTest extends TestCase
         );
 
         self::assertCount(9, $result['items']);
+        self::assertSame(9, $result['total']);
         self::assertSame('checklist.budget.title', $result['items'][5]['titleKey']);
         self::assertSame('checklist.ailabel.title', $result['items'][8]['titleKey']);
     }

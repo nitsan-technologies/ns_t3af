@@ -259,7 +259,13 @@ export const sessionMethods = {
       const openChips = Array.isArray(openPayload?.chips) ? openPayload.chips : [];
       const openPromptText = typeof openPayload?.promptText === 'string' ? openPayload.promptText : '';
       const openPageId = Number(openPayload?.context?.pageId ?? 0);
-      query.searchParams.set('pageId', String(openPageId > 0 ? openPageId : backendContext.pageId));
+      const openPageIds = Array.isArray(openPayload?.context?.pageIds)
+        ? openPayload.context.pageIds.map((id) => Number(id)).filter((id) => id > 0)
+        : [];
+      const resolvedPageId = openPageId > 0
+        ? openPageId
+        : (openPageIds[0] > 0 ? openPageIds[0] : backendContext.pageId);
+      query.searchParams.set('pageId', String(resolvedPageId));
       query.searchParams.set('module', backendContext.module);
       const requestedUuid = String(options.sessionUuid ?? '').trim();
       if (requestedUuid !== '') {
@@ -290,9 +296,16 @@ export const sessionMethods = {
         if (openPayload && typeof openPayload.context === 'object' && openPayload.context !== null) {
           const openPage = Number(openPayload.context.pageId ?? 0);
           const openLanguage = Number(openPayload.context.languageId ?? NaN);
+          const mergedPageIds = Array.isArray(openPayload.context.pageIds)
+            ? openPayload.context.pageIds.map((id) => Number(id)).filter((id) => id > 0)
+            : [];
+          const effectivePage = openPage > 0
+            ? openPage
+            : (mergedPageIds[0] > 0 ? mergedPageIds[0] : 0);
           this.context = {
             ...this.context,
-            ...(openPage > 0 ? { pageId: openPage } : {}),
+            ...(effectivePage > 0 ? { pageId: effectivePage } : {}),
+            ...(mergedPageIds.length > 0 ? { pageIds: mergedPageIds } : {}),
             ...(Number.isFinite(openLanguage) ? { languageId: openLanguage } : {}),
           };
         }

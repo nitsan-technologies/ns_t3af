@@ -187,6 +187,16 @@ readonly class AgentPromptBuilder
             if ($pageId > 0) {
                 $lines[] = 'Current page id: ' . $pageId;
             }
+            $pageIds = [];
+            foreach (is_array($context['pageIds'] ?? null) ? $context['pageIds'] : [] as $pageIdValue) {
+                $id = (int) $pageIdValue;
+                if ($id > 0 && !in_array($id, $pageIds, true)) {
+                    $pageIds[] = $id;
+                }
+            }
+            if ($pageIds !== []) {
+                $lines[] = 'Target page ids for this request: ' . implode(', ', $pageIds);
+            }
             $record = is_array($context['record'] ?? null) ? $context['record'] : null;
             if ($record !== null) {
                 $lines[] = 'Focused record: ' . ($record['table'] ?? '') . ':' . ($record['uid'] ?? '');

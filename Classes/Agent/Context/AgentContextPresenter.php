@@ -160,6 +160,17 @@ final readonly class AgentContextPresenter
         } else {
             $lines[] = '- Page: none selected';
         }
+        $pageIds = [];
+        foreach (is_array($context['pageIds'] ?? null) ? $context['pageIds'] : [] as $pageIdValue) {
+            $id = (int) $pageIdValue;
+            if ($id > 0 && !in_array($id, $pageIds, true)) {
+                $pageIds[] = $id;
+            }
+        }
+        if ($pageIds !== []) {
+            $lines[] = '- Target page ids for this request (translate/fix these, not only the open page): '
+                . implode(', ', $pageIds);
+        }
         $languages = is_array($details['siteLanguages'] ?? null) ? $details['siteLanguages'] : [];
         $language = is_array($details['language'] ?? null) ? $details['language'] : null;
         if ($language !== null || $languages !== []) {

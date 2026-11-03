@@ -420,6 +420,13 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
         unset($payload['pid'], $payload['beforeUid'], $payload['afterUid']);
         $filteredData = self::withoutEmptyCreateFields($this->normalizer->filterWritableFields($tableName, $payload));
+        // Agent page/news drafts default hidden unless the editor/model explicitly set visibility.
+        if (
+            in_array($tableName, ['pages', 'tx_news_domain_model_news'], true)
+            && !array_key_exists('hidden', $filteredData)
+        ) {
+            $filteredData['hidden'] = 1;
+        }
         // Empty "add a text element" must still get a draft card — fill from the page title (no error card).
         if ($tableName === 'tt_content' && ($filteredData['CType'] ?? '') === 'text'
             && trim((string) ($filteredData['header'] ?? '')) === ''

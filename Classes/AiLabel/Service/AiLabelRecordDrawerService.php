@@ -36,6 +36,7 @@ final class AiLabelRecordDrawerService
         private readonly ApplicableTablesResolver $applicableTablesResolver,
         private readonly FrontendLabelRenderer $frontendLabelRenderer,
         private readonly AiLabelSettingsService $settingsService,
+        private readonly ConfirmationService $confirmationService,
     ) {}
 
     public function isAllowedTable(string $table): bool
@@ -147,6 +148,12 @@ final class AiLabelRecordDrawerService
         ];
 
         $this->connectionPool->getConnectionForTable($table)->update($table, $fields, ['uid' => $uid]);
+
+        // Named human review closes the awaiting gap — Confirmed uses confirmed_at.
+        if ($responsiblePerson !== '') {
+            $beUserId = (int) ($GLOBALS['BE_USER']->user['uid'] ?? 0);
+            $this->confirmationService->confirm($table, $uid, $beUserId);
+        }
 
         return ['ok' => true, 'errors' => []];
     }

@@ -54,6 +54,7 @@ final class SetupChecklistService
      * @return array{
      *   percent: int,
      *   done: int,
+     *   total: int,
      *   warnings: int,
      *   incomplete: int,
      *   items: list<array{
@@ -87,9 +88,12 @@ final class SetupChecklistService
             static fn(array $row): bool => in_array($row['status'], ['error', 'pending'], true),
         ));
 
+        $total = count($items);
+
         return [
-            'percent' => (int) min(100, round(100 * $done / max(1, count($items)))),
+            'percent' => (int) min(100, round(100 * $done / max(1, $total))),
             'done' => $done,
+            'total' => $total,
             'warnings' => $warnings,
             'incomplete' => $incomplete,
             'items' => $items,
