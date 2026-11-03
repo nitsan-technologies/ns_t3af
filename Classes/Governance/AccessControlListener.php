@@ -133,10 +133,13 @@ final class AccessControlListener
             return false;
         }
 
-        $this->deny($event, sprintf(
-            'Missing AI capability permission "%s" for this request.',
-            $permissionKey,
-        ));
+        // Product-facing copy (T3AI-616+); capability key stays in structured logs.
+        $this->logger->notice('AI capability permission denied.', [
+            'permission' => $permissionKey,
+            'callKind' => $event->callKind,
+            'beUser' => (int) ($user->user['uid'] ?? 0),
+        ]);
+        $this->deny($event, "You don't have access to this AI feature");
 
         return true;
     }
