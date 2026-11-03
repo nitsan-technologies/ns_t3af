@@ -1552,6 +1552,7 @@ PY);
     {
         $view = $this->createModuleView($request, 'schedulerCli');
         $this->pageRenderer->loadJavaScriptModule('@nitsan/nst3af/scheduler-cli.js');
+        $this->pageRenderer->loadJavaScriptModule('@typo3/scheduler/new-scheduler-task-wizard-button.js');
         $query = $request->getQueryParams();
         $mode = $this->resolveSchedulerCliMode($query);
         $commands = $this->schedulerCliCommandCatalog->all();
@@ -1569,7 +1570,13 @@ PY);
         $typo3Version = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Core\Information\Typo3Version::class);
         $routeName = $typo3Version->getMajorVersion() >= 14 ? 'scheduler' : 'scheduler_manage';
         $schedulerManageUri = (string) $this->uriBuilder->buildUriFromRoute($routeName);
-        $schedulerManageAddUri = (string) $this->uriBuilder->buildUriFromRoute($routeName, ['action' => 'add']);
+        // TYPO3 14+ ignores action=add on the list route; use the new-task wizard AJAX URL.
+        $schedulerManageAddUri = $typo3Version->getMajorVersion() >= 14
+            ? (string) $this->uriBuilder->buildUriFromRoute('ajax_new_scheduler_task_wizard', [
+                'returnUrl' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.scheduler_cli'),
+            ])
+            : (string) $this->uriBuilder->buildUriFromRoute($routeName, ['action' => 'add']);
+        $schedulerManageAddWizard = $typo3Version->getMajorVersion() >= 14;
 
         $view->assignMultiple([
             'flash' => $this->flashFromQuery($request) ?? '',
@@ -1589,6 +1596,7 @@ PY);
             'schedulerCliRunUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.scheduler_cli.run'),
             'schedulerManageUri' => $schedulerManageUri,
             'schedulerManageAddUri' => $schedulerManageAddUri,
+            'schedulerManageAddWizard' => $schedulerManageAddWizard,
             'schedulerCliCommandsJson' => json_encode($commands, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?: '[]',
             'schedulerCliTasksJson' => json_encode($tasks, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?: '[]',
         ]);

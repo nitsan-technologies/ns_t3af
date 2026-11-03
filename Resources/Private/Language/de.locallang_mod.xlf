@@ -3652,8 +3652,8 @@
                 <target>Setup-Assistent · Schritt</target>
             </trans-unit>
             <trans-unit id="wizard.kicker.after">
-                <source> of 7</source>
-                <target>von 7</target>
+                <source> of 8</source>
+                <target>von 8</target>
             </trans-unit>
             <trans-unit id="dashboard.credits.claim.link">
                 <source>I already have a claim code</source>

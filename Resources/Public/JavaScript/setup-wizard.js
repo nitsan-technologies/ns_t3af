@@ -510,15 +510,16 @@ function initSetupWizard() {
       apiKeyHelpEl.textContent = '';
     }
     renderModelPills();
+    const providerChosen = state.providerCatalogId !== '' || (state.providerUid !== null && state.providerUid > 0);
     if (apiKeyInput instanceof HTMLInputElement) {
-      apiKeyInput.disabled = credits || state.providerUid === null;
+      apiKeyInput.disabled = credits || !providerChosen;
     }
     const testBtn = qs(dialog, '#aiu-wizard-test-api');
     const keyRequired = entry?.requiresApiKey !== false;
     const hasKey = apiKeyInput instanceof HTMLInputElement && apiKeyInput.value.trim() !== '';
     if (testBtn instanceof HTMLButtonElement) {
-      testBtn.disabled =
-        credits || state.providerUid === null || !testUrl || (keyRequired && !hasKey);
+      // Provider row is created on first Test — catalog choice is enough to enable the button.
+      testBtn.disabled = credits || !providerChosen || !testUrl || (keyRequired && !hasKey);
     }
     if (credits) {
       state.connectionOk = true;
@@ -1020,12 +1021,33 @@ function initSetupWizard() {
       );
       return false;
     }
-    if (fromStep === 4 && state.mode === 'ownkeys' && !apiKeyGateOk()) {
-      Notification.warning(
-        ui.needApiTest || ll('wizard.error.needApiTest', 'Run Test connection before continuing.'),
-        '',
-      );
-      return false;
+    if (fromStep === 4 && state.mode === 'ownkeys') {
+      const entry = catalogEntry();
+      const keyRequired = entry?.requiresApiKey !== false;
+      const key = draftApiKey();
+      if (keyRequired && key === '') {
+        Notification.warning(
+          ui.needApiKey ||
+            ll('wizard.error.needApiKey', 'Enter an API key in the API key field before continuing.'),
+          '',
+        );
+        if (apiKeyInput instanceof HTMLInputElement) {
+          apiKeyInput.focus();
+          apiKeyInput.classList.add('is-invalid');
+        }
+        return false;
+      }
+      if (!apiKeyGateOk()) {
+        Notification.warning(
+          ui.needApiTest || ll('wizard.error.needApiTest', 'Run Test connection before continuing.'),
+          '',
+        );
+        const testBtn = qs(dialog, '#aiu-wizard-test-api');
+        if (testBtn instanceof HTMLButtonElement) {
+          testBtn.focus();
+        }
+        return false;
+      }
     }
     if (fromStep === 6) {
       return validateBrandContextStep(true);
@@ -1063,17 +1085,25 @@ function initSetupWizard() {
     if (!testUrl || !(apiKeyInput instanceof HTMLInputElement)) {
       return;
     }
+    const btn = qs(dialog, '#aiu-wizard-test-api');
+    if (btn instanceof HTMLButtonElement) {
+      btn.disabled = true;
+    }
+    if (state.providerUid === null || state.providerUid <= 0) {
+      const ensured = await ensureWizardProvider();
+      if (!ensured) {
+        syncApiPanel();
+        return;
+      }
+    }
     const uid = state.providerUid;
     if (uid === null || uid <= 0) {
       Notification.warning(
         ui.testMissingUid || ll('wizard.error.testMissingUid', 'Choose a provider before testing.'),
         '',
       );
+      syncApiPanel();
       return;
-    }
-    const btn = qs(dialog, '#aiu-wizard-test-api');
-    if (btn instanceof HTMLButtonElement) {
-      btn.disabled = true;
     }
     const payload = /** @type {Record<string, string|number>} */ ({ uid });
     const key = apiKeyInput.value.trim();
@@ -1212,22 +1242,17 @@ function initSetupWizard() {
       if (!canLeaveStep(step)) {
         return;
       }
+      // Defer provider DB create until Test connection (step 4) — leaving step 3
+      // only remembers the catalog choice so unfinished wizards leave no orphan rows.
       if (step === 3 && state.mode === 'ownkeys') {
-        const btn = el instanceof HTMLButtonElement ? el : null;
-        if (btn) {
-          btn.disabled = true;
-        }
-        const ensured = await ensureWizardProvider();
-        if (btn) {
-          btn.disabled = false;
-        }
-        if (!ensured) {
+        if (state.providerCatalogId === '') {
           return;
         }
+        state.providerUid = null;
+        state.connectionOk = false;
         if (apiKeyInput instanceof HTMLInputElement) {
           apiKeyInput.value = '';
         }
-        state.connectionOk = false;
         if (testStatusEl) {
           testStatusEl.textContent = '';
           testStatusEl.classList.remove('is-ok', 'text-danger', 'text-success');

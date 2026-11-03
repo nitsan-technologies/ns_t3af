@@ -36,9 +36,21 @@
     <div class="aiu-scheduler-cli__task-head">
         <h3><f:translate key="{ll}:module.schedulerCli.mode.scheduledTasks" default="Scheduled Tasks" /></h3>
         <div class="aiu-scheduler-cli__task-head-actions">
-            <a href="{schedulerManageAddUri}" class="btn btn-primary">
-                <f:translate key="{ll}:module.schedulerCli.action.addScheduler" default="Add Scheduler Task" />
-            </a>
+            <f:if condition="{schedulerManageAddWizard}">
+                <f:then>
+                    <typo3-scheduler-new-task-wizard-button
+                        class="btn btn-primary"
+                        url="{schedulerManageAddUri}"
+                        subject="{f:translate(key: '{ll}:module.schedulerCli.action.addScheduler', default: 'Add Scheduler Task')}">
+                        <f:translate key="{ll}:module.schedulerCli.action.addScheduler" default="Add Scheduler Task" />
+                    </typo3-scheduler-new-task-wizard-button>
+                </f:then>
+                <f:else>
+                    <a href="{schedulerManageAddUri}" class="btn btn-primary">
+                        <f:translate key="{ll}:module.schedulerCli.action.addScheduler" default="Add Scheduler Task" />
+                    </a>
+                </f:else>
+            </f:if>
             <a href="{schedulerManageUri}" class="btn btn-default">
                 <f:translate key="{ll}:module.schedulerCli.action.openScheduler" default="Open Scheduler" />
             </a>

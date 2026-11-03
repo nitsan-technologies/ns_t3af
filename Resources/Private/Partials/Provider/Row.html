@@ -33,7 +33,12 @@
     <td><span class="aiu-adapter-type">{adapterLabel}</span></td>
     <td>
         <f:if condition="{provider.modelId} != ''">
-            <span class="badge badge-default">{provider.modelId}</span>
+            <f:then>
+                <span class="badge badge-default">{provider.modelId}</span>
+            </f:then>
+            <f:else>
+                <span class="text-body-secondary">—</span>
+            </f:else>
         </f:if>
     </td>
     <f:if condition="{showEmbeddingModelField} == 1">

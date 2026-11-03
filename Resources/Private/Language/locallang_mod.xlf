@@ -2971,7 +2971,7 @@
         <source>Setup Wizard · Step </source>
       </trans-unit>
       <trans-unit id="wizard.kicker.after" resname="wizard.kicker.after">
-        <source> of 7</source>
+        <source> of 8</source>
       </trans-unit>
       <trans-unit id="dashboard.credits.claim.link" resname="dashboard.credits.claim.link">
         <source>I already have a claim code</source>

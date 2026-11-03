@@ -385,6 +385,7 @@ final class SetupChecklistPresenter
             'percent' => $raw['percent'],
             'progressDash' => (string) (int) max(0, min(97, round($raw['percent'] * 97 / 100))),
             'done' => $raw['done'],
+            'total' => (int) ($raw['total'] ?? count($items)),
             'warnings' => $raw['warnings'],
             'incomplete' => $raw['incomplete'],
             'foundationUri' => $foundationUri,
