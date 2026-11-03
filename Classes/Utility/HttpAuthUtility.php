@@ -34,6 +34,7 @@ class HttpAuthUtility
     /** @var array<string, mixed> */
     private array $extConf;
     private string $extensionKey;
+    private ?int $pageId;
     private ClientInterface $client;
     private ServerRequestFactory $serverRequestFactory;
 
@@ -41,11 +42,29 @@ class HttpAuthUtility
         string $extensionKey = 'ns_t3af',
         ?ClientInterface $client = null,
         ?ServerRequestFactory $serverRequestFactory = null,
+        ?int $pageId = null,
     ) {
         $this->extensionKey = $extensionKey;
-        $this->extConf = AiUniverseUtilityHelper::getExtensionConf($this->extensionKey);
+        $this->pageId = $pageId;
+        $this->extConf = AiUniverseUtilityHelper::getExtensionConf($this->extensionKey, $this->pageId);
         $this->client = $client ?? GeneralUtility::makeInstance(ClientInterface::class);
         $this->serverRequestFactory = $serverRequestFactory ?? GeneralUtility::makeInstance(ServerRequestFactory::class);
+    }
+
+    /**
+     * Re-resolve Basic Auth settings for a site root / page (Access & Notifications is per site).
+     */
+    public function forPage(?int $pageId): self
+    {
+        if ($pageId === $this->pageId) {
+            return $this;
+        }
+
+        $clone = clone $this;
+        $clone->pageId = $pageId;
+        $clone->extConf = AiUniverseUtilityHelper::getExtensionConf($clone->extensionKey, $pageId);
+
+        return $clone;
     }
 
     /**
