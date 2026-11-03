@@ -54,7 +54,9 @@
                     </f:if>
                 </div>
 
-                <f:render partial="Module/SetupWizard" arguments="{_all}" />
+                <f:if condition="{quickSetupLabel} != ''">
+                    <f:render partial="Module/SetupWizard" arguments="{_all}" />
+                </f:if>
                 <f:render partial="Module/CreditsContactDialog" arguments="{_all}" />
                 <f:render partial="Module/CreditsClaimDialog" arguments="{_all}" />
             </div>

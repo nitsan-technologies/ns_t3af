@@ -237,9 +237,16 @@ abstract class AbstractAiUniverseModuleController
                 'modulePath' => $this->moduleTabUtility->resolveActivePath($activeTabKey),
                 'creditOverview' => $this->resolveCreditOverviewLine(),
                 'creditsFeatureAvailable' => self::fluidFlag((new CreditsReleaseGate())->isPubliclyAvailable()),
-                'quickSetupLabel' => $this->translateModule('module.quickSetup'),
+                // Quick Setup mutates providers / API keys / MCP — admin-only (T3AI-285).
+                'quickSetupLabel' => $this->backendUserIsAdmin($backendUser)
+                    ? $this->translateModule('module.quickSetup')
+                    : '',
                 'wizardCompleted' => self::fluidFlag($wizardCompleted),
-                'wizardAutoOpen' => self::fluidFlag(!$wizardCompleted && $tabAccessDenied === 0),
+                'wizardAutoOpen' => self::fluidFlag(
+                    $this->backendUserIsAdmin($backendUser)
+                    && !$wizardCompleted
+                    && $tabAccessDenied === 0,
+                ),
                 'wizardResumeStep' => $this->wizardProgress->getLastStep(),
                 'wizardMaxStep' => $this->wizardProgress->getMaxStep(),
                 'providersUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.providers', $routeParams),
@@ -407,5 +414,10 @@ abstract class AbstractAiUniverseModuleController
         ];
 
         return json_encode($payload, JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    private function backendUserIsAdmin(?BackendUserAuthentication $backendUser): bool
+    {
+        return $backendUser !== null && $backendUser->isAdmin();
     }
 }
