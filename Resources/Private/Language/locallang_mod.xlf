@@ -3057,6 +3057,9 @@
       <trans-unit id="wizard.step1.lead" resname="wizard.step1.lead">
         <source>You've installed the AI Foundation extension. This quick wizard gets your suite ready in under 2 minutes.</source>
       </trans-unit>
+      <trans-unit id="wizard.providersAllDisabled" resname="wizard.providersAllDisabled">
+        <source>%1$s provider(s) are configured on this site but all are disabled. Enable at least one under AI Foundation → AI Providers, or continue this wizard to add/reconnect a provider.</source>
+      </trans-unit>
       <trans-unit id="wizard.step1.previewHeading" resname="wizard.step1.previewHeading">
         <source>What you'll configure</source>
       </trans-unit>
