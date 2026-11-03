@@ -162,17 +162,38 @@ final class SetupChecklistService
         $registeredTotal = count($providersVisible);
 
         $items = [];
-        $items[] = [
-            'status' => $enabledCount >= 1 ? 'ok' : 'error',
-            'titleKey' => 'checklist.providers.title',
-            'descKey' => $enabledCount >= 1 ? 'checklist.providers.descOk' : 'checklist.providers.descMissing',
-            'descArgs' => [(string) $registeredTotal],
-            'actionRoute' => 't3af_dashboard.providers',
-            'actionTabKey' => 'providers',
-        ];
+        if ($enabledCount >= 1) {
+            $items[] = [
+                'status' => 'ok',
+                'titleKey' => 'checklist.providers.title',
+                'descKey' => 'checklist.providers.descOk',
+                'descArgs' => [(string) $enabledCount],
+                'actionRoute' => 't3af_dashboard.providers',
+                'actionTabKey' => 'providers',
+            ];
+        } elseif ($registeredTotal > 0) {
+            // Providers exist but every row is toggled off (no-provider QA).
+            $items[] = [
+                'status' => 'error',
+                'titleKey' => 'checklist.providers.title',
+                'descKey' => 'checklist.providers.descAllDisabled',
+                'descArgs' => [(string) $registeredTotal],
+                'actionRoute' => 't3af_dashboard.providers',
+                'actionTabKey' => 'providers',
+            ];
+        } else {
+            $items[] = [
+                'status' => 'error',
+                'titleKey' => 'checklist.providers.title',
+                'descKey' => 'checklist.providers.descMissing',
+                'descArgs' => ['0'],
+                'actionRoute' => 't3af_dashboard.providers',
+                'actionTabKey' => 'providers',
+            ];
+        }
 
         $default = $storagePid > 0 ? $this->providers->findDefault($storagePid) : null;
-        if ($default !== null && $default->identifier !== CreditsProviderIdentifier::IDENTIFIER) {
+        if ($default !== null && $default->identifier !== CreditsProviderIdentifier::IDENTIFIER && $default->isEnabled) {
             $title = $default->title !== '' ? $default->title : $default->identifier;
             $model = $default->modelId !== '' ? $default->modelId : '—';
             $items[] = [
@@ -180,6 +201,16 @@ final class SetupChecklistService
                 'titleKey' => 'checklist.default.title',
                 'descKey' => 'checklist.default.descOk',
                 'descArgs' => [$title, $model],
+                'actionRoute' => 't3af_dashboard.providers',
+                'actionTabKey' => 'providers',
+            ];
+        } elseif ($default !== null && $default->identifier !== CreditsProviderIdentifier::IDENTIFIER && !$default->isEnabled) {
+            $title = $default->title !== '' ? $default->title : $default->identifier;
+            $items[] = [
+                'status' => 'error',
+                'titleKey' => 'checklist.default.title',
+                'descKey' => 'checklist.default.descDisabled',
+                'descArgs' => [$title],
                 'actionRoute' => 't3af_dashboard.providers',
                 'actionTabKey' => 'providers',
             ];
