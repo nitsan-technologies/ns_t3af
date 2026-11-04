@@ -20,6 +20,8 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
+use NITSAN\NsT3AF\Domain\Model\Provider;
+use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
 use NITSAN\NsT3AF\Mcp\Dto\PreviewResult;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Exception\NoChangeRequiredException;
@@ -29,6 +31,8 @@ use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use NITSAN\NsT3AF\Service\SiteStorageContext;
+use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
@@ -5351,9 +5355,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
-     * DeepL and Google Translate are not agent providers. When the editor asks for one, the card must
-     * say which provider is really used instead of leaving the editor to assume.
+     * Translate-only adapters (DeepL / Google) are not agent providers. When the editor asks for one,
+     * or AI Features / the site default is one of them, the card must say which provider is really used.
      *
+     * @var array<string, string>
+     */
+    private const TRANSLATE_ONLY_ADAPTER_LABELS = [
+        'ns_t3ai.deepl_translate' => 'DeepL',
+        'ns_t3ai.google_translate' => 'Google Translate',
+    ];
+
+    /**
      * @param array<string, mixed> $arguments
      */
     private function translationProviderNotice(string $toolName, array $arguments, string $requestQuery): string
@@ -5361,27 +5373,128 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if (!self::isTranslateTool($toolName)) {
             return '';
         }
-        if (preg_match('/\b(deepl|google\s*translate|google)\b/iu', $requestQuery, $match) !== 1) {
+        $requested = self::translateOnlyNameFromQuery($requestQuery)
+            ?? $this->translateOnlyNameFromConfiguration($arguments);
+        if ($requested === null) {
             return '';
         }
         $used = trim((string) ($arguments['aiProvider'] ?? ''));
-        if ($used === '') {
+        if ($used === '' || strtolower($used) === 'default') {
             $used = $this->translator->translate('agent.translate.defaultProvider');
             if ($used === 'agent.translate.defaultProvider') {
                 $used = 'your default AI provider';
             }
         }
-        $label = $this->translator->translate('agent.translate.providerNotice', [$match[1], $used]);
+        $label = $this->translator->translate('agent.translate.providerNotice', [$requested, $used]);
         if ($label === 'agent.translate.providerNotice') {
             $label = sprintf(
                 "%s can't be used in the agent, so this translation uses %s. For %s, use the page translation dialog.",
-                $match[1],
+                $requested,
                 $used,
-                $match[1],
+                $requested,
             );
         }
 
         return "\n\n" . $label;
+    }
+
+    /**
+     * @internal Exposed for unit tests.
+     */
+    public static function translateOnlyNameFromQuery(string $requestQuery): ?string
+    {
+        if (preg_match('/\b(deepl|google\s*translate|google)\b/iu', $requestQuery, $match) !== 1) {
+            return null;
+        }
+
+        return $match[1];
+    }
+
+    /**
+     * @internal Exposed for unit tests.
+     */
+    public static function translateOnlyNameFromAdapterType(string $adapterType): ?string
+    {
+        $type = Provider::normalizeAdapterType($adapterType);
+
+        return self::TRANSLATE_ONLY_ADAPTER_LABELS[$type] ?? null;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private function translateOnlyNameFromConfiguration(array $arguments): ?string
+    {
+        $pageId = self::pageIdFromTranslateArguments($arguments);
+        if ($pageId <= 0) {
+            return null;
+        }
+
+        try {
+            $storagePid = GeneralUtility::makeInstance(SiteStorageContext::class)
+                ->resolveStoragePidFromPageId($pageId);
+            if ($storagePid === null || $storagePid <= 0) {
+                return null;
+            }
+
+            $providers = GeneralUtility::makeInstance(ProviderLookupInterface::class);
+            $candidates = [];
+            $configuredId = $this->configuredTranslationProviderIdentifier($storagePid);
+            if ($configuredId !== null) {
+                $candidates[] = $providers->findByIdentifier($configuredId, $storagePid);
+            }
+            $candidates[] = $providers->findDefault($storagePid);
+
+            foreach ($candidates as $provider) {
+                if (!$provider instanceof Provider || !$provider->isEnabled) {
+                    continue;
+                }
+                $label = self::translateOnlyNameFromAdapterType($provider->adapterType);
+                if ($label !== null) {
+                    return $label;
+                }
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return null;
+    }
+
+    private function configuredTranslationProviderIdentifier(int $storagePid): ?string
+    {
+        try {
+            $settings = GeneralUtility::makeInstance(ExtensionSettingsService::class)
+                ->getAll('ns_t3ai', $storagePid);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $value = trim((string) ($settings['defaultProviderForTranslation'] ?? 'default'));
+        if ($value === '' || strtolower($value) === 'default') {
+            return null;
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @internal Exposed for unit tests.
+     */
+    public static function pageIdFromTranslateArguments(array $arguments): int
+    {
+        foreach (['pageId', 'pid'] as $key) {
+            $pageId = (int) ($arguments[$key] ?? 0);
+            if ($pageId > 0) {
+                return $pageId;
+            }
+        }
+        if (isset($arguments['pageIds']) && is_array($arguments['pageIds'])) {
+            return (int) ($arguments['pageIds'][0] ?? 0);
+        }
+
+        return 0;
     }
 
     /**

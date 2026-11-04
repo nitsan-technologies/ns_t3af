@@ -21,13 +21,13 @@ namespace NITSAN\NsT3AF\Agent\Context;
 
 use NITSAN\NsT3AF\Access\RecordAccessGate;
 use NITSAN\NsT3AF\Agent\Service\AgentTranslator;
+use NITSAN\NsT3AF\Mcp\Service\WorkspaceContextService;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
 use TYPO3\CMS\Backend\Module\ModuleProvider;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Site\SiteFinder;
@@ -276,10 +276,13 @@ final readonly class AgentContextPresenter
 
         // Translations sit next to the page (own pid), not below it; the model cannot find them with a
         // search below the page and then reports "the German version does not exist".
+        // Match pages_get: skip soft-deleted rows and workspace delete placeholders.
         $translations = [];
         try {
+            $workspaceContext = GeneralUtility::makeInstance(WorkspaceContextService::class);
             $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('pages');
-            $queryBuilder->getRestrictions()->removeAll()->add(GeneralUtility::makeInstance(DeletedRestriction::class));
+            $queryBuilder->getRestrictions()->removeAll();
+            $workspaceContext->applyRestriction($queryBuilder, 'pages');
             $rows = $queryBuilder
                 ->select('uid', 'sys_language_uid', 'hidden')
                 ->from('pages')
@@ -292,8 +295,15 @@ final readonly class AgentContextPresenter
                 ->fetchAllAssociative();
         } catch (\Throwable) {
             $rows = [];
+            $workspaceContext = null;
         }
         foreach ($rows as $translation) {
+            if ($workspaceContext instanceof WorkspaceContextService) {
+                $record = BackendUtility::getRecord('pages', (int) $translation['uid']);
+                if (!is_array($record) || $workspaceContext->overlay('pages', $record) === null) {
+                    continue;
+                }
+            }
             $translations[] = [
                 'uid' => (int) $translation['uid'],
                 'languageId' => (int) $translation['sys_language_uid'],
