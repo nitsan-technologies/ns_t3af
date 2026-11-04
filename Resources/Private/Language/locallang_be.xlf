@@ -807,6 +807,9 @@
       <trans-unit id="agent.turn.imageGenerationUnavailable" resname="agent.turn.imageGenerationUnavailable">
         <source>AI image generation is not available to you (it needs T3AI with an image provider and access to T3AI Media), so no image will be generated. I will do the rest of the request.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.imageProviderCannotGenerate" resname="agent.turn.imageProviderCannotGenerate">
+        <source>%1$s cannot create images. Switch the AI Agent provider to OpenAI, Stability AI or MidJourney (or enable T3Planet Credits), then ask again. No image was prepared.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.filesPartlyUnavailable" resname="agent.turn.filesPartlyUnavailable">
         <source>Skipped %1$s: the file does not exist or is missing from the file storage. I will continue with the other files (%2$s).</source>
       </trans-unit>

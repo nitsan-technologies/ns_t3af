@@ -216,4 +216,30 @@ final class ProviderTest extends TestCase
         self::assertSame(['chat', 'streaming'], $p->capabilities);
         self::assertFalse($p->hasCapability(Capability::IMAGE_GENERATION));
     }
+
+    public function testCanGenerateImagesRequiresRealImageAdapter(): void
+    {
+        $mistral = Provider::fromRow([
+            'identifier' => 'mistral',
+            'adapter_type' => 'symfony.mistral',
+            'capabilities' => 'chat,streaming',
+            'is_enabled' => 1,
+        ]);
+        $openai = Provider::fromRow([
+            'identifier' => 'openai',
+            'adapter_type' => 'symfony.openai',
+            'capabilities' => 'chat,image_generation',
+            'is_enabled' => 1,
+        ]);
+        $stability = Provider::fromRow([
+            'identifier' => 'stability',
+            'adapter_type' => 'ns_t3ai.stability_ai',
+            'capabilities' => 'image_generation',
+            'is_enabled' => 1,
+        ]);
+
+        self::assertFalse($mistral->canGenerateImages());
+        self::assertTrue($openai->canGenerateImages());
+        self::assertTrue($stability->canGenerateImages());
+    }
 }

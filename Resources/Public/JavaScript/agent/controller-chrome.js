@@ -519,7 +519,11 @@ export const chromeMethods = {
       // A fresh Fix must not resume the previous conversation (stale page / checkIds).
       if (this.isOpen) {
         if (wantsFresh) {
-          void this.reloadSessionForCurrentScope({ fresh: true });
+          // Await so the pending openWithContext payload (chips / prompt) is applied
+          // before the editor can send into a still-loading previous conversation.
+          void this.reloadSessionForCurrentScope({ fresh: true }).then(() => {
+            this.input?.focus?.();
+          });
           return;
         }
         const openPayload = this.pendingOpenPayload;

@@ -99,12 +99,29 @@ final class AiLabelStatisticsService
             'media' => $media,
             'texts' => $texts,
             'origins' => $origins,
-            'coverageBadges' => [
-                'done' => $global['confirmed'],
-                'needsPerson' => $global['awaiting'],
-                'blocked' => $unbound,
-                'total' => max(1, $global['confirmed'] + $global['awaiting'] + $unbound),
-            ],
+            'coverageBadges' => self::coverageBadges(
+                $global['confirmed'],
+                $global['awaiting'],
+                $unbound,
+            ),
+        ];
+    }
+
+    /**
+     * Ring % and "X of Y checks complete" share the same content-labelling counters.
+     *
+     * @return array{done: int, needsPerson: int, blocked: int, total: int, percent: int}
+     */
+    public static function coverageBadges(int $confirmed, int $awaiting, int $unbound): array
+    {
+        $total = max(1, $confirmed + $awaiting + $unbound);
+
+        return [
+            'done' => $confirmed,
+            'needsPerson' => $awaiting,
+            'blocked' => $unbound,
+            'total' => $total,
+            'percent' => (int) round(($confirmed / $total) * 100),
         ];
     }
 

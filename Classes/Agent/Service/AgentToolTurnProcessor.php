@@ -4437,6 +4437,15 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             (string) ($body['provider'] ?? ''),
             self::requestTextFromBody($body),
         );
+        $imageBlocked = $this->imageGenerationBlockedByProvider(
+            $toolName,
+            $arguments,
+            (string) ($body['provider'] ?? ''),
+            $correlationId,
+        );
+        if ($imageBlocked !== null) {
+            return $imageBlocked;
+        }
         /** @var list<array<string, mixed>> $history */
         $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
@@ -5421,6 +5430,79 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * Selected chat provider cannot make images → no confirm card; ask the editor to switch.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function imageGenerationBlockedByProvider(
+        string $toolName,
+        array $arguments,
+        string $sessionProvider,
+        string $correlationId,
+    ): ?array {
+        if (strtolower(trim($toolName)) !== 't3ai_generate_image') {
+            return null;
+        }
+        $providerId = trim((string) ($arguments['aiProvider'] ?? ''));
+        if ($providerId === '' || $providerId === AgentProviderOptions::DEFAULT) {
+            $providerId = trim($sessionProvider);
+        }
+        if ($providerId === '' || $providerId === AgentProviderOptions::DEFAULT) {
+            return null;
+        }
+        if (self::providerIdentifierCanGenerateImages($providerId)) {
+            return null;
+        }
+
+        $label = $providerId;
+        try {
+            $provider = GeneralUtility::makeInstance(ProviderLookupInterface::class)->findByIdentifier($providerId);
+            if ($provider instanceof Provider) {
+                $title = trim($provider->title);
+                $label = $title !== '' ? $title : $provider->identifier;
+            }
+        } catch (\Throwable) {
+        }
+
+        $content = $this->translator->translate('agent.turn.imageProviderCannotGenerate', [$label]);
+        if ($content === '' || $content === 'agent.turn.imageProviderCannotGenerate') {
+            $content = sprintf(
+                '%s cannot create images. Switch the AI Agent provider to OpenAI, Stability AI or MidJourney (or enable T3Planet Credits), then ask again. No image was prepared.',
+                $label,
+            );
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $content,
+            'meta' => [
+                'type' => 'info',
+                'tool' => $toolName,
+                'success' => false,
+                'imageGenerationUnavailable' => true,
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    private static function providerIdentifierCanGenerateImages(string $providerIdentifier): bool
+    {
+        $providerIdentifier = trim($providerIdentifier);
+        if ($providerIdentifier === '' || $providerIdentifier === AgentProviderOptions::DEFAULT) {
+            return false;
+        }
+        try {
+            $provider = GeneralUtility::makeInstance(ProviderLookupInterface::class)->findByIdentifier($providerIdentifier);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return $provider instanceof Provider && $provider->canGenerateImages();
+    }
+
+    /**
      * @param array<string, mixed> $arguments
      */
     private function translateOnlyNameFromConfiguration(array $arguments): ?string
@@ -5778,11 +5860,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         // Agent provider selection → MCP McpInvocationContext (`aiProvider` arg).
+        // Do not stamp a chat-only provider onto image generation — the confirm card would lie.
         $provider = trim($providerIdentifier);
         if (
             $provider !== ''
             && $provider !== AgentProviderOptions::DEFAULT
             && (!isset($arguments['aiProvider']) || trim((string) $arguments['aiProvider']) === '')
+            && !($toolName === 't3ai_generate_image' && !self::providerIdentifierCanGenerateImages($provider))
         ) {
             $arguments['aiProvider'] = $provider;
         }
