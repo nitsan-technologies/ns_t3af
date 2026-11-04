@@ -243,6 +243,21 @@
       <trans-unit id="module.aiAgent.governance.matrix" resname="module.aiAgent.governance.matrix">
         <source>Control matrix</source>
       </trans-unit>
+      <trans-unit id="module.aiAgent.governance.severityMatrix" resname="module.aiAgent.governance.severityMatrix">
+        <source>Severity access (who can run what)</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.who" resname="module.aiAgent.col.who">
+        <source>Who can run</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.severity.who.read" resname="module.aiAgent.governance.severity.who.read">
+        <source>All AI Agent users (unless the tool is in Blocked tools).</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.severity.who.write" resname="module.aiAgent.governance.severity.who.write">
+        <source>Groups without Read-only agent; still need Apply for drafts. Blocked tools never run.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.severity.who.destructive" resname="module.aiAgent.governance.severity.who.destructive">
+        <source>Same as write — Read-only agent blocks these; Blocked tools can deny specific names.</source>
+      </trans-unit>
       <trans-unit id="module.aiAgent.governance.source.group" resname="module.aiAgent.governance.source.group">
         <source>Backend user group (AI Permissions)</source>
       </trans-unit>

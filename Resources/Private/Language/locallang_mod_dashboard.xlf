@@ -1264,6 +1264,15 @@
       <trans-unit id="provider.meta.fallbackWarn" resname="provider.meta.fallbackWarn">
         <source>No fallback chain — requests will error if the default provider fails.</source>
       </trans-unit>
+      <trans-unit id="provider.meta.fallbackWarnHint" resname="provider.meta.fallbackWarnHint">
+        <source>Add another enabled provider (New Provider). The next active non-default provider is used when the default fails.</source>
+      </trans-unit>
+      <trans-unit id="provider.meta.fallbackWarnAction" resname="provider.meta.fallbackWarnAction">
+        <source>Add a fallback provider</source>
+      </trans-unit>
+      <trans-unit id="provider.action.confirmDeleteDefault" resname="provider.action.confirmDeleteDefault">
+        <source>Delete the default provider "%s"? There is no fallback chain — AI requests will fail until another provider is set as default.</source>
+      </trans-unit>
       <trans-unit id="provider.col.title" resname="provider.col.title">
         <source>Title</source>
       </trans-unit>

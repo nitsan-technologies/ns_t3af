@@ -170,6 +170,24 @@ final readonly class AgentSettingsPresenter
                     ],
                 ],
             ],
+            // Who can run which tool severity — mirrors AI Permissions → Limits (agentReadOnly / blocked tools).
+            'severityAccessMatrix' => [
+                [
+                    'severity' => 'module.aiAgent.severity.read',
+                    'who' => 'module.aiAgent.governance.severity.who.read',
+                    'source' => 'module.aiAgent.governance.source.group',
+                ],
+                [
+                    'severity' => 'module.aiAgent.severity.write',
+                    'who' => 'module.aiAgent.governance.severity.who.write',
+                    'source' => 'module.aiAgent.governance.source.group',
+                ],
+                [
+                    'severity' => 'module.aiAgent.severity.destructive',
+                    'who' => 'module.aiAgent.governance.severity.who.destructive',
+                    'source' => 'module.aiAgent.governance.source.group',
+                ],
+            ],
             'audit' => [
                 'coverage' => [
                     ['item' => 'module.aiAgent.audit.coverage.toolInvocations', 'recorded' => true],
