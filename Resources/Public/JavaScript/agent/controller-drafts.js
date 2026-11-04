@@ -309,12 +309,12 @@ export const draftMethods = {
       const fieldRows = fields.map((field) => {
         const key = String(field.key ?? '');
         const label = String(field.label ?? key);
-        const current = String(field.current ?? '');
         const selectedIndex = Number(meta.selections[key] ?? 0);
         const editValue = Object.prototype.hasOwnProperty.call(meta.edits, key)
           ? String(meta.edits[key] ?? '')
           : null;
         const toolName = String(meta.tool ?? suggestions.tool ?? '');
+        const current = formatSuggestionFieldText(toolName, key, String(field.current ?? ''));
         const variantOptions = variants.map((variant, index) => {
           const values = variant?.values && typeof variant.values === 'object' ? variant.values : {};
           const text = formatSuggestionFieldText(toolName, key, String(values[key] ?? ''));

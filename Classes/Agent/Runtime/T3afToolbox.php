@@ -78,7 +78,7 @@ final class T3afToolbox implements ToolboxInterface
     public const READ_REFUSALS_BEFORE_PAUSE = 3;
 
     /** Repeated identical reads answered from the first result before the turn stops. */
-    public const REPEATED_READS_BEFORE_STOP = 3;
+    public const REPEATED_READS_BEFORE_STOP = 1;
 
     private const FOUND_TOOLS_LIMIT = 5;
 

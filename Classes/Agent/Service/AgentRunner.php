@@ -553,7 +553,17 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         );
 
         try {
-            $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan, $requestForChecklist))->getResult();
+            try {
+                $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan, $requestForChecklist))->getResult();
+            } catch (\Throwable $firstCallException) {
+                // One retry for flaky HTTP/2 / idle timeouts; then fall through to the outer catch.
+                if (!AgentProviderTurnErrorPresenter::looksLikeTransportInfrastructure($firstCallException)
+                    && !self::looksLikeTimeout($firstCallException)
+                ) {
+                    throw $firstCallException;
+                }
+                $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan, $requestForChecklist))->getResult();
+            }
             $content = $agentResult->getContent();
             $finalText = is_string($content) ? trim($content) : '';
             $retried = false;

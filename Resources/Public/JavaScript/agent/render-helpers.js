@@ -14,7 +14,12 @@ import { lang, escapeHtml, formatWorkDuration } from './format.js';
  */
 export function formatSuggestionFieldText(tool, fieldKey, text) {
   const value = String(text ?? '');
-  if (String(tool ?? '') !== 't3ai_create_page_structure' || String(fieldKey ?? '') !== 'structure') {
+  const toolName = String(tool ?? '');
+  const key = String(fieldKey ?? '');
+  if (key === 'schemaContent' || toolName === 't3ai_apply_schema_markup') {
+    return formatSchemaSuggestionText(value);
+  }
+  if (toolName !== 't3ai_create_page_structure' || key !== 'structure') {
     return value;
   }
   try {
@@ -54,6 +59,33 @@ export function formatSuggestionFieldText(tool, fieldKey, text) {
     return lines.length > 0 ? lines.join('\n') : value;
   } catch {
     return value;
+  }
+}
+
+/**
+ * Schema markup stores JSON-LD for Apply; show @type + a short pretty dump in the card.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function formatSchemaSuggestionText(value) {
+  const raw = String(value ?? '').trim();
+  if (raw === '') {
+    return '';
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    const nodes = Array.isArray(parsed) ? parsed : [parsed];
+    const types = nodes
+      .map((node) => (node && typeof node === 'object' ? String(node['@type'] ?? '').trim() : ''))
+      .filter((type) => type !== '');
+    const pretty = JSON.stringify(parsed, null, 2);
+    if (types.length > 0) {
+      return `${types.join(', ')}\n${pretty}`;
+    }
+    return pretty;
+  } catch {
+    return raw;
   }
 }
 

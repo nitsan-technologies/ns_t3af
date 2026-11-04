@@ -224,4 +224,17 @@ final class AgentProviderTurnErrorPresenterTest extends TestCase
         self::assertSame('The AI provider is not available right now.', $shown);
         self::assertStringNotContainsString('10.255.255.1', $shown);
     }
+
+    #[Test]
+    public function http2ProtocolErrorsAreGenericForAdminsToo(): void
+    {
+        $exception = new AdapterRuntimeException(
+            'HTTP/2 stream 1 was not closed cleanly: PROTOCOL_ERROR (err 1) for "https://api.example.com/v1/chat/completions".',
+        );
+
+        self::assertTrue(AgentProviderTurnErrorPresenter::looksLikeTransportInfrastructure($exception));
+        $shown = $this->presenter->present($exception, $this->translator, true);
+        self::assertSame('The AI provider is not available right now.', $shown);
+        self::assertStringNotContainsString('PROTOCOL_ERROR', $shown);
+    }
 }
