@@ -856,6 +856,10 @@ function initAiFeatures(root) {
     if (description !== '' && settingsScope === '') {
       state.activeScope = '';
       state.activeExtension = '';
+      if (extConfLoading instanceof HTMLElement) {
+        extConfLoading.classList.add('is-hidden');
+        extConfLoading.setAttribute('hidden', 'hidden');
+      }
       if (localConfig instanceof HTMLElement) {
         localConfig.classList.add('is-hidden');
         localConfig.setAttribute('hidden', 'hidden');

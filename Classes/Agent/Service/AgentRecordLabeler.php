@@ -61,7 +61,7 @@ readonly class AgentRecordLabeler
         if ($field === 'hidden') {
             $label = $this->translator->translate('agent.field.hidden');
 
-            return $label !== 'agent.field.hidden' ? $label : 'Hidden (1 = hidden, 0 = visible)';
+            return $label !== 'agent.field.hidden' ? $label : 'Hidden';
         }
 
         // tt_content CType and header_layout both ship as TCA "Type".

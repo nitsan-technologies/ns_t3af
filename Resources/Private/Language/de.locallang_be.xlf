@@ -2446,8 +2446,8 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <target>Umbenennen</target>
             </trans-unit>
             <trans-unit id="agent.field.hidden">
-                <source>Hidden (1 = hidden, 0 = visible)</source>
-                <target>Versteckt (1 = versteckt, 0 = sichtbar)</target>
+                <source>Hidden</source>
+                <target>Versteckt</target>
             </trans-unit>
             <trans-unit id="agent.field.contentType">
                 <source>Content type</source>
