@@ -102,6 +102,12 @@ readonly class DataHandlerService
                 try {
                     $this->updateRecord($table, $newUid, $relationFields);
                 } catch (\Throwable $exception) {
+                    // RelationHandler can SELECT uid on MM tables that only have
+                    // uid_local/uid_foreign. Keep the scalar row — Apply still succeeds;
+                    // categories/tags can be set in the form afterwards.
+                    if (str_contains($exception->getMessage(), "Unknown column 'uid'")) {
+                        return $newUid;
+                    }
                     $this->discardCreatedRecord($table, $newUid);
                     throw $this->friendlyCreateFailure($table, $exception);
                 }
