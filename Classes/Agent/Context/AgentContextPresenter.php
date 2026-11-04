@@ -202,6 +202,16 @@ final readonly class AgentContextPresenter
                     ($workspace['fromLive'] ?? false) === true ? ' (the editor works in Live; nothing goes live until it is published)' : '',
                 );
         }
+        $credits = is_array($context['credits'] ?? null) ? $context['credits'] : null;
+        if ($credits !== null) {
+            $remaining = trim((string) ($credits['remaining'] ?? $credits['label'] ?? ''));
+            if ($remaining !== '') {
+                $lines[] = sprintf(
+                    '- T3Planet credits remaining: %s (buy or check balance under AI Foundation → Providers / Buy Credits — not AI Chatbot/Search)',
+                    $remaining,
+                );
+            }
+        }
 
         return implode("\n", $lines);
     }

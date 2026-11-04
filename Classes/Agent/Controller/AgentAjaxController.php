@@ -1768,6 +1768,7 @@ final class AgentAjaxController
         ], $clientContext, $openContext);
 
         $presented = $this->contextPresenter->present($merged, $this->resolveBackendUser());
+        $presented['credits'] = $this->creditsStatus->status();
 
         // Caller-supplied chips/prompt text never feed back into AgentContextResolver::resolve()
         // (they are not part of $merged's recognised keys) — they ride along on the presented

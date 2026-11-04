@@ -75,6 +75,25 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function promptBlockIncludesCreditsBalanceAndBuyPath(): void
+    {
+        $block = AgentContextPresenter::promptBlock([
+            'details' => [
+                'module' => ['route' => 'web_layout', 'label' => 'Page'],
+                'page' => null,
+                'siteLanguages' => [],
+                'folder' => null,
+                'workspace' => ['id' => 0, 'title' => 'Live', 'live' => true],
+            ],
+            'credits' => ['remaining' => '12.5', 'label' => '12.5', 'empty' => false],
+        ]);
+
+        self::assertStringContainsString('T3Planet credits remaining: 12.5', $block);
+        self::assertStringContainsString('AI Foundation → Providers / Buy Credits', $block);
+        self::assertStringContainsString('not AI Chatbot/Search', $block);
+    }
+
+    #[Test]
     public function titleIsTheFirstUserMessageShortened(): void
     {
         $long = str_repeat('Erstelle Überschriften ', 5);
