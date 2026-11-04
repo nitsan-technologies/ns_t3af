@@ -41,6 +41,7 @@ readonly class DataHandlerService
         private McpSiteRequestBootstrap $siteRequestBootstrap,
         private RecordService $recordService,
         private ?McpSlugRedirectGuard $slugRedirectGuard = null,
+        private ?TcaSchemaService $tcaSchemaService = null,
     ) {}
 
     /**
@@ -48,9 +49,14 @@ readonly class DataHandlerService
      */
     public function createRecord(string $table, int $pid, array $fields): int
     {
+        // MM relation fields (categories, tags, related, …) can trip RelationHandler into
+        // SELECT uid on tables that only have uid_local/uid_foreign. Create scalars first,
+        // then attach relations in a separate update — same shape write_table accepts.
+        [$scalarFields, $relationFields] = $this->splitRelationUidListFields($table, $fields);
+
         $newId = 'NEW' . bin2hex(random_bytes(8));
-        $fields['pid'] = $pid;
-        $fields = self::withContentColumn($table, $fields);
+        $scalarFields['pid'] = $pid;
+        $scalarFields = self::withContentColumn($table, $scalarFields);
 
         $requestSnapshot = $this->siteRequestBootstrap->capture();
 
@@ -59,18 +65,22 @@ readonly class DataHandlerService
                 if ($pid < 0) {
                     $liveAnchor = $this->resolveLivePageUid(abs($pid));
                     $pid = -$liveAnchor;
-                    $fields['pid'] = $pid;
+                    $scalarFields['pid'] = $pid;
                     $this->siteRequestBootstrap->attachForPage($liveAnchor);
                 } else {
                     $pid = $this->resolveLivePageUid($pid);
-                    $fields['pid'] = $pid;
+                    $scalarFields['pid'] = $pid;
                     $this->siteRequestBootstrap->attachForPage($pid);
                 }
             }
 
-            $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-            $dataHandler->start([$table => [$newId => $fields]], []);
-            $dataHandler->process_datamap();
+            try {
+                $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
+                $dataHandler->start([$table => [$newId => $scalarFields]], []);
+                $dataHandler->process_datamap();
+            } catch (\Throwable $exception) {
+                throw $this->friendlyCreateFailure($table, $exception);
+            }
 
             /** @var int|string|null $uid */
             $uid = $dataHandler->substNEWwithIDs[$newId] ?? null;
@@ -81,19 +91,77 @@ readonly class DataHandlerService
                     $this->discardCreatedRecord($table, (int) $uid);
                 }
 
-                throw $exception;
+                throw $this->friendlyCreateFailure($table, $exception);
             }
             if ($uid === null) {
                 throw new \RuntimeException('Failed to create record: no uid returned', 1712000020);
             }
 
-            return (int) $uid;
+            $newUid = (int) $uid;
+            if ($relationFields !== []) {
+                try {
+                    $this->updateRecord($table, $newUid, $relationFields);
+                } catch (\Throwable $exception) {
+                    $this->discardCreatedRecord($table, $newUid);
+                    throw $this->friendlyCreateFailure($table, $exception);
+                }
+            }
+
+            return $newUid;
         } finally {
             if ($table === 'pages') {
                 $this->siteRequestBootstrap->restore($requestSnapshot);
             }
             $this->discardUpdateSignal();
         }
+    }
+
+    /**
+     * @param array<string, mixed> $fields
+     * @return array{0: array<string, mixed>, 1: array<string, mixed>}
+     */
+    private function splitRelationUidListFields(string $table, array $fields): array
+    {
+        $schema = $this->tcaSchemaService;
+        if ($schema === null) {
+            return [$fields, []];
+        }
+
+        $relationNames = array_flip($schema->getRelationUidListFields($table));
+        if ($relationNames === []) {
+            return [$fields, []];
+        }
+
+        $scalar = [];
+        $relations = [];
+        foreach ($fields as $name => $value) {
+            if (isset($relationNames[$name])) {
+                $relations[$name] = $value;
+            } else {
+                $scalar[$name] = $value;
+            }
+        }
+
+        return [$scalar, $relations];
+    }
+
+    private function friendlyCreateFailure(string $table, \Throwable $exception): \RuntimeException
+    {
+        $message = $exception->getMessage();
+        if (
+            $table === 'tx_news_domain_model_news'
+            && str_contains($message, "Unknown column 'uid'")
+        ) {
+            return new \RuntimeException(
+                'The news article could not be saved. Leave categories, tags and related articles empty on create, then set them after the article exists.',
+                1712000022,
+                $exception,
+            );
+        }
+
+        return $exception instanceof \RuntimeException
+            ? $exception
+            : new \RuntimeException($message, 0, $exception);
     }
 
     /**

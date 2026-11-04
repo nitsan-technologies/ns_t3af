@@ -1944,7 +1944,7 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
         <source>Rename</source>
       </trans-unit>
       <trans-unit id="agent.field.hidden" resname="agent.field.hidden">
-        <source>Hidden (1 = hidden, 0 = visible)</source>
+        <source>Hidden</source>
       </trans-unit>
       <trans-unit id="agent.field.contentType" resname="agent.field.contentType">
         <source>Content type</source>
