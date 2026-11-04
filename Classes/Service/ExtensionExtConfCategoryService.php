@@ -822,6 +822,24 @@ final class ExtensionExtConfCategoryService
     }
 
     /**
+     * Nested userFunc number fields (not declared in fields.typoscript) still need
+     * the same whole-number / min / max rules as typed constants.
+     *
+     * @var array<string, array{0: int, 1: int}>
+     */
+    private const NESTED_INT_CONSTRAINTS = [
+        'generalPageTitleNumberOfResult' => [1, 20],
+        'blogPageNumberOfResult' => [1, 20],
+        'productPageNumberOfResult' => [1, 20],
+        'servicePageNumberOfResult' => [1, 20],
+        'newsNumberOfResult' => [1, 20],
+        'blogNumberOfResult' => [1, 20],
+        'wordCountForContentRewriter' => [1, 5000],
+        'wordCountForNewsRewriter' => [1, 5000],
+        'wordCountForBlogRewriter' => [1, 5000],
+    ];
+
+    /**
      * @param array<string, string> $submitted
      * @return list<string>
      */
@@ -831,12 +849,20 @@ final class ExtensionExtConfCategoryService
         $errors = [];
         foreach ($submitted as $fieldName => $value) {
             $item = $constantsByName[$fieldName] ?? null;
-            if (!is_array($item)) {
+            if (is_array($item)) {
+                $error = $this->validateConstantValue($item, $value);
+                if ($error !== null) {
+                    $errors[] = $error;
+                }
+            } elseif (isset(self::NESTED_INT_CONSTRAINTS[$fieldName])) {
+                [$min, $max] = self::NESTED_INT_CONSTRAINTS[$fieldName];
+                $error = $this->validateNestedIntValue($fieldName, $value, $min, $max);
+                if ($error !== null) {
+                    $errors[] = $error;
+                }
                 continue;
-            }
-            $error = $this->validateConstantValue($item, $value);
-            if ($error !== null) {
-                $errors[] = $error;
+            } else {
+                continue;
             }
             $formOptions = $this->featureProviderFormOptionsByExtension[$extensionKey] ?? null;
             if ($formOptions !== null) {
@@ -890,6 +916,23 @@ final class ExtensionExtConfCategoryService
         }
 
         return $byName;
+    }
+
+    private function validateNestedIntValue(string $fieldName, string $value, int $min, int $max): ?string
+    {
+        $label = $fieldName;
+        if ($value === '' || !preg_match('/^-?\d+$/', $value)) {
+            return sprintf('"%s" must be a whole number.', $label);
+        }
+        $intValue = (int) $value;
+        if ($intValue < $min) {
+            return sprintf('"%s" must be at least %d.', $label, $min);
+        }
+        if ($intValue > $max) {
+            return sprintf('"%s" must be at most %d.', $label, $max);
+        }
+
+        return null;
     }
 
     /**

@@ -49,8 +49,11 @@
     color-mix(in srgb, var(--typo3-overlay-bg, #000) 72%, transparent)
   );
   z-index: 1080;
-  /* Sit above the page tree and the module iframe so those clicks cannot navigate while the
-     agent is open. Clicking this scrim closes the panel (see controller-chrome.js). */
+  /* Dim only — do not trap clicks. Editors must still reach module UI (e.g. Pages starter
+     Start) so a second openWithContext can replace the prompt. Close via × / Escape
+     (and the panel itself). Click-on-scrim close stays wired but never fires while
+     pointer-events are none. */
+  pointer-events: none;
 }
 
 .nst3af-agent-panel {

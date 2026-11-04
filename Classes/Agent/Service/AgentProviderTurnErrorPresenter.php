@@ -334,18 +334,30 @@ final class AgentProviderTurnErrorPresenter
         return preg_match('/context[_ ]length|maximum context|context window|too many tokens|prompt is too long|reduce the length/i', $raw) === 1;
     }
 
-    private static function looksLikeTransportInfrastructure(\Throwable $exception, string $detail): bool
+    /**
+     * Network / TLS / DNS failures before a usable provider response (not account or rate-limit errors).
+     */
+    public static function looksLikeTransportInfrastructure(\Throwable $exception, string $detail = ''): bool
     {
+        if ($detail === '') {
+            $detail = self::readableMessageFromThrowable($exception);
+        }
+
         if (preg_match(
-            '/tls connect|ssl routines|broken pipe|send failure|connection refused|could not resolve host|name or service not known|failed to connect|network is unreachable|unexpected eof/i',
+            '/tls connect|ssl routines|broken pipe|send failure|connection refused|could not resolve host|name or service not known|failed to connect|network is unreachable|unexpected eof|idle timeout|timed out|timeout reached|operation timed out/i',
             $detail,
         ) === 1) {
             return true;
         }
 
         for ($current = $exception; $current !== null; $current = $current->getPrevious()) {
+            if ($current instanceof \Symfony\Contracts\HttpClient\Exception\TimeoutExceptionInterface
+                || $current instanceof \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
+            ) {
+                return true;
+            }
             if (preg_match(
-                '/tls connect|ssl routines|broken pipe|send failure|connection refused|could not resolve host|failed to connect|network is unreachable|unexpected eof/i',
+                '/tls connect|ssl routines|broken pipe|send failure|connection refused|could not resolve host|failed to connect|network is unreachable|unexpected eof|idle timeout|timed out|timeout reached|operation timed out/i',
                 $current->getMessage(),
             ) === 1) {
                 return true;
