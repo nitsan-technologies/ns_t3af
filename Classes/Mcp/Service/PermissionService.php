@@ -57,6 +57,8 @@ readonly class PermissionService
      */
     public function assertCanSelectTable(string $table): void
     {
+        $this->assertTableIsRegistered($table);
+
         if ($this->canSelectTable($table, $this->getBackendUser())) {
             return;
         }

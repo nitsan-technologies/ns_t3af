@@ -131,6 +131,9 @@ final readonly class AgentContextPresenter
         $page = is_array($details['page'] ?? null) ? $details['page'] : null;
         if ($page !== null) {
             $line = sprintf('- Page: "%s" [uid %d]', $page['title'] ?? '', (int) ($page['uid'] ?? 0));
+            if (($page['deleted'] ?? false) === true) {
+                $line .= ' (deleted or missing — do not edit; ask for a live page)';
+            }
             if (($page['slug'] ?? '') !== '') {
                 $line .= ', slug ' . $page['slug'];
             }
@@ -269,7 +272,16 @@ final readonly class AgentContextPresenter
      */
     private function pageDetails(int $pageId, ?BackendUserAuthentication $user = null): array
     {
-        $row = BackendUtility::getRecord('pages', $pageId, 'uid,pid,title,slug') ?? [];
+        $row = BackendUtility::getRecord('pages', $pageId, 'uid,pid,title,slug,deleted');
+        if (!is_array($row) || $row === [] || (int) ($row['deleted'] ?? 0) === 1) {
+            return [
+                'uid' => $pageId,
+                'title' => 'Page ' . $pageId . ' (deleted or missing)',
+                'slug' => '',
+                'parent' => null,
+                'deleted' => true,
+            ];
+        }
         $parentId = (int) ($row['pid'] ?? 0);
         // The parent of a mounted page can lie outside the editor's mount: its title is not theirs to see.
         $parentReadable = $user === null
@@ -294,11 +306,12 @@ final readonly class AgentContextPresenter
             $queryBuilder->getRestrictions()->removeAll();
             $workspaceContext->applyRestriction($queryBuilder, 'pages');
             $rows = $queryBuilder
-                ->select('uid', 'sys_language_uid', 'hidden')
+                ->select('uid', 'sys_language_uid', 'hidden', 'deleted')
                 ->from('pages')
                 ->where(
                     $queryBuilder->expr()->eq('l10n_parent', $queryBuilder->createNamedParameter($pageId, Connection::PARAM_INT)),
                     $queryBuilder->expr()->gt('sys_language_uid', 0),
+                    $queryBuilder->expr()->eq('deleted', 0),
                 )
                 ->orderBy('sys_language_uid')
                 ->executeQuery()
@@ -308,15 +321,18 @@ final readonly class AgentContextPresenter
             $workspaceContext = null;
         }
         foreach ($rows as $translation) {
+            if ((int) ($translation['deleted'] ?? 0) === 1) {
+                continue;
+            }
             if ($workspaceContext instanceof WorkspaceContextService) {
                 $record = BackendUtility::getRecord('pages', (int) $translation['uid']);
-                if (!is_array($record) || $workspaceContext->overlay('pages', $record) === null) {
+                if (!is_array($record) || (int) ($record['deleted'] ?? 0) === 1 || $workspaceContext->overlay('pages', $record) === null) {
                     continue;
                 }
             }
             $translations[] = [
                 'uid' => (int) $translation['uid'],
-                'languageId' => (int) $translation['sys_language_uid'],
+                'languageId' => (int) ($translation['sys_language_uid']),
                 'hidden' => (int) ($translation['hidden'] ?? 0) === 1,
             ];
         }

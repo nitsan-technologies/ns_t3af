@@ -1526,9 +1526,16 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $notAskedFor['t3ai_generate_keywords'] = true;
                 $notAskedFor['t3ai_generate_meta_description'] = true;
             }
-            if (preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $query) !== 1) {
+            if (
+                self::isAltTextMetadataRequest($query)
+                || preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $query) !== 1
+            ) {
                 $notAskedFor['t3ai_generate_image'] = true;
             }
+        }
+        // "Write alt text for this image" mentions "image" but must never open image generation.
+        if (self::isAltTextMetadataRequest($query)) {
+            $notAskedFor['t3ai_generate_image'] = true;
         }
         $schemaRequest = self::isSchemaRequest($query);
         if ($schemaRequest && preg_match('/\b(folders?|director(?:y|ies)|ordner|verzeichnis\w*)\b/iu', $query) !== 1) {
@@ -1613,6 +1620,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             if (AgentToolTurnProcessor::asksToWriteMissingAltText($query)) {
                 $found = [...self::toolsByName(['t3aa_update_file_metadata'], $executableTools, $offeredNames), ...$found];
             }
+        } elseif (self::isAltTextMetadataRequest($query) && !self::isApproveAllAltTextRequest($query)) {
+            $found = [...self::toolsByName(['t3aa_update_file_metadata', 't3aa_list_files_missing_alt_text'], $executableTools, $offeredNames), ...$found];
         }
         if (self::isDecorativeImageRequest($query)) {
             $found = [...self::toolsByName(['t3aa_mark_image_decorative'], $executableTools, $offeredNames), ...$found];
@@ -2090,6 +2099,21 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return preg_match('/\b(missing|without|no|ohne|fehlend\w*|keine[nr]?)\b/iu', $query) === 1;
+    }
+
+    /**
+     * Any alt-text / file-metadata ask (including "write alt text for hero.jpg"), not only "missing".
+     */
+    public static function isAltTextMetadataRequest(string $query): bool
+    {
+        if (self::isMissingAltTextRequest($query)) {
+            return true;
+        }
+
+        return preg_match(
+            '/\b(?:alt[\s-]?(?:text|tag|attribute?)s?|alternative?\s*text|alternativtext\w*|bildbeschreibung|file\s+metadata)\b/iu',
+            $query,
+        ) === 1;
     }
 
     public static function isSummarizeRequest(string $query): bool

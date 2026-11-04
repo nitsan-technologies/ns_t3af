@@ -296,8 +296,8 @@ final class AgentRequestChecklist
                     . $altText . ' Do not claim the request is finished until that succeeds.';
             }
             if (($step['kind'] ?? '') === 'alt_text') {
-                return 'Next: the image is attached without alt text. Set "alternative" on its sys_file_reference (write_table, table sys_file_reference, the uid from referenceUids)'
-                    . ' to a short text that describes the image. If that is not possible, tell the editor the alt text is not set — do not claim the request is finished.';
+                return 'Next: the image is attached without alt text. Call t3aa_update_file_metadata with the file uid/url and a short alternative text that describes the image.'
+                    . ' Never use write_table on sys_file or sys_file_reference for alt text. If that is not possible, tell the editor the alt text is not set — do not claim the request is finished.';
             }
             $cType = (string) ($step['cType'] ?? '');
             if ($cType !== '') {

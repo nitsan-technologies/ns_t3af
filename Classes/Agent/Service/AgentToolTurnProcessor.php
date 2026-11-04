@@ -1581,11 +1581,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 
         return preg_match(
             '/(?:'
-            . 'what did you (?:change|save)'
-            . '|what was (?:changed|saved)'
-            . '|what changed in this conversation'
-            . '|was hast du (?:geändert|geaendert|gespeichert)'
-            . '|was wurde (?:geändert|geaendert|gespeichert)'
+            . 'what did you (?:\w+\s+){0,3}(?:change|save|apply)'
+            . '|what was (?:\w+\s+){0,3}(?:changed|saved|applied)'
+            . '|what (?:just )?(?:changed|was saved) in this conversation'
+            . '|was hast du (?:\w+\s+){0,3}(?:geändert|geaendert|gespeichert)'
+            . '|was wurde (?:\w+\s+){0,3}(?:geändert|geaendert|gespeichert)'
             . ')/u',
             $text,
         ) === 1;

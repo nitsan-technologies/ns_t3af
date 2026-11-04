@@ -418,6 +418,16 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function altTextMetadataRequestCoversWriteAltTextWithoutMissing(): void
+    {
+        self::assertTrue(AgentRunner::isAltTextMetadataRequest('Write alt text for hero.jpg'));
+        self::assertTrue(AgentRunner::isAltTextMetadataRequest('Set a sensible alt text for this image'));
+        self::assertTrue(AgentRunner::isMissingAltTextRequest('List images without alt text'));
+        self::assertFalse(AgentRunner::isMissingAltTextRequest('Write alt text for hero.jpg'));
+        self::assertFalse(AgentRunner::isAltTextMetadataRequest('Generate an image of a lighthouse'));
+    }
+
+    #[Test]
     public function imageWorkToolsOmitsAttachWhenEveryFileIsAlreadyLinked(): void
     {
         $catalog = [

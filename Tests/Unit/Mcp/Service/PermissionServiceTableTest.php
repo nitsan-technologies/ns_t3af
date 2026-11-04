@@ -50,6 +50,21 @@ final class PermissionServiceTableTest extends TestCase
     }
 
     #[Test]
+    public function assertCanSelectTableRejectsUnknownTableAsNotRegistered(): void
+    {
+        $GLOBALS['TCA'] = ['pages' => []];
+        $GLOBALS['BE_USER'] = $this->createMock(BackendUserAuthentication::class);
+
+        $service = new PermissionService();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionCode(1790600002);
+        $this->expectExceptionMessage('not registered');
+
+        $service->assertCanSelectTable('tx_ns_t3ai_labels');
+    }
+
+    #[Test]
     public function aBackendAuthTableCannotBeModifiedEvenByAnAdmin(): void
     {
         $GLOBALS['TCA'] = ['be_users' => [], 'pages' => []];
