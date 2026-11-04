@@ -515,6 +515,15 @@ export const chromeMethods = {
     openWithContext(payload) {
       this.pendingOpenPayload = payload && typeof payload === 'object' ? payload : null;
       const wantsFresh = this.pendingOpenPayload?.fresh === true;
+      const immediatePrompt = typeof this.pendingOpenPayload?.promptText === 'string'
+        ? this.pendingOpenPayload.promptText
+        : '';
+      // Show the caller prompt in the composer right away — restoreSession still
+      // reapplies it after the conversation AJAX, but the editor should not wait on that.
+      if (immediatePrompt !== '' && this.input) {
+        this.input.value = immediatePrompt;
+        this.resizeComposerInput?.();
+      }
       // Panel already open: open() is a no-op, so apply chips/prompt here (Fix from a module).
       // A fresh Fix must not resume the previous conversation (stale page / checkIds).
       if (this.isOpen) {
@@ -539,6 +548,7 @@ export const chromeMethods = {
         }
         if (openPromptText !== '' && this.input) {
           this.input.value = openPromptText;
+          this.resizeComposerInput?.();
         }
         this.renderContext?.();
         this.input?.focus?.();
@@ -581,6 +591,15 @@ export const chromeMethods = {
       this.isLoadingSession = true;
       this.panel.setAttribute('aria-busy', 'true');
       this.renderLoadingSkeleton();
+
+      // Prefill before the conversation request so openWithContext prompts appear immediately.
+      const pendingPrompt = typeof this.pendingOpenPayload?.promptText === 'string'
+        ? this.pendingOpenPayload.promptText
+        : '';
+      if (pendingPrompt !== '' && this.input) {
+        this.input.value = pendingPrompt;
+        this.resizeComposerInput?.();
+      }
 
       // Resume the last-viewed conversation for this conversation-scope key when remembered;
       // otherwise the server opens the latest of the configured scope (see restoreSession).
