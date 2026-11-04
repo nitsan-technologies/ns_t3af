@@ -5448,22 +5448,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($providerId === '' || $providerId === AgentProviderOptions::DEFAULT) {
             $providerId = trim($sessionProvider);
         }
-        if ($providerId === '' || $providerId === AgentProviderOptions::DEFAULT) {
-            return null;
-        }
-        if (self::providerIdentifierCanGenerateImages($providerId)) {
+        $provider = self::resolveProviderForImageGate($providerId, $arguments);
+        if ($provider === null || $provider->canGenerateImages()) {
             return null;
         }
 
-        $label = $providerId;
-        try {
-            $provider = GeneralUtility::makeInstance(ProviderLookupInterface::class)->findByIdentifier($providerId);
-            if ($provider instanceof Provider) {
-                $title = trim($provider->title);
-                $label = $title !== '' ? $title : $provider->identifier;
-            }
-        } catch (\Throwable) {
-        }
+        $title = trim($provider->title);
+        $label = $title !== '' ? $title : $provider->identifier;
 
         $content = $this->translator->translate('agent.turn.imageProviderCannotGenerate', [$label]);
         if ($content === '' || $content === 'agent.turn.imageProviderCannotGenerate') {
@@ -5487,17 +5478,37 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         ];
     }
 
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private static function resolveProviderForImageGate(string $providerIdentifier, array $arguments): ?Provider
+    {
+        try {
+            $lookup = GeneralUtility::makeInstance(ProviderLookupInterface::class);
+            $storagePid = null;
+            $pageId = (int) ($arguments['pageId'] ?? $arguments['pid'] ?? 0);
+            if ($pageId > 0) {
+                try {
+                    $storagePid = GeneralUtility::makeInstance(SiteStorageContext::class)
+                        ->resolveStoragePidFromPageId($pageId);
+                } catch (\Throwable) {
+                    $storagePid = null;
+                }
+            }
+            $providerIdentifier = trim($providerIdentifier);
+            if ($providerIdentifier !== '' && $providerIdentifier !== AgentProviderOptions::DEFAULT) {
+                return $lookup->findByIdentifier($providerIdentifier, $storagePid);
+            }
+
+            return $lookup->findDefault($storagePid);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     private static function providerIdentifierCanGenerateImages(string $providerIdentifier): bool
     {
-        $providerIdentifier = trim($providerIdentifier);
-        if ($providerIdentifier === '' || $providerIdentifier === AgentProviderOptions::DEFAULT) {
-            return false;
-        }
-        try {
-            $provider = GeneralUtility::makeInstance(ProviderLookupInterface::class)->findByIdentifier($providerIdentifier);
-        } catch (\Throwable) {
-            return false;
-        }
+        $provider = self::resolveProviderForImageGate($providerIdentifier, []);
 
         return $provider instanceof Provider && $provider->canGenerateImages();
     }
