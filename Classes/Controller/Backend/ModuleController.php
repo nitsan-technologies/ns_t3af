@@ -1136,11 +1136,26 @@ PY);
         $filters = $this->aiUsageAnalyticsService->normalizeFilters($query);
         $mode = $this->resolveAiUsageMode($query);
         $creditsModeEnabled = $this->creditModeResolver->isEnabled();
-        $usageData = $this->aiUsageAnalyticsService->buildUsageData($period, $filters, $creditsModeEnabled);
+        // Same Credits / Own Keys (+ site provider UIDs) scope as the dashboard KPIs (T3AF-DASHBO-07).
+        $usageScope = $creditsModeEnabled
+            ? RequestLogProviderScope::Credits
+            : RequestLogProviderScope::OwnKeys;
+        $usageProviderUids = $creditsModeEnabled
+            ? null
+            : $this->dashboardAnalytics->resolveOwnKeysProviderUids(
+                $this->resolveSiteStorage($request)->storagePid,
+            );
+        $usageData = $this->aiUsageAnalyticsService->buildUsageData(
+            $period,
+            $filters,
+            $creditsModeEnabled,
+            $usageScope,
+            $usageProviderUids,
+        );
         $routeContext = $this->buildAiUsageRouteContext($query, $mode, $filters);
 
         $logPage = $mode === 'log'
-            ? $this->aiUsageAnalyticsService->buildLogPage($period, $filters)
+            ? $this->aiUsageAnalyticsService->buildLogPage($period, $filters, $usageScope, $usageProviderUids)
             : null;
         $filtersForView = $filters;
         $aiUsagePagination = null;
@@ -1230,9 +1245,23 @@ PY);
         $filters = $this->aiUsageAnalyticsService->normalizeFilters($query);
         $format = strtolower(trim((string) ($query['format'] ?? 'json')));
         $creditsModeEnabled = $this->creditModeResolver->isEnabled();
+        $usageScope = $creditsModeEnabled
+            ? RequestLogProviderScope::Credits
+            : RequestLogProviderScope::OwnKeys;
+        $usageProviderUids = $creditsModeEnabled
+            ? null
+            : $this->dashboardAnalytics->resolveOwnKeysProviderUids(
+                $this->resolveSiteStorage($request)->storagePid,
+            );
 
         if ($format === 'csv') {
-            $rows = $this->aiUsageAnalyticsService->buildLogCsvRows($period, $filters, $creditsModeEnabled);
+            $rows = $this->aiUsageAnalyticsService->buildLogCsvRows(
+                $period,
+                $filters,
+                $creditsModeEnabled,
+                $usageScope,
+                $usageProviderUids,
+            );
             $lines = array_map(
                 static fn(array $row): string => implode(',', array_map(
                     static fn(string $cell): string => '"' . str_replace('"', '""', $cell) . '"',
@@ -1247,7 +1276,13 @@ PY);
                 ->withHeader('Content-Disposition', 'attachment; filename="ai-usage-' . date('Ymd-His') . '.csv"');
         }
 
-        $payload = $this->aiUsageAnalyticsService->buildExportPayload($period, $filters, $creditsModeEnabled);
+        $payload = $this->aiUsageAnalyticsService->buildExportPayload(
+            $period,
+            $filters,
+            $creditsModeEnabled,
+            $usageScope,
+            $usageProviderUids,
+        );
 
         $filename = sprintf('ai-usage-%s.json', date('Ymd-His'));
         $response = new JsonResponse($payload);

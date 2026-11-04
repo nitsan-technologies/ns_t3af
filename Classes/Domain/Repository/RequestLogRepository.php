@@ -477,16 +477,21 @@ class RequestLogRepository
      *   max?:int
      * } $filters
      */
+    /**
+     * @param list<int>|null $providerUids
+     */
     public function countFiltered(
         array $filters,
         int $fromTimestamp,
         ?int $toTimestamp = null,
         ?RequestLogProviderScope $scope = null,
+        ?array $providerUids = null,
     ): int {
         $qb = $this->queryBuilder();
         $qb->count('uid')->from(self::TABLE);
         $this->applyVisibleConstraint($qb);
         $this->applyProviderScopeConstraint($qb, $scope);
+        $this->applyProviderUidConstraint($qb, $providerUids);
         $this->applyPeriodConstraint($qb, $fromTimestamp, $toTimestamp);
         $this->applyUsageListFilters($qb, $filters);
 
@@ -507,6 +512,9 @@ class RequestLogRepository
      * } $filters
      * @return list<array<string, scalar|null>>
      */
+    /**
+     * @param list<int>|null $providerUids
+     */
     public function findFiltered(
         array $filters,
         int $fromTimestamp,
@@ -514,6 +522,7 @@ class RequestLogRepository
         ?RequestLogProviderScope $scope = null,
         int $limit = 50,
         int $offset = 0,
+        ?array $providerUids = null,
     ): array {
         $qb = $this->queryBuilder();
         $qb->select(
@@ -542,6 +551,7 @@ class RequestLogRepository
 
         $this->applyVisibleConstraint($qb);
         $this->applyProviderScopeConstraint($qb, $scope);
+        $this->applyProviderUidConstraint($qb, $providerUids);
         $this->applyPeriodConstraint($qb, $fromTimestamp, $toTimestamp);
         $this->applyUsageListFilters($qb, $filters);
         $qb->orderBy('crdate', 'DESC');
@@ -570,11 +580,15 @@ class RequestLogRepository
      * } $filters
      * @return list<array<string, scalar|null>>
      */
+    /**
+     * @param list<int>|null $providerUids
+     */
     public function findForExport(
         array $filters,
         int $fromTimestamp,
         ?int $toTimestamp = null,
         ?RequestLogProviderScope $scope = null,
+        ?array $providerUids = null,
     ): array {
         return $this->findFiltered(
             $filters,
@@ -583,6 +597,7 @@ class RequestLogRepository
             $scope,
             ExportLimits::MAX_ROWS,
             0,
+            $providerUids,
         );
     }
 

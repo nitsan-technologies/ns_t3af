@@ -658,7 +658,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
     }
 
     /**
-     * @return list<array{type: string, label: string, defaultEndpoint: string, requiresEndpoint: bool}>
+     * @return list<array{type: string, label: string, defaultEndpoint: string, requiresEndpoint: bool, requiresModel: bool}>
      */
     private function buildAdapterRows(): array
     {
@@ -670,6 +670,8 @@ final class ProviderController extends AbstractAiUniverseModuleController
                 'label' => $this->formatAdapterUiLabel($type, $adapter->getDisplayName()),
                 'defaultEndpoint' => $adapter->getDefaultEndpoint(),
                 'requiresEndpoint' => Provider::adapterRequiresEndpoint($type),
+                // Translate-only adapters advertise no default capabilities and may omit model_id.
+                'requiresModel' => $adapter->getDefaultCapabilities() !== [],
             ];
         }
 

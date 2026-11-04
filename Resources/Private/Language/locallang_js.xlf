@@ -126,6 +126,9 @@
       <trans-unit id="provider.js.error.saveFailed" resname="provider.js.error.saveFailed">
         <source>Save failed</source>
       </trans-unit>
+      <trans-unit id="provider.js.error.modelRequired" resname="provider.js.error.modelRequired">
+        <source>Select or enter a chat / completion model.</source>
+      </trans-unit>
       <trans-unit id="provider.js.error.connectionFailed" resname="provider.js.error.connectionFailed">
         <source>Connection failed</source>
       </trans-unit>

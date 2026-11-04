@@ -35,7 +35,10 @@
                         </span>
                     </f:case>
                     <f:case value="attention">
-                        <span class="badge badge-warning flex-shrink-0">
+                        <span class="badge badge-warning flex-shrink-0"
+                              title="{card.statusReason}"
+                              data-bs-toggle="tooltip"
+                              data-bs-title="{card.statusReason}">
                             <f:translate key="{ll}:dashboard.provider.status.attention" default="Needs attention" />
                         </span>
                     </f:case>
@@ -75,6 +78,9 @@
                 </div>
             </div>
         </div>
+        <f:if condition="{card.statusReason} != ''">
+            <p class="small text-warning mb-0" role="status">{card.statusReason}</p>
+        </f:if>
         <p class="small text-variant mb-0 mt-auto text-end">
             <f:translate key="{ll}:dashboard.provider.lastUsed" arguments="{0: card.lastUsedLabel}" default="last used: %s" />
         </p>

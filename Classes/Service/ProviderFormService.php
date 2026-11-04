@@ -197,14 +197,27 @@ final class ProviderFormService
             $errors['api_key'] = $apiKeyError;
         }
 
+        $modelId = $this->stringValue($input, 'model_id');
+        $embeddingModelId = $this->stringValue($input, 'embedding_model_id');
+        // Translate-only adapters (DeepL / Google) may omit models; LLM/media need chat
+        // and/or embedding model (embedding-only rows are valid).
+        if ($adapterType !== ''
+            && $this->adapters->has($adapterType)
+            && !$this->adapterAllowsEmptyCapabilities($adapterType)
+            && $modelId === ''
+            && $embeddingModelId === ''
+        ) {
+            $errors['model_id'] = 'Chat / completion model is required.';
+        }
+
         $stored = $uid > 0 ? $this->repository->findByUid($uid) : null;
         $adapterChanging = $stored instanceof Provider && trim($stored->adapterType) !== $adapterType;
-        if ($adapterType !== '' && !$adapterChanging && $this->adapters->has($adapterType)) {
-            $chatModelError = $this->installedModels->rejection($adapterType, $this->stringValue($input, 'model_id'));
+        if ($adapterType !== '' && !$adapterChanging && $this->adapters->has($adapterType) && !isset($errors['model_id'])) {
+            $chatModelError = $this->installedModels->rejection($adapterType, $modelId);
             if ($chatModelError !== null) {
                 $errors['model_id'] = $chatModelError;
             }
-            $embeddingModelError = $this->installedModels->rejection($adapterType, $this->stringValue($input, 'embedding_model_id'));
+            $embeddingModelError = $this->installedModels->rejection($adapterType, $embeddingModelId);
             if ($embeddingModelError !== null) {
                 $errors['embedding_model_id'] = $embeddingModelError;
             }

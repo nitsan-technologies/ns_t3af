@@ -43,4 +43,46 @@ final class DashboardProviderCardBuilderTest extends TestCase
 
         self::assertSame('€0.0044', $cards[0]['periodCostFormatted']);
     }
+
+    public function testAttentionStatusExposesReasonForHighErrorRate(): void
+    {
+        $cards = (new DashboardProviderCardBuilder())->build(
+            [
+                Provider::fromRow([
+                    'identifier' => 'deepl',
+                    'title' => 'DeepL',
+                    'is_enabled' => 1,
+                    'api_key' => 'enc',
+                    'model_id' => '',
+                ]),
+            ],
+            [
+                ['provider' => 'deepl', 'requests' => 100, 'failed' => 5, 'cost' => 0.0, 'tokens' => 0, 'lastCrdate' => 0],
+            ],
+        );
+
+        self::assertSame('attention', $cards[0]['statusKey']);
+        self::assertStringContainsString('Error rate 5.0%', $cards[0]['statusReason']);
+    }
+
+    public function testAttentionStatusExposesReasonForMissingApiKey(): void
+    {
+        $cards = (new DashboardProviderCardBuilder())->build(
+            [
+                Provider::fromRow([
+                    'identifier' => 'stability',
+                    'title' => 'Stability',
+                    'is_enabled' => 1,
+                    'api_key' => '',
+                    'model_id' => 'core',
+                ]),
+            ],
+            [
+                ['provider' => 'stability', 'requests' => 0, 'failed' => 0, 'cost' => 0.0, 'tokens' => 0, 'lastCrdate' => 0],
+            ],
+        );
+
+        self::assertSame('attention', $cards[0]['statusKey']);
+        self::assertSame('API key missing', $cards[0]['statusReason']);
+    }
 }
