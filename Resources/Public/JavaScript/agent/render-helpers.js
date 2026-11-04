@@ -75,13 +75,35 @@ function formatSchemaSuggestionText(value) {
   }
   try {
     const parsed = JSON.parse(raw);
-    const nodes = Array.isArray(parsed) ? parsed : [parsed];
-    const types = nodes
-      .map((node) => (node && typeof node === 'object' ? String(node['@type'] ?? '').trim() : ''))
-      .filter((type) => type !== '');
+    const nodes = [];
+    const collect = (node) => {
+      if (Array.isArray(node)) {
+        node.forEach(collect);
+        return;
+      }
+      if (!node || typeof node !== 'object') {
+        return;
+      }
+      nodes.push(node);
+      if (Array.isArray(node['@graph'])) {
+        node['@graph'].forEach(collect);
+      }
+    };
+    collect(parsed);
+    const types = [...new Set(
+      nodes
+        .flatMap((node) => {
+          const type = node['@type'];
+          if (Array.isArray(type)) {
+            return type.map((entry) => String(entry ?? '').trim());
+          }
+          return [String(type ?? '').trim()];
+        })
+        .filter((type) => type !== ''),
+    )];
     const pretty = JSON.stringify(parsed, null, 2);
     if (types.length > 0) {
-      return `${types.join(', ')}\n${pretty}`;
+      return `@type: ${types.join(', ')}\n${pretty}`;
     }
     return pretty;
   } catch {

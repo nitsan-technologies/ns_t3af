@@ -314,6 +314,10 @@ export const draftMethods = {
           ? String(meta.edits[key] ?? '')
           : null;
         const toolName = String(meta.tool ?? suggestions.tool ?? '');
+        const schemaField = key === 'schemaContent' || toolName === 't3ai_apply_schema_markup';
+        const textClass = schemaField
+          ? 'nst3af-agent-suggestions__option-text nst3af-agent-suggestions__option-text--schema'
+          : 'nst3af-agent-suggestions__option-text';
         const current = formatSuggestionFieldText(toolName, key, String(field.current ?? ''));
         const variantOptions = variants.map((variant, index) => {
           const values = variant?.values && typeof variant.values === 'object' ? variant.values : {};
@@ -323,7 +327,7 @@ export const draftMethods = {
           return `<label class="nst3af-agent-suggestions__option">
             <input type="radio" name="nst3af-sug-${messageIndex}-${escapeHtml(key)}" value="${index}" data-nst3af-agent-suggestions-select="1" data-message-index="${messageIndex}" data-field-key="${escapeHtml(key)}" data-variant-index="${index}"${checked}>
             <span class="nst3af-agent-suggestions__option-label">${escapeHtml(variantLabel)}</span>
-            <span class="nst3af-agent-suggestions__option-text">${escapeHtml(text)}</span>
+            <span class="${textClass}">${escapeHtml(text)}</span>
           </label>`;
         }).join('');
 
@@ -337,7 +341,7 @@ export const draftMethods = {
         return `<div class="nst3af-agent-suggestions__field" data-field-key="${escapeHtml(key)}">
           <div class="nst3af-agent-suggestions__field-head">
             <strong>${escapeHtml(label)}</strong>
-            <span class="nst3af-agent-suggestions__current">${escapeHtml(lang('agent.suggestions.current', 'Current'))}: ${escapeHtml(current || '—')}</span>
+            <span class="nst3af-agent-suggestions__current${schemaField ? ' nst3af-agent-suggestions__option-text--schema' : ''}">${escapeHtml(lang('agent.suggestions.current', 'Current'))}: ${escapeHtml(current || '—')}</span>
           </div>
           <div class="nst3af-agent-suggestions__options">${variantOptions}${editBox}</div>
         </div>`;

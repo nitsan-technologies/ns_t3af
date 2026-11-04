@@ -1961,6 +1961,7 @@
 }
 
 .nst3af-agent-suggestions__current {
+  white-space: pre-wrap;
   color: var(--nst3af-agent-text-muted);
 }
 
@@ -1992,6 +1993,15 @@
 .nst3af-agent-suggestions__option-text {
   color: var(--nst3af-agent-text-strong);
   word-break: break-word;
+  /* Schema / page-structure formatters emit newlines — keep them visible. */
+  white-space: pre-wrap;
+}
+
+.nst3af-agent-suggestions__option-text--schema {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  max-height: 16rem;
+  overflow: auto;
 }
 
 .nst3af-agent-suggestions__option textarea {
