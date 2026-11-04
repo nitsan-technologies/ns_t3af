@@ -703,6 +703,10 @@
                 <source>No default AI provider is configured for this site. Open AI Foundation → Providers on the current site and mark one provider as default.</source>
                 <target>Für diese Website ist kein Standard-KI-Anbieter gesetzt. Öffnen Sie KI Foundation → Anbieter auf der aktuellen Website und markieren Sie einen Anbieter als Standard.</target>
             </trans-unit>
+            <trans-unit id="agent.turn.providerModelUnavailable">
+                <source>The Gemini (or other) model set for this provider is no longer available. Open AI Foundation → Providers, choose a current chat model, and run Test connection.</source>
+                <target>Das für diesen Anbieter eingestellte Modell (z. B. Gemini) ist nicht mehr verfügbar. Öffnen Sie KI Foundation → Anbieter, wählen Sie ein aktuelles Chat-Modell und führen Sie „Verbindung testen“ aus.</target>
+            </trans-unit>
             <trans-unit id="agent.turn.providerRateLimited">
                 <source>The AI provider rate limit was reached: %1$s Please wait a moment and try again.</source>
                 <target>Das Anfragenlimit des KI-Anbieters wurde erreicht: %1$s Bitte warten Sie einen Moment und versuchen Sie es erneut.</target>

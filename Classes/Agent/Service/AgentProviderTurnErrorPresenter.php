@@ -278,6 +278,12 @@ final class AgentProviderTurnErrorPresenter
         if ($detail === 'No default AI provider is configured.') {
             return $translator->translate('agent.turn.providerNoDefaultForSite');
         }
+        if (preg_match(
+            '/no longer available|is not (?:found|available)|model .+ (?:retired|deprecated)|update your code to use models?\//i',
+            $detail,
+        ) === 1) {
+            return $translator->translate('agent.turn.providerModelUnavailable');
+        }
 
         return null;
     }

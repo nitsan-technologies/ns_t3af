@@ -43,6 +43,7 @@ final class AgentProviderTurnErrorPresenterTest extends TestCase
             return match (true) {
                 str_contains($label, 'agent.turn.orchestratorFailed') => 'The agent could not complete this turn: %1$s',
                 str_contains($label, 'agent.turn.providerUnavailable') => 'The AI provider is not available right now.',
+                str_contains($label, 'agent.turn.providerModelUnavailable') => 'The model set for this provider is no longer available. Open AI Foundation → Providers.',
                 str_contains($label, 'agent.turn.providerRateLimited') => 'Rate limited: %1$s',
                 default => $label,
             };
@@ -144,6 +145,18 @@ final class AgentProviderTurnErrorPresenterTest extends TestCase
             'Insufficient credits on Anthropic account',
             AgentProviderTurnErrorPresenter::readableMessageFromThrowable($outer),
         );
+    }
+
+    #[Test]
+    public function retiredVendorModelGetsFriendlyProvidersPath(): void
+    {
+        $message = 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash.';
+        $shown = $this->presenter->present(new AdapterRuntimeException($message), $this->translator, true);
+
+        self::assertStringContainsString('no longer available', $shown);
+        self::assertStringContainsString('AI Foundation → Providers', $shown);
+        self::assertStringNotContainsString('gemini-3.8-flash', $shown);
+        self::assertStringNotContainsString('update your code', $shown);
     }
 
     #[Test]

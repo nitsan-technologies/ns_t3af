@@ -194,13 +194,14 @@ final class ModelDiscoveryServiceTest extends TestCase
             new ModelInfo('claude-sonnet-4-5-20250929', 'current', [Capability::CHAT], 'catalog'),
             new ModelInfo('gemini-2.5-flash-lite-preview-09-2025', 'preview', [Capability::CHAT], 'catalog'),
             new ModelInfo('gemini-2.5-pro', 'pro', [Capability::CHAT], 'catalog'),
+            new ModelInfo('gemini-3.1-pro', 'pro', [Capability::CHAT], 'catalog'),
         ]);
 
         $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache, new ModelCatalogFilter());
         $models = $service->discover($this->provider('symfony.anthropic'));
 
         $ids = array_map(static fn(ModelInfo $m): string => $m->id, $models);
-        self::assertSame(['claude-sonnet-4-5-20250929', 'gemini-2.5-pro'], $ids);
+        self::assertSame(['claude-sonnet-4-5-20250929', 'gemini-3.1-pro'], $ids);
     }
 
     private function provider(string $adapterType): Provider
