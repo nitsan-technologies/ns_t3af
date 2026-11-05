@@ -1626,12 +1626,16 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $found = [...self::toolsByName(['t3aa_alt_text_approve'], $executableTools, $offeredNames), ...$found];
         }
         if (self::isMissingAltTextRequest($query) && !self::isApproveAllAltTextRequest($query)) {
+            // Always force-offer — never leave the model to invent an ACL refuse.
             $found = [...self::toolsByName(['t3aa_list_files_missing_alt_text'], $executableTools, $offeredNames), ...$found];
             if (AgentToolTurnProcessor::asksToWriteMissingAltText($query)) {
                 $found = [...self::toolsByName(['t3aa_update_file_metadata'], $executableTools, $offeredNames), ...$found];
             }
         } elseif (self::isAltTextMetadataRequest($query) && !self::isApproveAllAltTextRequest($query)) {
             $found = [...self::toolsByName(['t3aa_update_file_metadata', 't3aa_list_files_missing_alt_text'], $executableTools, $offeredNames), ...$found];
+        }
+        if (self::isAiLabelStatusRequest($query)) {
+            $found = [...self::toolsByName(['t3ai_ailabel_status'], $executableTools, $offeredNames), ...$found];
         }
         if (self::isDecorativeImageRequest($query)) {
             $found = [...self::toolsByName(['t3aa_mark_image_decorative'], $executableTools, $offeredNames), ...$found];
@@ -2104,11 +2108,29 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
      */
     public static function isMissingAltTextRequest(string $query): bool
     {
+        // "images that have no alternative text" / "files without alt"
+        if (preg_match(
+            '/\b(?:images?|files?|bilder?|dateien)\b.*\b(?:no|without|missing|ohne|fehlend\w*|keine[nr]?)\b.*\b(?:alt|alternativ)/iu',
+            $query,
+        ) === 1) {
+            return true;
+        }
         if (preg_match('/\b(alt[\s-]*texts?|alternativtext\w*)\b/iu', $query) !== 1) {
             return false;
         }
 
         return preg_match('/\b(missing|without|no|ohne|fehlend\w*|keine[nr]?)\b/iu', $query) === 1;
+    }
+
+    /**
+     * AI Label status / how many labels reviewed (not a free-text invent of table ACL).
+     */
+    public static function isAiLabelStatusRequest(string $query): bool
+    {
+        return preg_match(
+            '/\b(?:ai[\s-]?labels?|ailabel|labelling|label(?:ling)?\s+status|labels?\s+reviewed|reviewed\s+labels?)\b/iu',
+            $query,
+        ) === 1;
     }
 
     /**
