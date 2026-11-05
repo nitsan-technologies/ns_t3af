@@ -78,9 +78,13 @@ final class SchedulerCliTaskService implements SchedulerCliTaskListInterface
             $getArguments = [$task, 'getArguments'];
             $getOptions = [$task, 'getOptions'];
             $getOptionValues = [$task, 'getOptionValues'];
+            $description = trim((string) ($row['description'] ?? ''));
+            if ($description === '') {
+                $description = (string) ($meta['name'] ?? $command);
+            }
             $record = [
                 'uid' => (int) $row['uid'],
-                'description' => (string) ($row['description'] ?? ''),
+                'description' => $description,
                 'command' => $command,
                 'commandName' => (string) ($meta['name'] ?? $command),
                 'category' => (string) ($meta['category'] ?? 'Custom'),
@@ -93,7 +97,7 @@ final class SchedulerCliTaskService implements SchedulerCliTaskListInterface
                 'hasFailure' => trim((string) ($row['lastexecution_failure'] ?? '')) !== '' ? 1 : 0,
                 'cronExpression' => $cronExpression,
                 'interval' => $interval,
-                'scheduleType' => $cronExpression !== '' ? 'cron' : 'interval',
+                'scheduleType' => $cronExpression !== '' ? 'cron' : ($interval > 0 ? 'interval' : 'once'),
             ];
 
             if ($status === 'enabled' && (int) $record['disabled'] === 1) {
@@ -157,11 +161,31 @@ final class SchedulerCliTaskService implements SchedulerCliTaskListInterface
         } catch (\Throwable) {
             return null;
         }
-        if (!$this->isSchedulableCommandTask($task)) {
+        if (!is_object($task)) {
             return null;
         }
+        if ($this->isSchedulableCommandTask($task)) {
+            return $task;
+        }
+        // Native TCA tasks (v14+) wrapping t3af:*/t3ai:crawlers:* commands.
+        if ($this->resolveNativeTaskCommand($task) !== '') {
+            return $task;
+        }
 
-        return $task;
+        return null;
+    }
+
+    private function resolveNativeTaskCommand(object $task): string
+    {
+        $class = $task::class;
+        if (defined($class . '::COMMAND_IDENTIFIER')) {
+            $command = trim((string) constant($class . '::COMMAND_IDENTIFIER'));
+            if ($command !== '' && $this->catalog->isSchedulerCliCommand($command)) {
+                return $command;
+            }
+        }
+
+        return '';
     }
 
     private function resolveSchedulerTaskRepository(): ?object
@@ -184,8 +208,15 @@ final class SchedulerCliTaskService implements SchedulerCliTaskListInterface
 
     private function resolveTaskCommand(object $task): string
     {
+        $native = $this->resolveNativeTaskCommand($task);
+        if ($native !== '') {
+            return $native;
+        }
         if (method_exists($task, 'getTaskType')) {
-            return trim((string) $task->getTaskType());
+            $taskType = trim((string) $task->getTaskType());
+            if ($this->catalog->isSchedulerCliCommand($taskType)) {
+                return $taskType;
+            }
         }
         if (method_exists($task, 'getCommandIdentifier')) {
             return trim((string) $task->getCommandIdentifier());

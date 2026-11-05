@@ -85,7 +85,12 @@
                 <td class="aiu-table__mono">
                     <f:if condition="{task.scheduleType} == 'cron'">
                         <f:then>{task.cronExpression}</f:then>
-                        <f:else>Every {task.interval} sec</f:else>
+                        <f:else>
+                            <f:if condition="{task.scheduleType} == 'once'">
+                                <f:then><f:translate key="{ll}:module.schedulerCli.schedule.once" default="Once" /></f:then>
+                                <f:else>Every {task.interval} sec</f:else>
+                            </f:if>
+                        </f:else>
                     </f:if>
                 </td>
                 <td><f:if condition="{task.nextexecution} > 0"><f:format.date format="Y-m-d H:i">@{task.nextexecution}</f:format.date></f:if></td>

@@ -335,10 +335,18 @@ final class McpServerController
             return new JsonResponse(['success' => false], 400);
         }
 
-        $this->settingsService->save($body);
+        $result = $this->settingsService->save($body);
+        if ($result['ok'] !== true) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => $result['message'],
+                'settings' => $result['settings'],
+            ]);
+        }
+
         $this->activityLogService->logMcpSettingsSaved('advanced settings');
 
-        return new JsonResponse(['success' => true, 'settings' => $this->settingsService->all()]);
+        return new JsonResponse(['success' => true, 'settings' => $result['settings']]);
     }
 
     public function securityScopesSaveAction(ServerRequestInterface $request): ResponseInterface

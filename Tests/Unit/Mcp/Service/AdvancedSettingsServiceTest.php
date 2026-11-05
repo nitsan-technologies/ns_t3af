@@ -71,4 +71,64 @@ final class AdvancedSettingsServiceTest extends TestCase
 
         self::assertSame(33554432, $service->all()['mcpMaxBodyBytes']);
     }
+
+    public function testSaveRejectsZeroAccessTokenLifetime(): void
+    {
+        $extensionSettings = $this->createMock(ExtensionSettingsService::class);
+        $extensionSettings->expects(self::never())->method('mergeGlobal');
+        $extensionSettings->method('getAllIgnorePid')->with('ns_t3af')->willReturn([]);
+
+        $service = new AdvancedSettingsService($extensionSettings);
+        $result = $service->save(['accessTokenLifetime' => '0']);
+
+        self::assertFalse($result['ok']);
+        self::assertNotSame('', $result['message']);
+    }
+
+    public function testSaveRejectsUnknownOauthScope(): void
+    {
+        $extensionSettings = $this->createMock(ExtensionSettingsService::class);
+        $extensionSettings->expects(self::never())->method('mergeGlobal');
+        $extensionSettings->method('getAllIgnorePid')->with('ns_t3af')->willReturn([]);
+
+        $service = new AdvancedSettingsService($extensionSettings);
+        $result = $service->save(['oauthDefaultScopes' => 'bogus:scope']);
+
+        self::assertFalse($result['ok']);
+        self::assertStringContainsString('Unknown OAuth scope', $result['message']);
+    }
+
+    public function testSaveRejectsInvalidRedirectUri(): void
+    {
+        $extensionSettings = $this->createMock(ExtensionSettingsService::class);
+        $extensionSettings->expects(self::never())->method('mergeGlobal');
+        $extensionSettings->method('getAllIgnorePid')->with('ns_t3af')->willReturn([]);
+
+        $service = new AdvancedSettingsService($extensionSettings);
+        $result = $service->save(['oauthDefaultRedirectUris' => 'not a url <script>x</script>']);
+
+        self::assertFalse($result['ok']);
+        self::assertStringContainsString('Invalid OAuth redirect URI', $result['message']);
+    }
+
+    public function testSavePersistsValidAdvancedValues(): void
+    {
+        $extensionSettings = $this->createMock(ExtensionSettingsService::class);
+        $extensionSettings->expects(self::once())->method('mergeGlobal')->with(
+            'ns_t3af',
+            self::callback(static function (array $normalized): bool {
+                return ($normalized['accessTokenLifetime'] ?? null) === '3600'
+                    && ($normalized['oauthDefaultScopes'] ?? null) === 'mcp:read mcp:write';
+            }),
+        );
+        $extensionSettings->method('getAllIgnorePid')->with('ns_t3af')->willReturn([]);
+
+        $service = new AdvancedSettingsService($extensionSettings);
+        $result = $service->save([
+            'accessTokenLifetime' => '3600',
+            'oauthDefaultScopes' => 'mcp:read  mcp:write',
+        ]);
+
+        self::assertTrue($result['ok']);
+    }
 }

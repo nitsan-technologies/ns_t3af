@@ -29,6 +29,8 @@ final class SchedulerCliCommandCatalogService
 {
     private const COMMAND_PREFIX = 't3af:';
 
+    private const CRAWLERS_COMMAND_PREFIX = 't3ai:crawlers:';
+
     /**
      * Legacy scheduler/console aliases registered alongside canonical t3af:* names.
      *
@@ -84,38 +86,40 @@ final class SchedulerCliCommandCatalogService
     public function all(): array
     {
         $entries = [];
-        foreach ($this->commandRegistry->filter('t3af') as $commandName => $configuration) {
-            if (!str_starts_with($commandName, self::COMMAND_PREFIX)) {
-                continue;
-            }
-            if (isset(self::DEPRECATED_COMMAND_ALIASES[$commandName])) {
-                continue;
-            }
+        foreach (['t3af', 't3ai'] as $filterPrefix) {
+            foreach ($this->commandRegistry->filter($filterPrefix) as $commandName => $configuration) {
+                if (!$this->isCatalogCommand($commandName)) {
+                    continue;
+                }
+                if (isset(self::DEPRECATED_COMMAND_ALIASES[$commandName])) {
+                    continue;
+                }
 
-            try {
-                $command = $this->commandRegistry->getCommandByIdentifier($commandName);
-            } catch (\Throwable) {
-                continue;
-            }
+                try {
+                    $command = $this->commandRegistry->getCommandByIdentifier($commandName);
+                } catch (\Throwable) {
+                    continue;
+                }
 
-            $serviceName = (string) ($configuration['serviceName'] ?? '');
-            $feature = $this->resolveFeature($commandName);
-            $description = trim((string) ($configuration['description'] ?? $command->getDescription()));
-            if ($description === '') {
-                $description = $commandName;
-            }
+                $serviceName = (string) ($configuration['serviceName'] ?? '');
+                $feature = $this->resolveFeature($commandName);
+                $description = trim((string) ($configuration['description'] ?? $command->getDescription()));
+                if ($description === '') {
+                    $description = $commandName;
+                }
 
-            $entries[] = [
-                'id' => str_replace(':', '-', $commandName),
-                'name' => $this->humanizeCommandName($commandName, $description),
-                'command' => $commandName,
-                'extension' => $this->resolveExtensionKey($serviceName),
-                'category' => $feature,
-                'description' => $description,
-                'schedulable' => ($configuration['schedulable'] ?? true) ? 1 : 0,
-                'arguments' => $this->extractArguments($command),
-                'options' => $this->extractOptions($command),
-            ];
+                $entries[] = [
+                    'id' => str_replace(':', '-', $commandName),
+                    'name' => $this->humanizeCommandName($commandName, $description),
+                    'command' => $commandName,
+                    'extension' => $this->resolveExtensionKey($serviceName),
+                    'category' => $feature,
+                    'description' => $description,
+                    'schedulable' => ($configuration['schedulable'] ?? true) ? 1 : 0,
+                    'arguments' => $this->extractArguments($command),
+                    'options' => $this->extractOptions($command),
+                ];
+            }
         }
 
         usort(
@@ -137,6 +141,10 @@ final class SchedulerCliCommandCatalogService
             return true;
         }
 
+        if (str_starts_with($needle, self::CRAWLERS_COMMAND_PREFIX)) {
+            return true;
+        }
+
         foreach (self::LEGACY_COMMAND_PREFIXES as $prefix) {
             if (str_starts_with($needle, $prefix)) {
                 return true;
@@ -144,6 +152,12 @@ final class SchedulerCliCommandCatalogService
         }
 
         return false;
+    }
+
+    private function isCatalogCommand(string $commandName): bool
+    {
+        return str_starts_with($commandName, self::COMMAND_PREFIX)
+            || str_starts_with($commandName, self::CRAWLERS_COMMAND_PREFIX);
     }
 
     /**

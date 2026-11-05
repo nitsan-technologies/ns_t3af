@@ -42,13 +42,19 @@ final class SchedulerCliCommandCatalogServiceTest extends TestCase
         };
 
         $registry = $this->createMock(CommandRegistry::class);
-        $registry->method('filter')->with('t3af')->willReturn([
-            't3af:mcp:cleanup' => [
-                'serviceName' => 'NITSAN\\NsT3AF\\Mcp\\Command\\CleanupCommand',
-                'description' => 'Cleanup MCP sessions',
-                'schedulable' => true,
-            ],
-        ]);
+        $registry->method('filter')->willReturnCallback(static function (string $prefix): array {
+            if ($prefix !== 't3af') {
+                return [];
+            }
+
+            return [
+                't3af:mcp:cleanup' => [
+                    'serviceName' => 'NITSAN\\NsT3AF\\Mcp\\Command\\CleanupCommand',
+                    'description' => 'Cleanup MCP sessions',
+                    'schedulable' => true,
+                ],
+            ];
+        });
         $registry->method('getCommandByIdentifier')->with('t3af:mcp:cleanup')->willReturn($command);
 
         $service = new SchedulerCliCommandCatalogService($registry, ProviderTestStubs::emptyMcpToolsCardRegistry());
@@ -76,13 +82,19 @@ final class SchedulerCliCommandCatalogServiceTest extends TestCase
         };
 
         $registry = $this->createMock(CommandRegistry::class);
-        $registry->method('filter')->willReturn([
-            't3af:ai-logs:cleanup' => [
-                'serviceName' => 'NITSAN\\NsT3AF\\Command\\CleanAiLogsCommand',
-                'description' => 'Delete AI log entries older than retention period',
-                'schedulable' => true,
-            ],
-        ]);
+        $registry->method('filter')->willReturnCallback(static function (string $prefix): array {
+            if ($prefix !== 't3af') {
+                return [];
+            }
+
+            return [
+                't3af:ai-logs:cleanup' => [
+                    'serviceName' => 'NITSAN\\NsT3AF\\Command\\CleanAiLogsCommand',
+                    'description' => 'Delete AI log entries older than retention period',
+                    'schedulable' => true,
+                ],
+            ];
+        });
         $registry->method('getCommandByIdentifier')->willReturn($command);
 
         $service = new SchedulerCliCommandCatalogService($registry, ProviderTestStubs::emptyMcpToolsCardRegistry());
@@ -107,18 +119,24 @@ final class SchedulerCliCommandCatalogServiceTest extends TestCase
         };
 
         $registry = $this->createMock(CommandRegistry::class);
-        $registry->method('filter')->willReturn([
-            't3af:ai-logs:cleanup' => [
-                'serviceName' => 'NITSAN\\NsT3AF\\Command\\CleanAiLogsCommand',
-                'description' => 'Delete AI log entries older than retention period',
-                'schedulable' => true,
-            ],
-            't3af:log:clear' => [
-                'serviceName' => 'NITSAN\\NsT3AF\\Command\\CleanAiLogsCommand',
-                'description' => 'Delete AI log entries older than retention period',
-                'schedulable' => true,
-            ],
-        ]);
+        $registry->method('filter')->willReturnCallback(static function (string $prefix): array {
+            if ($prefix !== 't3af') {
+                return [];
+            }
+
+            return [
+                't3af:ai-logs:cleanup' => [
+                    'serviceName' => 'NITSAN\\NsT3AF\\Command\\CleanAiLogsCommand',
+                    'description' => 'Delete AI log entries older than retention period',
+                    'schedulable' => true,
+                ],
+                't3af:log:clear' => [
+                    'serviceName' => 'NITSAN\\NsT3AF\\Command\\CleanAiLogsCommand',
+                    'description' => 'Delete AI log entries older than retention period',
+                    'schedulable' => true,
+                ],
+            ];
+        });
         $registry->method('getCommandByIdentifier')->with('t3af:ai-logs:cleanup')->willReturn($command);
 
         $service = new SchedulerCliCommandCatalogService($registry, ProviderTestStubs::emptyMcpToolsCardRegistry());
@@ -144,13 +162,19 @@ final class SchedulerCliCommandCatalogServiceTest extends TestCase
         };
 
         $registry = $this->createMock(CommandRegistry::class);
-        $registry->method('filter')->willReturn([
-            't3af:bulk:retranslate' => [
-                'serviceName' => 'NITSAN\\NsT3Ai\\Command\\BulkRetranslateCommand',
-                'description' => 'Bulk retranslate',
-                'schedulable' => true,
-            ],
-        ]);
+        $registry->method('filter')->willReturnCallback(static function (string $prefix): array {
+            if ($prefix !== 't3af') {
+                return [];
+            }
+
+            return [
+                't3af:bulk:retranslate' => [
+                    'serviceName' => 'NITSAN\\NsT3Ai\\Command\\BulkRetranslateCommand',
+                    'description' => 'Bulk retranslate',
+                    'schedulable' => true,
+                ],
+            ];
+        });
         $registry->method('getCommandByIdentifier')->willReturn($command);
 
         $service = new SchedulerCliCommandCatalogService($registry, ProviderTestStubs::emptyMcpToolsCardRegistry());
@@ -167,6 +191,7 @@ final class SchedulerCliCommandCatalogServiceTest extends TestCase
 
         self::assertTrue($service->isSchedulerCliCommand('t3af:mcp:cleanup'));
         self::assertTrue($service->isSchedulerCliCommand('nst3ai:bulk:retranslate'));
+        self::assertTrue($service->isSchedulerCliCommand('t3ai:crawlers:build'));
         self::assertFalse($service->isSchedulerCliCommand('cache:flush'));
     }
 
@@ -195,35 +220,69 @@ final class SchedulerCliCommandCatalogServiceTest extends TestCase
             }
         };
 
+        $commandC = new class ('t3ai:crawlers:build') extends Command {
+            protected function configure(): void
+            {
+                $this->setDescription('Rebuild llms.txt cache');
+            }
+
+            protected function execute(\Symfony\Component\Console\Input\InputInterface $input, \Symfony\Component\Console\Output\OutputInterface $output): int
+            {
+                return self::SUCCESS;
+            }
+        };
+
         $registry = $this->createMock(CommandRegistry::class);
-        $registry->method('filter')->willReturn([
-            't3af:mcp:cleanup' => [
-                'serviceName' => 'NITSAN\\NsT3AF\\Mcp\\Command\\CleanupCommand',
-                'description' => 'Cleanup MCP sessions',
-                'schedulable' => true,
-            ],
-            't3af:ai-logs:cleanup' => [
-                'serviceName' => 'NITSAN\\NsT3AF\\Command\\CleanAiLogsCommand',
-                'description' => 'Delete AI log entries older than retention period',
-                'schedulable' => true,
-            ],
-            't3af:log:clear' => [
-                'serviceName' => 'NITSAN\\NsT3AF\\Command\\CleanAiLogsCommand',
-                'description' => 'Delete AI log entries older than retention period',
-                'schedulable' => true,
-            ],
-        ]);
+        $registry->method('filter')->willReturnCallback(static function (string $prefix): array {
+            if ($prefix === 't3af') {
+                return [
+                    't3af:mcp:cleanup' => [
+                        'serviceName' => 'NITSAN\\NsT3AF\\Mcp\\Command\\CleanupCommand',
+                        'description' => 'Cleanup MCP sessions',
+                        'schedulable' => true,
+                    ],
+                    't3af:ai-logs:cleanup' => [
+                        'serviceName' => 'NITSAN\\NsT3AF\\Command\\CleanAiLogsCommand',
+                        'description' => 'Delete AI log entries older than retention period',
+                        'schedulable' => true,
+                    ],
+                    't3af:log:clear' => [
+                        'serviceName' => 'NITSAN\\NsT3AF\\Command\\CleanAiLogsCommand',
+                        'description' => 'Delete AI log entries older than retention period',
+                        'schedulable' => true,
+                    ],
+                ];
+            }
+            if ($prefix === 't3ai') {
+                return [
+                    't3ai:crawlers:build' => [
+                        'serviceName' => 'NITSAN\\NsT3Ai\\Crawlers\\Command\\CrawlersBuildCommand',
+                        'description' => 'Rebuild llms.txt cache',
+                        'schedulable' => false,
+                    ],
+                ];
+            }
+
+            return [];
+        });
         $registry->method('getCommandByIdentifier')->willReturnMap([
             ['t3af:mcp:cleanup', $commandA],
             ['t3af:ai-logs:cleanup', $commandB],
+            ['t3ai:crawlers:build', $commandC],
         ]);
 
         $service = new SchedulerCliCommandCatalogService($registry, ProviderTestStubs::emptyMcpToolsCardRegistry());
         $groups = $service->extensionGroups();
 
-        self::assertCount(1, $groups);
-        self::assertSame('ns_t3af', $groups[0]['id']);
-        self::assertSame(2, $groups[0]['commandCount']);
-        self::assertArrayHasKey('cliSnippet', $groups[0]['commands'][0]);
+        self::assertCount(2, $groups);
+        $byId = [];
+        foreach ($groups as $group) {
+            $byId[(string) $group['id']] = $group;
+        }
+        self::assertArrayHasKey('ns_t3af', $byId);
+        self::assertArrayHasKey('ns_t3ai', $byId);
+        self::assertSame(2, $byId['ns_t3af']['commandCount']);
+        self::assertSame(1, $byId['ns_t3ai']['commandCount']);
+        self::assertArrayHasKey('cliSnippet', $byId['ns_t3af']['commands'][0]);
     }
 }

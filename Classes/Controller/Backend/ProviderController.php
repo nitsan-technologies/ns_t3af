@@ -486,6 +486,13 @@ final class ProviderController extends AbstractAiUniverseModuleController
             return new JsonResponse(['ok' => false, 'message' => 'Provider not found.'], 404);
         }
 
+        if ($this->formService->isTranslateOnlyAdapter($provider->adapterType)) {
+            return new JsonResponse([
+                'ok' => false,
+                'message' => 'Translation-only providers (e.g. DeepL / Google Translate) cannot be the site default. Choose a chat-capable provider instead.',
+            ], 400);
+        }
+
         $this->providerRepository->setDefault($uid, $resolution->storagePid);
         $this->activityLogService->logProviderSetDefault($provider->identifier, $provider->title);
 

@@ -250,6 +250,12 @@ final class ProviderFormService
         }
         $wantDefault = ((int) ($payload['is_default'] ?? 0)) === 1;
         if ($wantDefault) {
+            $adapterForDefault = trim((string) ($payload['adapter_type'] ?? $adapterType));
+            if ($this->isTranslateOnlyAdapter($adapterForDefault)) {
+                return ProviderFormResult::errors([
+                    'is_default' => 'Translation-only providers (e.g. DeepL / Google Translate) cannot be the site default. Choose a chat-capable provider instead.',
+                ]);
+            }
             // Avoid save(is_default=1) + setDefault() double-write lock races / deadlocks.
             unset($payload['is_default']);
         }
@@ -287,6 +293,14 @@ final class ProviderFormService
      * in ns_t3ai) are translate-only and must not be forced to pick chat/completion flags.
      */
     private function adapterAllowsEmptyCapabilities(string $adapterType): bool
+    {
+        return $this->isTranslateOnlyAdapter($adapterType);
+    }
+
+    /**
+     * Translate-only adapters must not be the site default (Agent / chat features need LLM).
+     */
+    public function isTranslateOnlyAdapter(string $adapterType): bool
     {
         if ($adapterType === '' || !$this->adapters->has($adapterType)) {
             return false;

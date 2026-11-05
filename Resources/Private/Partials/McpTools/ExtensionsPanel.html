@@ -73,15 +73,18 @@
                             <div class="d-flex flex-wrap gap-1 aiu-mcp-tools__tool-tags">
                                 <f:for each="{extension.tools}" as="tool">
                                     <button type="button"
-                                            class="btn btn-sm btn-default"
+                                            class="btn btn-sm btn-default aiu-mcp-tools__tool-tag"
                                             data-mcp-tools-tool-tag="{tool.name}"
                                             data-mcp-tools-open-drawer
                                             data-tool-name="{tool.name}"
                                             data-tool-category="{tool.category}"
                                             data-tool-status="{tool.status}"
+                                            data-tool-severity="{tool.severity}"
                                             data-tool-description="{tool.description}"
-                                            data-tool-short-title="{tool.shortTitle}">
-                                        {tool.name}
+                                            data-tool-short-title="{tool.shortTitle}"
+                                            title="{tool.description}">
+                                        <span class="aiu-mcp-tools__tool-tag-name">{tool.name}</span>
+                                        <span class="badge badge-default">{tool.severity}</span>
                                     </button>
                                 </f:for>
                             </div>
@@ -107,9 +110,13 @@
                                         <div>
                                             <div class="aiu-tool-panel__name">{tool.name}</div>
                                             <div class="small text-variant">{tool.shortTitle}</div>
+                                            <f:if condition="{tool.description}">
+                                                <div class="small text-variant mt-1">{tool.description}</div>
+                                            </f:if>
                                         </div>
                                     </div>
                                     <div class="aiu-tool-panel__header-end">
+                                        <span class="badge badge-default">{tool.severity}</span>
                                         <span class="badge badge-default">{tool.category}</span>
                                         <span class="badge badge-success">{tool.status}</span>
                                         <span class="aiu-tool-panel__chevron" aria-hidden="true">

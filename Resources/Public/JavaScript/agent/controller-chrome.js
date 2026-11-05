@@ -523,6 +523,7 @@ export const chromeMethods = {
       if (immediatePrompt !== '' && this.input) {
         this.input.value = immediatePrompt;
         this.resizeComposerInput?.();
+        this.syncSendButtonEnabled?.();
       }
       // Panel already open: open() is a no-op, so apply chips/prompt here (Fix from a module).
       // A fresh Fix must not resume the previous conversation (stale page / checkIds).
@@ -550,6 +551,7 @@ export const chromeMethods = {
           this.input.value = openPromptText;
           this.resizeComposerInput?.();
         }
+        this.syncSendButtonEnabled?.();
         this.renderContext?.();
         this.input?.focus?.();
         return;
@@ -600,6 +602,7 @@ export const chromeMethods = {
         this.input.value = pendingPrompt;
         this.resizeComposerInput?.();
       }
+      this.syncSendButtonEnabled?.();
 
       // Resume the last-viewed conversation for this conversation-scope key when remembered;
       // otherwise the server opens the latest of the configured scope (see restoreSession).
@@ -638,6 +641,7 @@ export const chromeMethods = {
       this.trapFocus();
       this.input?.focus();
       this.resizeComposerInput?.();
+      this.syncSendButtonEnabled?.();
       this.warnIfNoUsableProvider();
 
       try {
