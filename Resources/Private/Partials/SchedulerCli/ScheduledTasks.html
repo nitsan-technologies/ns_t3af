@@ -96,9 +96,21 @@
                 <td><f:if condition="{task.nextexecution} > 0"><f:format.date format="Y-m-d H:i">@{task.nextexecution}</f:format.date></f:if></td>
                 <td><f:if condition="{task.lastexecution} > 0"><f:format.date format="Y-m-d H:i">@{task.lastexecution}</f:format.date></f:if></td>
                 <td>
-                    <span class="badge {f:if(condition: '{task.disabled} == 0', then: 'badge-success', else: 'badge-danger')}">
-                        <f:if condition="{task.disabled} == 0"><f:then><f:translate key="{ll}:module.schedulerCli.status.enabled" default="Enabled" /></f:then><f:else><f:translate key="{ll}:module.schedulerCli.status.disabled" default="Disabled" /></f:else></f:if>
-                    </span>
+                    <f:if condition="{task.hasFailure} == 1">
+                        <f:then>
+                            <span class="badge badge-warning">
+                                <f:translate key="{ll}:module.schedulerCli.status.failing" default="Failing" />
+                            </span>
+                            <f:if condition="{task.failureReason} != ''">
+                                <div class="aiu-scheduler-cli__task-sub" title="{task.failureReason}">{task.failureReason}</div>
+                            </f:if>
+                        </f:then>
+                        <f:else>
+                            <span class="badge {f:if(condition: '{task.disabled} == 0', then: 'badge-success', else: 'badge-danger')}">
+                                <f:if condition="{task.disabled} == 0"><f:then><f:translate key="{ll}:module.schedulerCli.status.enabled" default="Enabled" /></f:then><f:else><f:translate key="{ll}:module.schedulerCli.status.disabled" default="Disabled" /></f:else></f:if>
+                            </span>
+                        </f:else>
+                    </f:if>
                 </td>
                 <td class="actions">
                     <div class="btn-group" role="group" aria-label="{f:translate(key: '{ll}:module.schedulerCli.table.actions', default: 'Actions')}">

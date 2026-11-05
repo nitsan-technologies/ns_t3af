@@ -1203,6 +1203,15 @@
       <trans-unit id="module.schedulerCli.status.disabled" resname="module.schedulerCli.status.disabled">
         <source>Disabled</source>
       </trans-unit>
+      <trans-unit id="module.schedulerCli.status.failing" resname="module.schedulerCli.status.failing">
+        <source>Failing</source>
+      </trans-unit>
+      <trans-unit id="module.schedulerCli.failingBanner" resname="module.schedulerCli.failingBanner">
+        <source>%1$s scheduler task(s) reported a failure — inspect Scheduler &amp; CLI.</source>
+      </trans-unit>
+      <trans-unit id="module.schedulerCli.failingBanner.link" resname="module.schedulerCli.failingBanner.link">
+        <source>Open failed task: %1$s</source>
+      </trans-unit>
       <trans-unit id="module.schedulerCli.empty.tasks" resname="module.schedulerCli.empty.tasks">
         <source>No scheduled tasks found.</source>
       </trans-unit>

@@ -82,6 +82,15 @@ final class SchedulerCliTaskService implements SchedulerCliTaskListInterface
             if ($description === '') {
                 $description = (string) ($meta['name'] ?? $command);
             }
+            $failureRaw = trim((string) ($row['lastexecution_failure'] ?? ''));
+            $failureReason = $failureRaw;
+            if ($failureReason !== '') {
+                // Serialized exceptions / long traces: keep a short readable line for the table.
+                $failureReason = preg_replace('/\s+/', ' ', $failureReason) ?? $failureReason;
+                if (strlen($failureReason) > 180) {
+                    $failureReason = rtrim(substr($failureReason, 0, 177)) . '…';
+                }
+            }
             $record = [
                 'uid' => (int) $row['uid'],
                 'description' => $description,
@@ -94,7 +103,8 @@ final class SchedulerCliTaskService implements SchedulerCliTaskListInterface
                 'disabled' => (int) ($row['disable'] ?? 0),
                 'nextexecution' => (int) ($row['nextexecution'] ?? 0),
                 'lastexecution' => (int) ($row['lastexecution_time'] ?? 0),
-                'hasFailure' => trim((string) ($row['lastexecution_failure'] ?? '')) !== '' ? 1 : 0,
+                'hasFailure' => $failureRaw !== '' ? 1 : 0,
+                'failureReason' => $failureReason,
                 'cronExpression' => $cronExpression,
                 'interval' => $interval,
                 'scheduleType' => $cronExpression !== '' ? 'cron' : ($interval > 0 ? 'interval' : 'once'),

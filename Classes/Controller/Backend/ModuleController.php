@@ -1613,6 +1613,10 @@ PY);
             : (string) $this->uriBuilder->buildUriFromRoute($routeName, ['action' => 'add']);
         $schedulerManageAddWizard = $typo3Version->getMajorVersion() >= 14;
 
+        $failingTasks = array_values(array_filter(
+            $tasks,
+            static fn(array $task): bool => ((int) ($task['hasFailure'] ?? 0)) === 1,
+        ));
         $view->assignMultiple([
             'flash' => $this->flashFromQuery($request) ?? '',
             'schedulerCliRunOutput' => (string) ($query['runOutput'] ?? ''),
@@ -1621,12 +1625,13 @@ PY);
             'schedulerCliExtensionGroups' => $extensionGroups,
             'schedulerCliCommands' => $commands,
             'schedulerCliTasks' => $tasks,
+            'schedulerCliFirstFailingTask' => $failingTasks[0] ?? [],
             'routeName' => $routeName,
             'schedulerCliKpis' => [
                 'totalCommands' => count($commands),
                 'totalTasks' => count($tasks),
                 'activeTasks' => count(array_filter($tasks, static fn(array $task): bool => ((int) ($task['disabled'] ?? 1)) === 0)),
-                'failingTasks' => count(array_filter($tasks, static fn(array $task): bool => ((int) ($task['hasFailure'] ?? 0)) === 1)),
+                'failingTasks' => count($failingTasks),
             ],
             'schedulerCliRunUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.scheduler_cli.run'),
             'schedulerManageUri' => $schedulerManageUri,
