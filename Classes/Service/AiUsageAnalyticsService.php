@@ -201,16 +201,17 @@ final class AiUsageAnalyticsService
         $offset = ($currentPage - 1) * $perPage;
 
         $entries = $this->requestLogs->findFiltered($filters, $from, $to, $scope, $perPage, $offset, $providerUids);
-        foreach ($entries as &$entry) {
+        $formatted = [];
+        foreach ($entries as $entry) {
             $entry['cost_formatted'] = $this->moneyFormatter->format(
                 (float) ($entry['estimated_cost'] ?? 0),
                 (string) ($entry['currency'] ?? 'USD'),
             );
+            $formatted[] = $entry;
         }
-        unset($entry);
 
         return [
-            'entries' => $entries,
+            'entries' => $formatted,
             'totalCount' => $totalCount,
             'currentPage' => $currentPage,
             'perPage' => $perPage,
@@ -220,11 +221,9 @@ final class AiUsageAnalyticsService
     /**
      * @param array{fromTimestamp:int,toTimestamp:int|null} $period
      * @param array{search:string,engine:string,model:string,module:string,scope:string,reqType:string,status:string,user:string,max:int,currentPage:int} $filters
+     * @param list<int>|null $providerUids
      *
      * @return array<string,mixed>
-     */
-    /**
-     * @param list<int>|null $providerUids
      */
     public function buildExportPayload(
         array $period,
@@ -259,11 +258,9 @@ final class AiUsageAnalyticsService
     /**
      * @param array{fromTimestamp:int,toTimestamp:int|null} $period
      * @param array{search:string,engine:string,model:string,module:string,scope:string,reqType:string,status:string,user:string,max:int,currentPage:int} $filters
+     * @param list<int>|null $providerUids
      *
      * @return list<list<string>>
-     */
-    /**
-     * @param list<int>|null $providerUids
      */
     public function buildLogCsvRows(
         array $period,

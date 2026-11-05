@@ -476,8 +476,6 @@ class RequestLogRepository
      *   user?:string,
      *   max?:int
      * } $filters
-     */
-    /**
      * @param list<int>|null $providerUids
      */
     public function countFiltered(
@@ -510,10 +508,8 @@ class RequestLogRepository
      *   user?:string,
      *   max?:int
      * } $filters
-     * @return list<array<string, scalar|null>>
-     */
-    /**
      * @param list<int>|null $providerUids
+     * @return list<array<string, scalar|null>>
      */
     public function findFiltered(
         array $filters,
@@ -578,10 +574,8 @@ class RequestLogRepository
      *   user?:string,
      *   max?:int
      * } $filters
-     * @return list<array<string, scalar|null>>
-     */
-    /**
      * @param list<int>|null $providerUids
+     * @return list<array<string, scalar|null>>
      */
     public function findForExport(
         array $filters,
