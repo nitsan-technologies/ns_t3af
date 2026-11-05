@@ -106,8 +106,10 @@ class IptcDigitalSourceTypeService
         $cache = $cacheKey !== null ? $this->getCache() : null;
         if ($cache !== null && $cache->has($cacheKey)) {
             $cached = $cache->get($cacheKey);
-
-            return $cached !== '' ? $cached : null;
+            // VariableFrontend::get() is mixed and returns false on miss (TOCTOU with has()).
+            if (is_string($cached)) {
+                return $cached !== '' ? $cached : null;
+            }
         }
 
         try {
