@@ -56,7 +56,7 @@
                 <f:translate key="{ll}:module.aiLabel.action.refresh" default="Refresh" />
             </a>
         </div>
-        <f:if condition="{aiLabelPagination}">
+        <f:if condition="{aiLabelPagination} && {listTotalCount} > 0">
             <f:render partial="AiLabel/Pagination" arguments="{_all}" />
         </f:if>
     </div>
