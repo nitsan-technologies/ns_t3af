@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Context;
 
 /**
- * Resolved backend context for an AI Agent turn (R9).
+ * Resolved backend context for an AI Agent turn.
  *
  * @internal
  */

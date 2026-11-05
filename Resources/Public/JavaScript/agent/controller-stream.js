@@ -41,7 +41,7 @@ export const streamMethods = {
     },
 
   /**
-     * Empty composer or exhausted credits: Send stays disabled (T3AI-108).
+     * Empty composer or exhausted credits: Send stays disabled.
      */
     syncSendButtonEnabled() {
       const send = this.root?.querySelector('[data-nst3af-agent-send]');

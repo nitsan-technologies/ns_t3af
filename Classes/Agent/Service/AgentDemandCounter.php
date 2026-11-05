@@ -23,7 +23,7 @@ use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 /**
- * Local-only locked-tool activation counts (T20).
+ * Local-only locked-tool activation counts.
  *
  * @internal
  */

@@ -1,6 +1,6 @@
 # Feature — T3Planet Credits
 
-**Status:** Publicly available (`CreditsReleaseGate::PUBLICLY_AVAILABLE = true`)  
+**Status:** Publicly available (`CreditsReleaseGate::PUBLICLY_AVAILABLE = true`) 
 **Release gate:** `CreditsReleaseGate::PUBLICLY_AVAILABLE` — compile-time switch; currently **on**.
 **Deep specs:**
 - Client: [`FEATURE_T3PlanetCredits_Client.md`](../specs/FEATURE_T3PlanetCredits_Client.md)

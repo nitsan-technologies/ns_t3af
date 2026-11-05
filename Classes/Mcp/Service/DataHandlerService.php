@@ -617,7 +617,7 @@ readonly class DataHandlerService
     }
 
     /**
-     * Apply only the kept fields from a tool plan (R28: server-side filtering).
+     * Apply only the kept fields from a tool plan.
      *
      * @param list<string> $keptFieldKeys
      * @return array{

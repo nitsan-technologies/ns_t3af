@@ -27,7 +27,7 @@ use NITSAN\NsT3AF\Mcp\Service\McpToolOwnershipResolver;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 /**
- * View-model builder for the AI Agent settings module (T21).
+ * View-model builder for the AI Agent settings module.
  *
  * @internal
  */

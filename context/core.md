@@ -23,7 +23,7 @@
 
 ## Compatibility (shipped)
 
-| | Floor |
+| — | Floor |
 |---|---|
 | PHP | `>=8.2 <9` |
 | TYPO3 | `^13.4 \|\| ^14.3` |

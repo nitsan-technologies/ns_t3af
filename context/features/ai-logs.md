@@ -1,6 +1,6 @@
 # Feature — AI Logs (centralized sys_log)
 
-**Status:** Done (AI Foundation tab + child extension links + in-module filter navigation)  
+**Status:** Done (AI Foundation tab + child extension links + in-module filter navigation) 
 **Route:** `t3af_dashboard.ai_logs` (`Configuration/Backend/Modules.php`)
 
 ---
@@ -41,7 +41,7 @@ Use **`AiLogService::writeLog($message, $level, $channel)`** or domain helpers l
 
 Channels are normalized via **`AiLogChannelCatalog`** (`normalizeWriteChannel`, `resolveChannelValuesForExtension`). Child extensions register **`AiLogChannelProviderInterface`** (tag `t3af.ai_log_channel`) with channel keys and optional write inference so **extension filter** in AI Logs works.
 
-**Do:** Log meaningful admin events (save/delete provider, sync finished, training error).  
+**Do:** Log meaningful admin events (save/delete provider, sync finished, training error). 
 **Don't:** Duplicate a separate log UI in child extensions — link to AI Foundation instead.
 
 ---
@@ -73,9 +73,9 @@ Same pattern as setup checklist: **markup lives in `ns_t3af` only**.
 
 ```
 ns_t3af (master)
-├── Classes/Utility/BackendModuleLinkUtility.php     ← buildAiLogsUri($pageId, $extensionKey)
-├── Partials/Backend/AiLogsModuleLink.html           ← shared button
-└── locallang_mod.xlf                                ← module.link.aiUniverseLogs*
+├── Classes/Utility/BackendModuleLinkUtility.php ← buildAiLogsUri($pageId, $extensionKey)
+├── Partials/Backend/AiLogsModuleLink.html ← shared button
+└── locallang_mod.xlf ← module.link.aiUniverseLogs*
 ```
 
 | Layer | Owner | Child rule |

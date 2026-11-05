@@ -23,7 +23,7 @@ use NITSAN\NsT3AF\Access\ExtensionAvailability;
 use NITSAN\NsT3AF\Contract\ExtensionOperationalStatusInterface;
 
 /**
- * Mirrors each child extension's operational self-report (R16).
+ * Mirrors each child extension's operational self-report.
  *
  * Implements no licence lookup of its own — it asks tagged providers only.
  */

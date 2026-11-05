@@ -1,6 +1,6 @@
 # Non-DataHandler Tool Classification
 
-Phase 0 prerequisite for the AI Agent write path (amended R30). Each child extension MCP tool is classified by inspecting its `execute()` path and delegated services.
+Phase 0 prerequisite for the AI Agent write path. Each child extension MCP tool is classified by inspecting its `execute()` path and delegated services.
 
 **Legend**
 

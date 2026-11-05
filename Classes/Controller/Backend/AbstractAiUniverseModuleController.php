@@ -237,7 +237,7 @@ abstract class AbstractAiUniverseModuleController
                 'modulePath' => $this->moduleTabUtility->resolveActivePath($activeTabKey),
                 'creditOverview' => $this->resolveCreditOverviewLine(),
                 'creditsFeatureAvailable' => self::fluidFlag((new CreditsReleaseGate())->isPubliclyAvailable()),
-                // Quick Setup mutates providers / API keys / MCP — admin-only (T3AI-285).
+                // Quick Setup mutates providers / API keys / MCP — admin-only.
                 'quickSetupLabel' => $this->backendUserIsAdmin($backendUser)
                     ? $this->translateModule('module.quickSetup')
                     : '',

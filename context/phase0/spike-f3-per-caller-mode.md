@@ -51,7 +51,7 @@ dual-mode MCP tool already wraps that call in an explicit `McpModeOverride::run(
   unconditionally (`Classes/Agent/Service/AgentToolTurnProcessor.php:367-371`).
 - **The draft/generation step for Write+Previewable+DualMode tools — exactly the "Fix" case** —
   goes through `McpPlaygroundService::preview()`, which **already hardcodes**
-  `$this->modeOverride->run(McpModeResolver::MODE_NATIVE, ...)` at
+  `$this->modeOverride->run(McpModeResolver::MODE_NATIVE,...)` at
   `Classes/Mcp/Service/Backend/McpPlaygroundService.php:222-223`, called from
   `AgentToolTurnProcessor::processPreviewToolTurn()` at `:496`
   (`Classes/Agent/Service/AgentToolTurnProcessor.php:496`), itself only reached for

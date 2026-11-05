@@ -204,7 +204,7 @@ final class BeGroupAccessService
         }
         // Warn when product modules are on but the AI Foundation shell is missing —
         // including groups that never finished the wizard (`configured` false), and when
-        // shell mods exist but no AI Foundation admin tab is enabled (T3AF-AIPERM-02).
+        // shell mods exist but no AI Foundation admin tab is enabled.
         if ($enabledCount > 0 || $childModulesOn) {
             $groupMods = $this->parseCsvField($beGroupRow['groupMods'] ?? '');
             $missingShell = false;

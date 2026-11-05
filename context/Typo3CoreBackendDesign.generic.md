@@ -3,7 +3,7 @@
 Project-agnostic reference for building **any** TYPO3 backend module so it looks and behaves like native TYPO3. Drop this file into any extension/project. When implementing a new extension or feature, follow this guide to adopt TYPO3 core design **automatically** — use core markup and `--typo3-*` tokens first; add extension CSS only when core cannot express the layout.
 
 **Scope:** Backend module UI (Fluid templates, module CSS, JS toggles).
-**Supported TYPO3:** `^13.4 || ^14.3`.
+**Supported TYPO3:** `^13.4 | — | ^14.3`.
 **Source of truth:** TYPO3 core `backend.css` (always) + **styleguide** when installed (optional live reference). Styleguide is **not** required in production — see fallbacks below.
 
 ---
@@ -73,7 +73,7 @@ Test v13 + v14 (light + dark backend theme)
 
 The **styleguide** extension ships with TYPO3 core. It is the live, browsable reference for backend UI — maintained by core developers alongside `backend.css`.
 
-| | |
+| — | |
 |---|---|
 | **Extension key** | `styleguide` |
 | **Typical path** | `typo3conf/ext/styleguide/` or `vendor/typo3/cms-styleguide/` |
@@ -228,7 +228,7 @@ Scope core typography to your module wrapper once (replace the wrapper selector 
 
 .your-module-page code,
 .your-module-page pre,
-.your-module-page .form-control.font-monospace {
+.your-module-page.form-control.font-monospace {
     font-family: var(--typo3-font-family-code, ui-monospace, monospace);
 }
 ```
@@ -366,15 +366,15 @@ Render module-level tabs and actions inside the core docheader so they align wit
 
 ```css
 /* layout + token colours only — no hardcoded brand hex */
-.your-module-nav-tabs .nav-link.active {
+.your-module-nav-tabs.nav-link.active {
     color: var(--typo3-badge-primary-color, #fff);
 }
-.your-module-nav-tabs .nav-link:not(.active):hover {
+.your-module-nav-tabs.nav-link:not(.active):hover {
     background: var(--typo3-badge-primary-bg, #f2f2f2);
     color: var(--typo3-badge-primary-color, #000);
 }
-[data-color-scheme=dark] .your-module-nav-tabs .nav-link:not(.active):hover,
-[data-bs-theme=dark] .your-module-nav-tabs .nav-link:not(.active):hover {
+[data-color-scheme=dark].your-module-nav-tabs.nav-link:not(.active):hover,
+[data-bs-theme=dark].your-module-nav-tabs.nav-link:not(.active):hover {
     background: var(--typo3-badge-primary-bg, #181818);
     color: var(--typo3-badge-primary-color, #fff);
 }
@@ -458,7 +458,7 @@ If the module has a sticky-looking footer, make the module a flex column so the 
 
 ```css
 /* the body container holds a single full-height module wrapper */
-.t3js-module-body-container:has(> .your-module.module) {
+.t3js-module-body-container:has(>.your-module.module) {
     display: flex;
     flex-direction: column;
     min-height: 100%;
@@ -470,9 +470,9 @@ If the module has a sticky-looking footer, make the module a flex column so the 
     width: 100%;
 }
 
-.your-module.module .module-body { flex: 1 1 auto; min-height: 0; order: 2; }
-.your-module.module .module-docheader-navigation { flex: 0 0 auto; order: 1; }
-.your-module.module .module-footer { flex: 0 0 auto; margin-top: auto; order: 3; }
+.your-module.module.module-body { flex: 1 1 auto; min-height: 0; order: 2; }
+.your-module.module.module-docheader-navigation { flex: 0 0 auto; order: 1; }
+.your-module.module.module-footer { flex: 0 0 auto; margin-top: auto; order: 3; }
 ```
 
 `:has()` is supported on the browsers TYPO3 v13–v14 target. If you must support older engines, apply the flex container via a controller-added class instead.
@@ -506,9 +506,9 @@ A module footer holds secondary links (about, docs, support, rate-us) — never 
 Optional separator + colour styling (layout + tokens only):
 
 ```css
-.your-module .footer-links { gap: 0; }
-.your-module .footer-links li { padding-left: 20px; position: relative; }
-.your-module .footer-links li:not(:first-child)::before {
+.your-module.footer-links { gap: 0; }
+.your-module.footer-links li { padding-left: 20px; position: relative; }
+.your-module.footer-links li:not(:first-child)::before {
     content: "";
     position: absolute;
     left: 10px; top: 50%;
@@ -516,12 +516,12 @@ Optional separator + colour styling (layout + tokens only):
     width: 1px; height: 80%;
     background-color: var(--typo3-component-border-color, #cdcdcd);
 }
-.your-module .footer-links .btn-link {
+.your-module.footer-links.btn-link {
     color: var(--typo3-text-color-link, var(--typo3-component-color, inherit));
     text-decoration: none;
 }
-.your-module .footer-links .btn-link:hover,
-.your-module .footer-links .btn-link:focus { text-decoration: underline; }
+.your-module.footer-links.btn-link:hover,
+.your-module.footer-links.btn-link:focus { text-decoration: underline; }
 ```
 
 ### Body & footer checklist
@@ -613,8 +613,8 @@ Do **not** use `h-100` on cards inside `.card-container` (`height: 100%` breaks 
 
 ```css
 .my-grid.card-container { align-items: stretch; }
-.my-grid.card-container .card { align-self: stretch; height: auto; }
-.my-grid.card-container .card .card-footer { margin-top: auto; }
+.my-grid.card-container.card { align-self: stretch; height: auto; }
+.my-grid.card-container.card.card-footer { margin-top: auto; }
 ```
 
 Put actions in **`card-footer`** (not `card-body`) so buttons align at the bottom when descriptions differ in length.
@@ -624,8 +624,8 @@ Put actions in **`card-footer`** (not `card-body`) so buttons align at the botto
 TYPO3 core card CSS (v13+): `.card-footer:last-child` gets bottom padding; `.card { overflow: hidden; }`. If any sibling comes after `.card-footer` (even `hidden`), the footer loses padding and can be clipped.
 
 ```
-✓ card-header → card-body → [expandable, hidden] → card-footer   (last)
-✗ card-header → card-body → card-footer → [expandable]            (breaks footer)
+✓ card-header → card-body → [expandable, hidden] → card-footer (last)
+✗ card-header → card-body → card-footer → [expandable] (breaks footer)
 ```
 
 ### Tables inside cards
@@ -633,7 +633,7 @@ TYPO3 core card CSS (v13+): `.card-footer:last-child` gets bottom padding; `.car
 Core keeps `.table-fit` `border-top` inside `.card`, which stacks with the card edge (looks like a bold 2px line). Zero the table-fit border — the card provides the frame:
 
 ```css
-.my-panel .card > .table-fit {
+.my-panel.card >.table-fit {
     border: 0;
     box-shadow: none;
 }
@@ -737,9 +737,9 @@ When a module page has its own sub-tabs (not the docheader tabs):
 - If panes render blank when nested inside another tab system, drive switching with a small script that toggles `active` + `show` on the target pane (and `active` + `is-active` on the button), and add a scoped fallback:
 
 ```css
-#yourTabContent > .tab-pane:not(.active) { display: none; }
-#yourTabContent > .tab-pane.active { display: block; }
-#yourTabContent > .tab-pane.fade.active { opacity: 1; }
+#yourTabContent >.tab-pane:not(.active) { display: none; }
+#yourTabContent >.tab-pane.active { display: block; }
+#yourTabContent >.tab-pane.fade.active { opacity: 1; }
 ```
 
 ---
@@ -782,8 +782,8 @@ To resize a `core:icon` / `typo3-backend-icon`, target the icon element with `--
 
 ```css
 .your-ok-icon typo3-backend-icon,
-.your-ok-icon .typo3-icon { --icon-size: 16px; display: inline-flex; }
-.your-ok-icon .typo3-icon svg { width: 16px; height: 16px; display: block; }
+.your-ok-icon.typo3-icon { --icon-size: 16px; display: inline-flex; }
+.your-ok-icon.typo3-icon svg { width: 16px; height: 16px; display: block; }
 ```
 
 Common identifiers: `actions-cog`, `actions-check`, `actions-search`, `actions-chevron-down`, `actions-key`, `actions-info`, `actions-delete`, `actions-open`, `spinner-circle`.
@@ -810,15 +810,15 @@ Core has no dedicated accordion. Pattern:
     background: var(--typo3-surface-container-low, #fcfcfc);
     border: 1px solid var(--typo3-component-border-color, #d7d7d7);
     color: var(--typo3-text-color-base, #1e1e1e);
-    border-radius: var(--typo3-card-border-radius, var(--typo3-component-border-radius, .375rem));
+    border-radius: var(--typo3-card-border-radius, var(--typo3-component-border-radius,.375rem));
 }
 ```
 
 Never nest `light-dark()` inside `var()` fallbacks — it fails on older v13 setups when a token is missing. Use a plain hex fallback and, if needed, add explicit dark overrides:
 
 ```css
-[data-color-scheme=dark] .my-block,
-[data-bs-theme=dark] .my-block {
+[data-color-scheme=dark].my-block,
+[data-bs-theme=dark].my-block {
     background: var(--typo3-surface-container-low, #333);
     border-color: var(--typo3-component-border-color, #4b4b4b);
 }
@@ -915,13 +915,13 @@ Never nest `light-dark()` inside `var()` fallbacks — it fails on older v13 set
 
 | Pattern | Path |
 |---------|------|
-| **Primary (always available)** | |
+| **Primary (always available)** | — |
 | Backend CSS tokens + typography | `backend/Resources/Public/Css/backend.css` |
 | Submodule cards (production core) | `backend/Resources/Private/Templates/SubmoduleOverview/Cards.fluid.html` |
 | Table row actions (production core) | `beuser/Resources/Private/Partials/BackendUser/PaginatedList.fluid.html` |
 | Form tabs (production core) | `backend/Resources/Private/Templates/Form/Tabs.fluid.html` |
 | Record list / tables | `backend/Resources/Private/Templates/RecordList.fluid.html` |
-| **Optional (when styleguide installed)** | |
+| **Optional (when styleguide installed)** | — |
 | Styleguide card examples | `styleguide/Resources/Private/Templates/Backend/Components/Cards.html` |
 | Styleguide buttons, forms, tables | `styleguide/Resources/Private/Templates/Backend/Components/*.html` |
 | Styleguide typography / colours | Styleguide → **Styles** submodule |

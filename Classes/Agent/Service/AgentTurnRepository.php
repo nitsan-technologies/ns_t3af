@@ -24,7 +24,7 @@ use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 /**
- * Persists per-turn correlation ids and tool-call guard state (T16/T17).
+ * Persists per-turn correlation ids and tool-call guard state.
  *
  * @internal
  */

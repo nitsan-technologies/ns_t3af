@@ -1451,7 +1451,7 @@ function boot() {
   initCreditsBundleTabs(document);
   requestAnimationFrame(() => initCreditsHeroProgress(document));
   document.addEventListener('typo3-module-loaded', () => {
-    // Soft module navigations replace the DOM — re-bind mode cards (T3AI-019).
+    // Soft module navigations replace the DOM — re-bind mode cards.
     document
       .querySelectorAll('[data-aiu-providers-credits-root]')
       .forEach((root) => initCreditsMode(root));

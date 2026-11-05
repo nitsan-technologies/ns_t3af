@@ -63,7 +63,7 @@ This is the part that matters most for F1 and is **not visible from the PHP side
   the first greeting + starters on open is deliberately thin (module + page only); record/language/
   brand richness only shows up once a **turn** is submitted.
 - On turn submit, `submitTurn()` (`Resources/Public/JavaScript/agent/controller-turn.js:58-103`)
-  builds `body.context = { ...resolveBackendContext(), ...this.context }` (`:85-94`) — fresh DOM
+  builds `body.context = {...resolveBackendContext(),...this.context }` (`:85-94`) — fresh DOM
   state merged over the last context the server returned — and POSTs it to
   `nst3af_agent_turn`/`nst3af_agent_turn/stream`. `prepareTurn()` → `resolveContext($request,
   $body['context'])` (confirmed call site at `AgentAjaxController.php:1470`) is where that payload
@@ -94,7 +94,7 @@ This is the part that matters most for F1 and is **not visible from the PHP side
 
 ### The real additive hook is not `data-nst3af-agent-open` by itself
 
-`document.addEventListener('click', ...)` in `controller-chrome.js:30` is bound against
+`document.addEventListener('click',...)` in `controller-chrome.js:30` is bound against
 whichever `document` `agent.js` executes in. The toolbar item renders in the backend's top-level
 chrome; TYPO3 backend modules (where `ns_t3ai`'s scan/report/fix tabs will live) render inside
 `#typo3-contentIframe` — a **different `document`**. Click events do not cross an iframe boundary,

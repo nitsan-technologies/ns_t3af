@@ -27,14 +27,14 @@ Mirrors server FEATURE Revision 2026-05-15. Overrides HMAC/signing-secret design
 
 ```
 TokenResolver::resolve(): string
-  1. $token = RuntimeSettingsService::getToken();     // token_enc decrypted
+  1. $token = RuntimeSettingsService::getToken(); // token_enc decrypted
      if ($token) return $token;
 
   2. $keys = RuntimeSettingsService::getLicenseKeys(); // comma-separated from setup
      if ($keys === '') throw LicenseUnavailableException;
 
   3. POST {base}/API/AI/Token.php {
-       license_keys: $keys,    // e.g. "LIC-UNIV-1,LIC-T3AI-2"
+       license_keys: $keys, // e.g. "LIC-UNIV-1,LIC-T3AI-2"
        domain: <HTTP_HOST or site primary>
      }
      → { token }
@@ -127,17 +127,17 @@ Encrypted at rest: `tx_nst3af_runtime_setting.token_enc` via `CredentialCipher`.
 ```text
 Customer TYPO3 (only ns_t3af + ns_license)
   ┌───────────────────────────────────────────────────────────────┐
-  │ Caller → AiServiceInterface (decorator)                       │
-  │   ├─ credit_mode ON  → T3PlanetCreditAiService                │
-  │   │                       → TokenResolver (cached token)      │
-  │   │                       → T3PlanetHttpClient (HTTP/2)       │
-  │   │                       → composer.t3planet.cloud/API/AI/*  │
-  │   │                                                           │
-  │   └─ credit_mode OFF → $inner AiService (local adapters)      │
-  │                                                               │
-  │ LicenseKeyResolver ←─ reads ns_product_license (ns_license)   │
-  │ Dashboard → BalanceService / CatalogService / ReceiptCache    │
-  │ Toolbar widget → live balance pill                            │
+  │ Caller → AiServiceInterface (decorator) │
+  │ ├─ credit_mode ON → T3PlanetCreditAiService │
+  │ │ → TokenResolver (cached token) │
+  │ │ → T3PlanetHttpClient (HTTP/2) │
+  │ │ → composer.t3planet.cloud/API/AI/* │
+  │ │ │
+  │ └─ credit_mode OFF → $inner AiService (local adapters) │
+  │ │
+  │ LicenseKeyResolver ←─ reads ns_product_license (ns_license) │
+  │ Dashboard → BalanceService / CatalogService / ReceiptCache │
+  │ Toolbar widget → live balance pill │
   └───────────────────────────────────────────────────────────────┘
                                        │ HTTPS Bearer + JSON body
                                        ▼
@@ -161,7 +161,7 @@ namespace NITSAN\NsT3AF\Credits\Service;
 final class LicenseKeyResolver
 {
     public function __construct(
-        private readonly NsLicenseRepository $licenseRepo,    // from ns_license
+        private readonly NsLicenseRepository $licenseRepo, // from ns_license
         private readonly RuntimeSettingsService $settings,
     ) {}
 
@@ -190,12 +190,12 @@ final class LicenseKeyResolver
         }
 
         return new LicenseContext(
-            licenseKey:   $row['license_key'],
+            licenseKey: $row['license_key'],
             extensionKey: $row['extension_key'],
-            orderId:      $row['order_id'],
-            expiresAt:    (int) $row['expiration_date'],
-            isLifetime:   $isLifetime,
-            domains:      array_filter(array_map('trim', explode(',', $row['domains'] ?? ''))),
+            orderId: $row['order_id'],
+            expiresAt: (int) $row['expiration_date'],
+            isLifetime: $isLifetime,
+            domains: array_filter(array_map('trim', explode(',', $row['domains'] ?? ''))),
         );
     }
 
@@ -279,7 +279,7 @@ final class AiResponse
         public readonly ?int $promptTokens = null,
         public readonly ?int $completionTokens = null,
         public readonly array $raw = [],
-        public readonly ?CreditsUsage $credits = null,   // NEW
+        public readonly ?CreditsUsage $credits = null, // NEW
     ) {}
 }
 
@@ -287,9 +287,9 @@ final class CreditsUsage
 {
     public function __construct(
         public readonly int $charged,
-        public readonly string $bucket,            // 'plan|free|paid|dev'
+        public readonly string $bucket, // 'plan|free|paid|dev'
         public readonly string $featureKey,
-        public readonly string $serverRequestId,   // request_uuid
+        public readonly string $serverRequestId, // request_uuid
         public readonly int $balanceFree,
         public readonly int $balancePaid,
         public readonly int $planUsed,
@@ -363,11 +363,11 @@ Caller invokes AiServiceInterface->complete($prompt, AiOptions(featureKey: 'seo_
   → TokenResolver::resolve() → Bearer token
   → T3PlanetHttpClient: POST {base}/AI/Charge.php
        Authorization: Bearer <token>
-       body = { domain, request_uuid, feature_key, prompt, model, max_tokens, ... }
+       body = { domain, request_uuid, feature_key, prompt, model, max_tokens,... }
        30s read timeout, HTTP/2, gzip, keep-alive
   → 401 token_invalid: clear token_enc, re-resolve once, retry; second 401 → banner + error
   → response 200
-       → AfterProviderResponseEvent(credits, balanceAfter, ...)
+       → AfterProviderResponseEvent(credits, balanceAfter,...)
        → LocalReceiptCache::append(receipt)
        → RuntimeSettingsService::touchLastBalanceSync()
        → AiResponse{content, credits}
@@ -466,8 +466,8 @@ Layout:
 `checkout_url` placeholder substitution (client-side):
 ```
 {license_key} → LicenseContext.licenseKey
-{domain}      → site primary domain
-{return}      → urlencode(BackendUtility::getModuleUrl('aiuniverse_credits.buy'))
+{domain} → site primary domain
+{return} → urlencode(BackendUtility::getModuleUrl('aiuniverse_credits.buy'))
 ```
 
 Cache: `ProductCatalogService` stores `/AI/Products.php` response in `tx_nst3af_product_catalog` (single-row JSON blob + etag + fetched_at). TTL 1h. Manual refresh button → `If-None-Match` revalidation.

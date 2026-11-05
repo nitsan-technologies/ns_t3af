@@ -1,10 +1,10 @@
-> **Agent entry:** `context/features/ai-label.md`  
+> **Agent entry:** `context/features/ai-label.md` 
 > **User doc:** `Documentation/Configuration/AiLabel/Index.rst`
 
 # Feature — AI Label (EU AI Act Article 50)
 
-Status: **Implemented** (backend dashboard, rule engines, capture/bind, frontend renderer, evidence export)  
-Owner: ns_t3af maintainers  
+Status: **Implemented** (backend dashboard, rule engines, capture/bind, frontend renderer, evidence export) 
+Owner: ns_t3af maintainers 
 Compliance input: `Configuration/BuildInputs/compliance-strings.json` (fail-closed build)
 
 ---
@@ -136,8 +136,8 @@ AiLabelBindHelper::bindContentRecord($uid); // always Involvement::AiGenerated, 
 
 Consumes correlation from registry → `OriginRecorder::bindGeneration()` → sets involvement + recording_source on target row → deletes generation queue row. Child binds always store `ai_generated` (page, content, file, or `bindRecord($table, $uid)`). Metadata-only file binds (`$altTextOnly = true` — alt/title/description) are skipped so the EU media mark is not applied to a non-AI image.
 
-**ns_t3ai** binds: `pages`, `tt_content`, and DALL·E file save via `bindFileMetadata($uid, 'ns_t3ai')` (second HTTP request → `recordOrigin` fallback). Stock libraries (pixabay/pexels/unsplash/openverse) are skipped.  
-**ns_t3aa** binds: TTS/binary audio always via `bindFileMetadata` (module and FE paths). File metadata text (alt/title/description) always skips.  
+**ns_t3ai** binds: `pages`, `tt_content`, and DALL·E file save via `bindFileMetadata($uid, 'ns_t3ai')` (second HTTP request → `recordOrigin` fallback). Stock libraries (pixabay/pexels/unsplash/openverse) are skipped. 
+**ns_t3aa** binds: TTS/binary audio always via `bindFileMetadata` (module and FE paths). File metadata text (alt/title/description) always skips. 
 **ns_t3al:** no bind hooks yet.
 
 ### 3. Manual / editor path
@@ -172,7 +172,7 @@ Human review does **not** suppress media labels.
 
 ---
 
-## Confirmation (R3)
+## Confirmation
 
 `ConfirmationService::confirm()`:
 

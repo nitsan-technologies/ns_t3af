@@ -1136,7 +1136,7 @@ PY);
         $filters = $this->aiUsageAnalyticsService->normalizeFilters($query);
         $mode = $this->resolveAiUsageMode($query);
         $creditsModeEnabled = $this->creditModeResolver->isEnabled();
-        // Same Credits / Own Keys (+ site provider UIDs) scope as the dashboard KPIs (T3AF-DASHBO-07).
+        // Same Credits / Own Keys (+ site provider UIDs) scope as the dashboard KPIs.
         $usageScope = $creditsModeEnabled
             ? RequestLogProviderScope::Credits
             : RequestLogProviderScope::OwnKeys;

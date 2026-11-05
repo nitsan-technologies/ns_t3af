@@ -133,7 +133,7 @@ final class AccessControlListener
             return false;
         }
 
-        // Product-facing copy (T3AI-616+); capability key stays in structured logs.
+        // Product-facing copy; capability key stays in structured logs.
         $this->logger->notice('AI capability permission denied.', [
             'permission' => $permissionKey,
             'callKind' => $event->callKind,

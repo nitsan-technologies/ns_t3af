@@ -114,16 +114,16 @@ Checking configured items
   [progress indicator when appropriate]
 
 Results
-  Item                         Result
-  Example item                 Completed
-  Another item                 Skipped · no change required
-  Third item                   Failed · reason available in verbose output
+  Item Result
+  Example item Completed
+  Another item Skipped · no change required
+  Third item Failed · reason available in verbose output
 
 Summary
-  Items checked                12
-  Completed                     8
-  Skipped                       3
-  Failed                        1
+  Items checked 12
+  Completed 8
+  Skipped 3
+  Failed 1
 
 Next step: Review the failed item and rerun the command.
 ```
@@ -360,11 +360,11 @@ A progress bar or `SymfonyStyle` section that only writes to the injected `$outp
 |---|---|
 | `t3af:mcp:cleanup` | `nst3af:mcp:cleanup` |
 | `t3af:mcp:serve` | `mcp:server`, `nst3af:mcp:serve` |
-| `t3af:agent:index-tools` | |
-| `t3af:agent:eval` | |
-| `t3af:agent:conversations:cleanup` | |
-| `t3af:ailabel:export` | |
-| `t3af:ailabel:audit` | |
+| `t3af:agent:index-tools` | — |
+| `t3af:agent:eval` | — |
+| `t3af:agent:conversations:cleanup` | — |
+| `t3af:ailabel:export` | — |
+| `t3af:ailabel:audit` | — |
 | `t3af:ai-logs:cleanup` | `nst3af:ai-logs:cleanup`, `nst3ai:log:clear`, `nst3ai:clean:ailog`, `ns_t3ai:clean:ailog` |
 
 `SchedulerCliCommandCatalogService` lists `t3af:*` names from `CommandRegistry` for the backend. It hides the retired log-cleanup aliases from that listing. Do not rename commands or drop aliases as part of a presentation change.
@@ -374,7 +374,7 @@ A progress bar or `SymfonyStyle` section that only writes to the injected `$outp
 | Command | Aliases | Schedulable |
 |---|---|---|
 | `t3af:cache:flush` | `nst3ai:cache:flush` | false |
-| `t3af:scan:site` | | true. `SiteScanTask` runs it with `NullOutput`. |
+| `t3af:scan:site` | — | true. `SiteScanTask` runs it with `NullOutput`. |
 | `t3af:exception:solve` | `nst3ai:exception:solve` | false. Registered only when the `OpenAI` class exists. |
 | `t3af:glossary:list` | `nst3ai:glossary:list` | false |
 | `t3af:glossary:remove` | `nst3ai:glossary:remove` | true |
@@ -388,17 +388,17 @@ The v14 split is `version_compare` on `version_main` in `ns_t3ai` `Configuration
 
 | Command | Aliases |
 |---|---|
-| `nst3aa:regenerate-widget` | |
+| `nst3aa:regenerate-widget` | — |
 | `nst3aa:bulk:metadata` | `aiuniverse:bulk:metadata` |
-| `nst3aa:monitor:run` | |
-| `nst3aa:bulk:voiceover` | |
+| `nst3aa:monitor:run` | — |
+| `nst3aa:bulk:voiceover` | — |
 
 `ns_t3cs` registers in `Configuration/Services.yaml`. `TrainingCommand` extends `AbstractCommand` and is the heaviest output path (progress bar, per-item lines, cleanup phase).
 
 | Command | Aliases | Schedulable |
 |---|---|---|
 | `nst3af:training` | `aiuniverse:training`, `t3cs:training` | true |
-| `t3cs:keyword:compounds` | | false |
+| `t3cs:keyword:compounds` | — | false |
 | `t3af:history:cleanup` | `t3cs:history:cleanup` | true |
 
 `ns_t3ac` and `ns_t3as` have no command classes. Chatbot and search training is `nst3af:training`.

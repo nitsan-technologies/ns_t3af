@@ -23,7 +23,7 @@ use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 
 /**
- * Reverts a single applied agent change via DataHandler (T14).
+ * Reverts a single applied agent change via DataHandler.
  *
  * @internal
  */

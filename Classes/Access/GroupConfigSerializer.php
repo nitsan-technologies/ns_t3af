@@ -156,7 +156,7 @@ final class GroupConfigSerializer
             'nst3af:capability_embeddings',
         ];
 
-        // Image generation is gated by the Media feature (T3AI-616+).
+        // Image generation is gated by the Media feature.
         $mediaLevel = FeatureLevel::tryFromString($config->features['media'] ?? FeatureLevel::Disabled->value);
         if ($mediaLevel !== FeatureLevel::Disabled) {
             $options[] = 'nst3af:capability_image_generation';

@@ -1,11 +1,11 @@
 # Feature — AI Agent (backend right-edge panel)
 
-**Status:** Done (structural + NL routing on Symfony AI Agent, core tool set + find_tools, DualMode preview→apply, BE i18n)  
-**UI:** Global toolbar **Ask AI Agent** (`AgentToolbarItem`), right-edge sliding panel JS `@nitsan/nst3af/agent.js` (persistent sessions rail, remembered last conversation via Persistent)  
-**Settings route:** `t3af_dashboard.ai_agent`  
+**Status:** Done (structural + NL routing on Symfony AI Agent, core tool set + find_tools, DualMode preview→apply, BE i18n) 
+**UI:** Global toolbar **Ask AI Agent** (`AgentToolbarItem`), right-edge sliding panel JS `@nitsan/nst3af/agent.js` (persistent sessions rail, remembered last conversation via Persistent) 
+**Settings route:** `t3af_dashboard.ai_agent` 
 **Verify:** `Documentation/Agent/VerifySuite.md`, `Tests/Unit/Agent/` · routing docs: `Documentation/Agent/Routing.md`, `PreviewApply.md`, `Eval.md`
 
-### Spec amendment (F7 / R38 / open item 2) — locked 21 Oct 2026
+### Spec amendment — locked 21 Oct 2026
 
 The agent surface for T3AI (and child Fix / ask-bar callers) is **this** right-edge panel as shipped: full-height, ~800px, with the existing full-screen dimming backdrop (`Resources/Public/Css/module/agent.css`, `AgentToolbarItem`). **No** bottom drawer inside the module content area, **no** centred modal, **no** separate "AI Agent workspace" screen in `ns_t3ai`. Earlier prototype / pattern-library text that described a bottom drawer or centred modal is superseded; amend external `ux-spec.md` / revision-log / open item 2 to match this note rather than changing the panel.
 
@@ -106,7 +106,7 @@ Reasoning models (0.13 `MultiPartResult`: thinking + text / tool calls) are read
 | Piece | Path |
 |---|---|
 | Preview DualMode | `McpPlaygroundService::preview` + `McpModeOverride` → suggestions meta |
-| Suggestions apply | `AgentWriteService::applySuggestions` (context mode content params). A tool `{"error": ...}` (for example an editor without SEO field rights) is a failed apply, not "Applied". Undo writes the preview field `column` (pages `seo_title`, not the suggestion key `metaTitle`). |
+| Suggestions apply | `AgentWriteService::applySuggestions` (context mode content params). A tool `{"error":...}` (for example an editor without SEO field rights) is a failed apply, not "Applied". Undo writes the preview field `column` (pages `seo_title`, not the suggestion key `metaTitle`). |
 | Plan + draft card | `AgentToolPlanResolver`, `AgentDraftService`, `SatelliteToolPlanService` |
 | Apply (non-preview) | `AgentWriteService::apply` → DataHandler or tool confirmation invoke |
 | Tool confirmation kind | `PLAN_KIND_TOOL_CONFIRMATION` — run-after-confirm for non-DataHandler tools |
