@@ -202,7 +202,9 @@ final readonly class AgentContextPresenter
                     '- Workspace: "%s" [%d] — confirmed changes go to this draft workspace%s',
                     $workspace['title'] ?? '',
                     (int) ($workspace['id'] ?? 0),
-                    ($workspace['fromLive'] ?? false) === true ? ' (the editor works in Live; nothing goes live until it is published)' : '',
+                    ($workspace['fromLive'] ?? false) === true
+                        ? ' (the editor works in Live; you MUST tell them records were created in this workspace and need publish before they appear in Live Layout)'
+                        : '',
                 );
         }
         $credits = is_array($context['credits'] ?? null) ? $context['credits'] : null;

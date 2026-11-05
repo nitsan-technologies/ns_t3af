@@ -75,6 +75,28 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function promptBlockFromLiveRequiresPublishDisclosure(): void
+    {
+        $block = AgentContextPresenter::promptBlock(['details' => [
+            'module' => ['route' => 'web_layout', 'label' => 'Page'],
+            'page' => ['uid' => 26, 'title' => 'fdg'],
+            'siteLanguages' => [],
+            'folder' => null,
+            'workspace' => [
+                'id' => 1,
+                'title' => 'MCP Workspace for Admin',
+                'live' => false,
+                'fromLive' => true,
+            ],
+        ]]);
+
+        self::assertStringContainsString('Workspace: "MCP Workspace for Admin" [1]', $block);
+        self::assertStringContainsString('the editor works in Live', $block);
+        self::assertStringContainsString('you MUST tell them records were created in this workspace and need publish', $block);
+        self::assertStringContainsString('Live Layout', $block);
+    }
+
+    #[Test]
     public function promptBlockIncludesCreditsBalanceAndBuyPath(): void
     {
         $block = AgentContextPresenter::promptBlock([

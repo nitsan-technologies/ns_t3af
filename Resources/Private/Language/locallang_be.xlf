@@ -1826,6 +1826,9 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.info.modeDraft" resname="agent.info.modeDraft">
         <source>You are in the workspace "%1$s": confirmed changes stay a draft until they are published.</source>
       </trans-unit>
+      <trans-unit id="agent.info.modeFromLive" resname="agent.info.modeFromLive">
+        <source>You are working in Live, but confirmed changes go to the workspace "%1$s" (MCP Server > Workspace selection). Publish that workspace to see them in Live Layout.</source>
+      </trans-unit>
       <trans-unit id="agent.info.conversationsTitle" resname="agent.info.conversationsTitle">
         <source>Conversations</source>
       </trans-unit>
@@ -1924,6 +1927,9 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       </trans-unit>
       <trans-unit id="agent.draft.targetWorkspace" resname="agent.draft.targetWorkspace">
         <source>On confirm this is saved as a draft in the workspace “%1$s”.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.targetWorkspaceFromLive" resname="agent.draft.targetWorkspaceFromLive">
+        <source>On confirm this is saved as a draft in the workspace “%1$s”. Publish that workspace to see it in Live Layout.</source>
       </trans-unit>
       <trans-unit id="agent.link.edit" resname="agent.link.edit">
         <source>Edit</source>
@@ -2581,6 +2587,9 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       </trans-unit>
       <trans-unit id="agent.workspace.noAccess" resname="agent.workspace.noAccess">
         <source>The workspace selected under MCP Server > Workspace selection is not available to you. Ask your administrator for access or pick another workspace there.</source>
+      </trans-unit>
+      <trans-unit id="agent.workspace.createdNeedPublish" resname="agent.workspace.createdNeedPublish">
+        <source>Created in workspace "%1$s" — publish to see it in Live Layout.</source>
       </trans-unit>
       <trans-unit id="agent.plan.title" resname="agent.plan.title">
         <source>Progress</source>

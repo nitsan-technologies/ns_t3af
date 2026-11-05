@@ -870,7 +870,9 @@ export const chromeMethods = {
         section('mode', lang('agent.info.modeTitle', 'Live or draft'),
           paragraph(live
             ? lang('agent.info.modeLive', 'You are in the live workspace: confirmed changes are visible on the website right away.')
-            : lang('agent.info.modeDraft', 'You are in the workspace "%1$s": confirmed changes stay a draft until they are published.', [String(details.workspace?.title ?? '')]))),
+            : (details.workspace?.fromLive === true
+              ? lang('agent.info.modeFromLive', 'You are working in Live, but confirmed changes go to the workspace "%1$s" (MCP Server > Workspace selection). Publish that workspace to see them in Live Layout.', [String(details.workspace?.title ?? '')])
+              : lang('agent.info.modeDraft', 'You are in the workspace "%1$s": confirmed changes stay a draft until they are published.', [String(details.workspace?.title ?? '')])))),
         section('conversations', lang('agent.info.conversationsTitle', 'Conversations'),
           paragraph(lang(`agent.info.conversations.${this.sessionListSettings.scope ?? 'page'}`, 'Each page has its own conversations.'))
           + paragraph(lang('agent.info.conversationsList', 'Find earlier conversations in the list; they are deleted after %1$s days without activity.', [String(this.sessionListSettings.retentionDays ?? 90)]))),

@@ -30,7 +30,8 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
  * "MCP Server > Workspace selection" (`WorkspacePreferenceService`) decides: a workspace = the
  * changes go there, Live chosen explicitly (or never chosen) = they go Live. A chosen workspace the
  * editor may not use is not replaced by another one: the caller refuses the write
- * (see {@see self::isPreferredWorkspaceUnusable()}).
+ * (see {@see self::isPreferredWorkspaceUnusable()}). When Live is redirected into a preferred
+ * workspace, callers must disclose that (see {@see self::redirectedFromLive()}).
  *
  * @internal
  */
@@ -66,6 +67,16 @@ final readonly class AgentWorkspaceTarget
             $this->preference->getStoredForBackendUser($user),
             static fn(int $uid): bool => $user->checkWorkspace($uid) !== false,
         );
+    }
+
+    /**
+     * True when the editor's own backend workspace is Live but the write target is a draft
+     * workspace (MCP preference redirected the write). Callers must tell the editor that
+     * records need publish before they appear in Live Layout.
+     */
+    public static function redirectedFromLive(int $editorWorkspaceId, int $writeWorkspaceId): bool
+    {
+        return $editorWorkspaceId <= 0 && $writeWorkspaceId > 0;
     }
 
     /**

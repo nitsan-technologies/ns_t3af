@@ -490,6 +490,8 @@ final class AgentAjaxController
         if ($this->workspaceTarget->isPreferredWorkspaceUnusable($requestedWorkspaceId, $user)) {
             return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.workspace.noAccess')], 403);
         }
+        // Capture before setTemporaryWorkspace: editor may be in Live while writes go to the preferred draft workspace.
+        $fromLiveRedirect = AgentWorkspaceTarget::redirectedFromLive((int) $user->workspace, $workspaceId);
         $correlationId = trim((string) ($body['correlationId'] ?? ''));
         $selections = is_array($body['selections'] ?? null) ? $body['selections'] : [];
         $edits = is_array($body['edits'] ?? null) ? $body['edits'] : [];
@@ -660,6 +662,7 @@ final class AgentAjaxController
             }
         }
         // Image fallback notice is shown once in the Agent UI (JS bubble from details.notice), not here.
+        $message = $this->withWorkspacePublishDisclosure($message, $fromLiveRedirect, $workspaceId);
 
         $links = $this->resultLinks($result, $storedDraft);
         if ($user !== null) {
@@ -685,6 +688,36 @@ final class AgentAjaxController
             'schedulerHandoff' => $handoff,
             'links' => $links,
         ]);
+    }
+
+    /**
+     * When Live→preferred-workspace redirect wrote the change, say so in the Apply reply
+     * (Live Layout stays empty until that workspace is published).
+     */
+    private function withWorkspacePublishDisclosure(string $message, bool $fromLiveRedirect, int $workspaceId): string
+    {
+        if (!$fromLiveRedirect || $workspaceId <= 0) {
+            return $message;
+        }
+
+        $title = $this->workspaceTitleForDisclosure($workspaceId);
+        $note = $this->translator->translate('agent.workspace.createdNeedPublish', [$title]);
+        if ($note === '' || $note === 'agent.workspace.createdNeedPublish') {
+            $note = sprintf(
+                'Created in workspace "%s" — publish to see it in Live Layout.',
+                $title,
+            );
+        }
+
+        return trim($message . ' ' . $note);
+    }
+
+    private function workspaceTitleForDisclosure(int $workspaceId): string
+    {
+        $row = BackendUtility::getRecord('sys_workspace', $workspaceId, 'title');
+        $title = trim((string) ($row['title'] ?? ''));
+
+        return $title !== '' ? $title : ('Workspace #' . $workspaceId);
     }
 
     /**

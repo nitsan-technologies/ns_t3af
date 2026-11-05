@@ -74,9 +74,20 @@ export const draftMethods = {
     renderDraftTarget(destructive, cannotUndo = false) {
       const workspace = this.context.details?.workspace ?? null;
       const live = workspace === null || workspace.live !== false;
-      const text = live
-        ? lang('agent.draft.targetLive', 'On confirm this goes live on the website.')
-        : lang('agent.draft.targetWorkspace', 'On confirm this is saved as a draft in the workspace “%1$s”.', [String(workspace.title ?? '')]);
+      const fromLive = workspace?.fromLive === true;
+      const title = String(workspace?.title ?? '');
+      let text;
+      if (live) {
+        text = lang('agent.draft.targetLive', 'On confirm this goes live on the website.');
+      } else if (fromLive) {
+        text = lang(
+          'agent.draft.targetWorkspaceFromLive',
+          'On confirm this is saved as a draft in the workspace “%1$s”. Publish that workspace to see it in Live Layout.',
+          [title],
+        );
+      } else {
+        text = lang('agent.draft.targetWorkspace', 'On confirm this is saved as a draft in the workspace “%1$s”.', [title]);
+      }
       const warn = destructive || cannotUndo ? ` ${lang('agent.draft.targetDestructive', 'This cannot be undone.')}` : '';
       return `<p class="nst3af-agent-draft__target nst3af-agent-draft__target--${live ? 'live' : 'draft'}">${escapeHtml(text + warn)}</p>`;
     },
