@@ -5872,12 +5872,15 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 
         // Agent provider selection → MCP McpInvocationContext (`aiProvider` arg).
         // Do not stamp a chat-only provider onto image generation — the confirm card would lie.
+        // Translate tools must not inherit the chat provider (T3AF-PVD-14): MCP honors
+        // defaultProviderForTranslation (DeepL/Google) when aiProvider is left unset.
         $provider = trim($providerIdentifier);
         if (
             $provider !== ''
             && $provider !== AgentProviderOptions::DEFAULT
             && (!isset($arguments['aiProvider']) || trim((string) $arguments['aiProvider']) === '')
             && !($toolName === 't3ai_generate_image' && !self::providerIdentifierCanGenerateImages($provider))
+            && !self::isTranslateTool($toolName)
         ) {
             $arguments['aiProvider'] = $provider;
         }
