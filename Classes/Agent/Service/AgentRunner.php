@@ -553,7 +553,17 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         );
 
         try {
-            $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan, $requestForChecklist))->getResult();
+            try {
+                $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan, $requestForChecklist))->getResult();
+            } catch (\Throwable $firstCallException) {
+                // One retry for flaky HTTP/2 / idle timeouts; then fall through to the outer catch.
+                if (!AgentProviderTurnErrorPresenter::looksLikeTransportInfrastructure($firstCallException)
+                    && !self::looksLikeTimeout($firstCallException)
+                ) {
+                    throw $firstCallException;
+                }
+                $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan, $requestForChecklist))->getResult();
+            }
             $content = $agentResult->getContent();
             $finalText = is_string($content) ? trim($content) : '';
             $retried = false;
@@ -1160,6 +1170,15 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * Whole-page translation — hide t3ai_fix_check so a prior SEO finding does not steal the turn.
+     */
+    public static function isWholePageTranslateRequest(string $query): bool
+    {
+        return preg_match('/\b(translat\w*|locali[sz]\w*|übersetz\w*|uebersetz\w*)\b/iu', $query) === 1
+            && preg_match('/\b(page|seite)\b/iu', $query) === 1;
+    }
+
+    /**
      * What a create card makes: its tool, table and content type ("write_table tt_content textmedia").
      *
      * @param array<string, mixed> $draft
@@ -1517,9 +1536,16 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $notAskedFor['t3ai_generate_keywords'] = true;
                 $notAskedFor['t3ai_generate_meta_description'] = true;
             }
-            if (preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $query) !== 1) {
+            if (
+                self::isAltTextMetadataRequest($query)
+                || preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $query) !== 1
+            ) {
                 $notAskedFor['t3ai_generate_image'] = true;
             }
+        }
+        // "Write alt text for this image" mentions "image" but must never open image generation.
+        if (self::isAltTextMetadataRequest($query)) {
+            $notAskedFor['t3ai_generate_image'] = true;
         }
         $schemaRequest = self::isSchemaRequest($query);
         if ($schemaRequest && preg_match('/\b(folders?|director(?:y|ies)|ordner|verzeichnis\w*)\b/iu', $query) !== 1) {
@@ -1600,10 +1626,16 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $found = [...self::toolsByName(['t3aa_alt_text_approve'], $executableTools, $offeredNames), ...$found];
         }
         if (self::isMissingAltTextRequest($query) && !self::isApproveAllAltTextRequest($query)) {
+            // Always force-offer — never leave the model to invent an ACL refuse.
             $found = [...self::toolsByName(['t3aa_list_files_missing_alt_text'], $executableTools, $offeredNames), ...$found];
             if (AgentToolTurnProcessor::asksToWriteMissingAltText($query)) {
                 $found = [...self::toolsByName(['t3aa_update_file_metadata'], $executableTools, $offeredNames), ...$found];
             }
+        } elseif (self::isAltTextMetadataRequest($query) && !self::isApproveAllAltTextRequest($query)) {
+            $found = [...self::toolsByName(['t3aa_update_file_metadata', 't3aa_list_files_missing_alt_text'], $executableTools, $offeredNames), ...$found];
+        }
+        if (self::isAiLabelStatusRequest($query)) {
+            $found = [...self::toolsByName(['t3ai_ailabel_status'], $executableTools, $offeredNames), ...$found];
         }
         if (self::isDecorativeImageRequest($query)) {
             $found = [...self::toolsByName(['t3aa_mark_image_decorative'], $executableTools, $offeredNames), ...$found];
@@ -1854,6 +1886,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if (self::isDoNotApproveAltTextRequest($query)) {
             $names[] = 't3aa_alt_text_approve';
         }
+        if (self::isWholePageTranslateRequest($query) && !self::asksForOneElementTranslation($query)) {
+            $names[] = 't3ai_fix_check';
+        }
         if (self::isQueueFolderAltTextRequest($query) && AgentToolTurnProcessor::requestedFileNames($query) === []) {
             $names[] = 't3aa_update_file_metadata';
         }
@@ -2073,11 +2108,44 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
      */
     public static function isMissingAltTextRequest(string $query): bool
     {
+        // "images that have no alternative text" / "files without alt"
+        if (preg_match(
+            '/\b(?:images?|files?|bilder?|dateien)\b.*\b(?:no|without|missing|ohne|fehlend\w*|keine[nr]?)\b.*\b(?:alt|alternativ)/iu',
+            $query,
+        ) === 1) {
+            return true;
+        }
         if (preg_match('/\b(alt[\s-]*texts?|alternativtext\w*)\b/iu', $query) !== 1) {
             return false;
         }
 
         return preg_match('/\b(missing|without|no|ohne|fehlend\w*|keine[nr]?)\b/iu', $query) === 1;
+    }
+
+    /**
+     * AI Label status / how many labels reviewed (not a free-text invent of table ACL).
+     */
+    public static function isAiLabelStatusRequest(string $query): bool
+    {
+        return preg_match(
+            '/\b(?:ai[\s-]?labels?|ailabel|labelling|label(?:ling)?\s+status|labels?\s+reviewed|reviewed\s+labels?)\b/iu',
+            $query,
+        ) === 1;
+    }
+
+    /**
+     * Any alt-text / file-metadata ask (including "write alt text for hero.jpg"), not only "missing".
+     */
+    public static function isAltTextMetadataRequest(string $query): bool
+    {
+        if (self::isMissingAltTextRequest($query)) {
+            return true;
+        }
+
+        return preg_match(
+            '/\b(?:alt[\s-]?(?:text|tag|attribute?)s?|alternative?\s*text|alternativtext\w*|bildbeschreibung|file\s+metadata)\b/iu',
+            $query,
+        ) === 1;
     }
 
     public static function isSummarizeRequest(string $query): bool

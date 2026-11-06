@@ -61,7 +61,19 @@ readonly class AgentRecordLabeler
         if ($field === 'hidden') {
             $label = $this->translator->translate('agent.field.hidden');
 
-            return $label !== 'agent.field.hidden' ? $label : 'Hidden (1 = hidden, 0 = visible)';
+            return $label !== 'agent.field.hidden' ? $label : 'Hidden';
+        }
+
+        // tt_content CType and header_layout both ship as TCA "Type".
+        if ($table === 'tt_content' && $field === 'CType') {
+            $label = $this->translator->translate('agent.field.contentType');
+
+            return $label !== 'agent.field.contentType' ? $label : 'Content type';
+        }
+        if ($table === 'tt_content' && $field === 'header_layout') {
+            $label = $this->translator->translate('agent.field.headingType');
+
+            return $label !== 'agent.field.headingType' ? $label : 'Heading type';
         }
 
         // Internal plan fields of copy and delete: the editor sees a word, not the key.

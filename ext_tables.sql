@@ -455,7 +455,7 @@ CREATE TABLE tx_nst3af_group_settings (
 );
 
 #
-# AI Label origin columns (R1). Real columns for filtering, export and coverage score.
+# AI Label origin columns. Real columns for filtering, export and coverage score.
 #
 CREATE TABLE tt_content (
     tx_nst3af_ailabel_involvement VARCHAR(32) NOT NULL DEFAULT 'not_reviewed',

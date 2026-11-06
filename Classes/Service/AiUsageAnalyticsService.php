@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Service;
 
 use NITSAN\NsT3AF\Domain\Repository\RequestLogRepository;
+use NITSAN\NsT3AF\Domain\RequestLog\RequestLogProviderScope;
 
 final class AiUsageAnalyticsService
 {
@@ -128,6 +129,7 @@ final class AiUsageAnalyticsService
     /**
      * @param array{fromTimestamp:int,toTimestamp:int|null} $period
      * @param array{search:string,engine:string,model:string,module:string,scope:string,reqType:string,status:string,user:string,max:int,currentPage:int} $filters
+     * @param list<int>|null $providerUids Match dashboard Own Keys site filter when set
      *
      * @return array{
      *   kpis:array<string,mixed>,
@@ -135,17 +137,23 @@ final class AiUsageAnalyticsService
      *   filterOptions:array<string,list<string>>
      * }
      */
-    public function buildUsageData(array $period, array $filters, bool $creditsMode = false): array
-    {
+    public function buildUsageData(
+        array $period,
+        array $filters,
+        bool $creditsMode = false,
+        ?RequestLogProviderScope $scope = null,
+        ?array $providerUids = null,
+    ): array {
         $from = (int) $period['fromTimestamp'];
         $to = (int) $period['toTimestamp'];
+        $scope ??= $creditsMode ? RequestLogProviderScope::Credits : RequestLogProviderScope::OwnKeys;
 
-        $totals = $this->requestLogs->totals($from, $to);
-        $providerUsage = $this->requestLogs->providerDistribution($from, $to);
+        $totals = $this->requestLogs->totals($from, $to, $scope, $providerUids);
+        $providerUsage = $this->requestLogs->providerDistribution($from, $to, $scope, $providerUids);
         $topModels = $creditsMode
-            ? $this->requestLogs->topModelsByCredits($from, $to, 10)
-            : $this->requestLogs->topModelsByTokens($from, $to, 10);
-        $extensionUsage = $this->requestLogs->usageByExtension($from, $to, 12);
+            ? $this->requestLogs->topModelsByCredits($from, $to, 10, $scope, $providerUids)
+            : $this->requestLogs->topModelsByTokens($from, $to, 10, $scope, $providerUids);
+        $extensionUsage = $this->requestLogs->usageByExtension($from, $to, 12, $scope, $providerUids);
 
         return [
             'kpis' => [
@@ -168,6 +176,7 @@ final class AiUsageAnalyticsService
     /**
      * @param array{fromTimestamp:int,toTimestamp:int|null} $period
      * @param array{search:string,engine:string,model:string,module:string,scope:string,reqType:string,status:string,user:string,max:int,currentPage:int} $filters
+     * @param list<int>|null $providerUids
      *
      * @return array{
      *   entries:list<array<string,mixed>>,
@@ -176,28 +185,33 @@ final class AiUsageAnalyticsService
      *   perPage:int
      * }
      */
-    public function buildLogPage(array $period, array $filters): array
-    {
+    public function buildLogPage(
+        array $period,
+        array $filters,
+        ?RequestLogProviderScope $scope = null,
+        ?array $providerUids = null,
+    ): array {
         $from = (int) $period['fromTimestamp'];
         $to = (int) $period['toTimestamp'];
         $perPage = $filters['max'];
         $currentPage = max(1, $filters['currentPage']);
-        $totalCount = $this->requestLogs->countFiltered($filters, $from, $to);
+        $totalCount = $this->requestLogs->countFiltered($filters, $from, $to, $scope, $providerUids);
         $totalPages = max(1, (int) ceil($totalCount / $perPage));
         $currentPage = min($currentPage, $totalPages);
         $offset = ($currentPage - 1) * $perPage;
 
-        $entries = $this->requestLogs->findFiltered($filters, $from, $to, null, $perPage, $offset);
-        foreach ($entries as &$entry) {
+        $entries = $this->requestLogs->findFiltered($filters, $from, $to, $scope, $perPage, $offset, $providerUids);
+        $formatted = [];
+        foreach ($entries as $entry) {
             $entry['cost_formatted'] = $this->moneyFormatter->format(
                 (float) ($entry['estimated_cost'] ?? 0),
                 (string) ($entry['currency'] ?? 'USD'),
             );
+            $formatted[] = $entry;
         }
-        unset($entry);
 
         return [
-            'entries' => $entries,
+            'entries' => $formatted,
             'totalCount' => $totalCount,
             'currentPage' => $currentPage,
             'perPage' => $perPage,
@@ -207,15 +221,22 @@ final class AiUsageAnalyticsService
     /**
      * @param array{fromTimestamp:int,toTimestamp:int|null} $period
      * @param array{search:string,engine:string,model:string,module:string,scope:string,reqType:string,status:string,user:string,max:int,currentPage:int} $filters
+     * @param list<int>|null $providerUids
      *
      * @return array<string,mixed>
      */
-    public function buildExportPayload(array $period, array $filters, bool $creditsMode = false): array
-    {
+    public function buildExportPayload(
+        array $period,
+        array $filters,
+        bool $creditsMode = false,
+        ?RequestLogProviderScope $scope = null,
+        ?array $providerUids = null,
+    ): array {
         $from = (int) $period['fromTimestamp'];
         $to = (int) $period['toTimestamp'];
-        $usage = $this->buildUsageData($period, $filters, $creditsMode);
-        $entries = $this->requestLogs->findForExport($filters, $from, $to);
+        $scope ??= $creditsMode ? RequestLogProviderScope::Credits : RequestLogProviderScope::OwnKeys;
+        $usage = $this->buildUsageData($period, $filters, $creditsMode, $scope, $providerUids);
+        $entries = $this->requestLogs->findForExport($filters, $from, $to, $scope, $providerUids);
         $kpis = $usage['kpis'];
         if ($creditsMode) {
             unset($kpis['totalTokens'], $kpis['totalCost']);
@@ -237,14 +258,21 @@ final class AiUsageAnalyticsService
     /**
      * @param array{fromTimestamp:int,toTimestamp:int|null} $period
      * @param array{search:string,engine:string,model:string,module:string,scope:string,reqType:string,status:string,user:string,max:int,currentPage:int} $filters
+     * @param list<int>|null $providerUids
      *
      * @return list<list<string>>
      */
-    public function buildLogCsvRows(array $period, array $filters, bool $creditsMode = false): array
-    {
+    public function buildLogCsvRows(
+        array $period,
+        array $filters,
+        bool $creditsMode = false,
+        ?RequestLogProviderScope $scope = null,
+        ?array $providerUids = null,
+    ): array {
         $from = (int) $period['fromTimestamp'];
         $to = (int) $period['toTimestamp'];
-        $rows = $this->requestLogs->findForExport($filters, $from, $to);
+        $scope ??= $creditsMode ? RequestLogProviderScope::Credits : RequestLogProviderScope::OwnKeys;
+        $rows = $this->requestLogs->findForExport($filters, $from, $to, $scope, $providerUids);
         $lines = [$creditsMode
             ? ['Time', 'Provider', 'Module', 'Scope', 'Model', 'Type', 'Status', 'Credits']
             : ['Time', 'Provider', 'Module', 'Scope', 'Model', 'Type', 'Status', 'Tokens', 'Cost'],

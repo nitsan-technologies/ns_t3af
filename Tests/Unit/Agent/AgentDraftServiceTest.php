@@ -76,7 +76,30 @@ final class AgentDraftServiceTest extends TestCase
         self::assertTrue($card['fields'][0]['kept']);
         self::assertFalse($card['fields'][0]['safe']);
         self::assertSame(0, $card['safeFieldCount']);
+        self::assertSame('', $card['notice']);
         self::assertNotSame('', $card['draftId']);
+    }
+
+    #[Test]
+    public function buildDraftCardSurfacesEditorNoticeFromPlanContext(): void
+    {
+        $plan = new ToolPlan('update', 't3ai_fix_check', [
+            new ToolPlanField(
+                ToolPlanField::buildKey('tt_content', 1814, 'bodytext'),
+                'tt_content',
+                1814,
+                'bodytext',
+                'Old',
+                'New',
+            ),
+        ], [
+            'editorNotice' => 'No safe rewrite found, original text kept. Content 1813: no simpler wording without changing meaning.',
+        ]);
+
+        $card = $this->service->buildDraftCard($plan, 'write');
+
+        self::assertStringContainsString('Content 1813', $card['notice']);
+        self::assertFalse($card['fields'][0]['safe']);
     }
 
     #[Test]

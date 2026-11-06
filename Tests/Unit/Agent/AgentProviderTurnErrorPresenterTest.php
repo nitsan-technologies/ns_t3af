@@ -43,6 +43,7 @@ final class AgentProviderTurnErrorPresenterTest extends TestCase
             return match (true) {
                 str_contains($label, 'agent.turn.orchestratorFailed') => 'The agent could not complete this turn: %1$s',
                 str_contains($label, 'agent.turn.providerUnavailable') => 'The AI provider is not available right now.',
+                str_contains($label, 'agent.turn.providerModelUnavailable') => 'The model set for this provider is no longer available. Open AI Foundation → Providers.',
                 str_contains($label, 'agent.turn.providerRateLimited') => 'Rate limited: %1$s',
                 default => $label,
             };
@@ -147,6 +148,18 @@ final class AgentProviderTurnErrorPresenterTest extends TestCase
     }
 
     #[Test]
+    public function retiredVendorModelGetsFriendlyProvidersPath(): void
+    {
+        $message = 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash.';
+        $shown = $this->presenter->present(new AdapterRuntimeException($message), $this->translator, true);
+
+        self::assertStringContainsString('no longer available', $shown);
+        self::assertStringContainsString('AI Foundation → Providers', $shown);
+        self::assertStringNotContainsString('gemini-3.8-flash', $shown);
+        self::assertStringNotContainsString('update your code', $shown);
+    }
+
+    #[Test]
     public function mistralRateLimitJsonIsReadable(): void
     {
         $raw = 'HTTP 429 returned for "https://api.mistral.ai/v1/chat/completions": {"message":"Rate limit exceeded","type":"rate_limit"}';
@@ -210,5 +223,18 @@ final class AgentProviderTurnErrorPresenterTest extends TestCase
         $shown = $this->presenter->present($exception, $this->translator, true);
         self::assertSame('The AI provider is not available right now.', $shown);
         self::assertStringNotContainsString('10.255.255.1', $shown);
+    }
+
+    #[Test]
+    public function http2ProtocolErrorsAreGenericForAdminsToo(): void
+    {
+        $exception = new AdapterRuntimeException(
+            'HTTP/2 stream 1 was not closed cleanly: PROTOCOL_ERROR (err 1) for "https://api.example.com/v1/chat/completions".',
+        );
+
+        self::assertTrue(AgentProviderTurnErrorPresenter::looksLikeTransportInfrastructure($exception));
+        $shown = $this->presenter->present($exception, $this->translator, true);
+        self::assertSame('The AI provider is not available right now.', $shown);
+        self::assertStringNotContainsString('PROTOCOL_ERROR', $shown);
     }
 }

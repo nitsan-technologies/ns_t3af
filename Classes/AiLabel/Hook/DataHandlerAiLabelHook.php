@@ -103,14 +103,18 @@ final class DataHandlerAiLabelHook
         if (isset($fieldArray['tx_nst3af_ailabel_involvement'])) {
             $involvement = Involvement::tryFrom((string) $fieldArray['tx_nst3af_ailabel_involvement'])
                 ?? Involvement::NotReviewed;
-            $key = $table . ':' . $uid;
-            GeneralUtility::makeInstance(OriginRecorder::class)->recordOrigin(
-                $table,
-                $uid,
-                $involvement,
-                'manual',
-                previousInvolvement: $this->previousInvolvement[$key] ?? null,
-            );
+            // TCA default / silent not_reviewed is not a human origin decision — bind helpers and
+            // RecordsApplyAiLabelMarker stamp AI. Never wipe an existing AI stamp via this path.
+            if ($involvement !== Involvement::NotReviewed) {
+                $key = $table . ':' . $uid;
+                GeneralUtility::makeInstance(OriginRecorder::class)->recordOrigin(
+                    $table,
+                    $uid,
+                    $involvement,
+                    'manual',
+                    previousInvolvement: $this->previousInvolvement[$key] ?? null,
+                );
+            }
         }
 
         $confirmation = GeneralUtility::makeInstance(ConfirmationService::class);

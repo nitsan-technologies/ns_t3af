@@ -21,6 +21,8 @@ namespace NITSAN\NsT3AF\Tests\Unit\AiLabel;
 
 use NITSAN\NsT3AF\AiLabel\Service\IptcDigitalSourceTypeService;
 use PHPUnit\Framework\TestCase;
+use TYPO3\CMS\Core\Cache\CacheManager;
+use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 
@@ -39,6 +41,56 @@ final class IptcDigitalSourceTypeServiceTest extends TestCase
         self::assertFalse($service->isAiGeneratedSource('http://example.com/photo'));
         self::assertFalse($service->isAiGeneratedSource('City: Berlin'));
         self::assertFalse($service->isAiGeneratedSource(null));
+    }
+
+    public function testReadDigitalSourceTypeIgnoresCacheFalseAndDoesNotTypeError(): void
+    {
+        $cache = $this->createMock(FrontendInterface::class);
+        $cache->method('has')->willReturn(true);
+        $cache->method('get')->willReturn(false);
+
+        $cacheManager = $this->createMock(CacheManager::class);
+        $cacheManager->method('getCache')->with('nst3af_ailabel_iptc')->willReturn($cache);
+
+        $service = $this->getMockBuilder(IptcDigitalSourceTypeService::class)
+            ->setConstructorArgs([$cacheManager])
+            ->onlyMethods(['imagickAvailable'])
+            ->getMock();
+        $service->method('imagickAvailable')->willReturn(true);
+
+        $file = $this->createMock(File::class);
+        $file->method('getMimeType')->willReturn('image/jpeg');
+        $file->method('getProperty')->willReturnMap([['sha1', 'deadbeef']]);
+        $file->method('getForLocalProcessing')
+            ->willThrowException(new \RuntimeException('no local file'));
+
+        self::assertNull($service->readDigitalSourceType($file));
+    }
+
+    public function testReadDigitalSourceTypeReturnsCachedString(): void
+    {
+        $cache = $this->createMock(FrontendInterface::class);
+        $cache->method('has')->willReturn(true);
+        $cache->method('get')->willReturn(IptcDigitalSourceTypeService::TRAINED_ALGORITHMIC_MEDIA);
+
+        $cacheManager = $this->createMock(CacheManager::class);
+        $cacheManager->method('getCache')->with('nst3af_ailabel_iptc')->willReturn($cache);
+
+        $service = $this->getMockBuilder(IptcDigitalSourceTypeService::class)
+            ->setConstructorArgs([$cacheManager])
+            ->onlyMethods(['imagickAvailable'])
+            ->getMock();
+        $service->method('imagickAvailable')->willReturn(true);
+
+        $file = $this->createMock(File::class);
+        $file->method('getMimeType')->willReturn('image/jpeg');
+        $file->method('getProperty')->willReturnMap([['sha1', 'deadbeef']]);
+        $file->expects(self::never())->method('getForLocalProcessing');
+
+        self::assertSame(
+            IptcDigitalSourceTypeService::TRAINED_ALGORITHMIC_MEDIA,
+            $service->readDigitalSourceType($file),
+        );
     }
 
     public function testCopyDigitalSourceTypeIgnoresNonAiDigitalSourceType(): void

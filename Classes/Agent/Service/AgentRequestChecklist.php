@@ -47,6 +47,9 @@ final class AgentRequestChecklist
         if (self::isFileMetadataOnlyRequest($message)) {
             return [];
         }
+        if (self::isScanFindingFixRequest($message)) {
+            return [];
+        }
         if (AgentToolTurnProcessor::asksForADataSource($message) && !AgentCoreToolSet::isCreateContentRequest($message)) {
             return [];
         }
@@ -207,6 +210,18 @@ final class AgentRequestChecklist
     }
 
     /**
+     * Scan Report Fix: rewrite existing fields. "Body text" / "Show a draft only" must not
+     * open a Create Text step that then drafts a new element after Apply.
+     */
+    public static function isScanFindingFixRequest(string $message): bool
+    {
+        $s = mb_strtolower($message);
+
+        return preg_match('/\bfix the\b.{0,120}\bfinding\b/u', $s) === 1
+            || preg_match('/\buse t3ai_fix_check\b/u', $s) === 1;
+    }
+
+    /**
      * Copy in the agent panel only — no tt_content / page write. "Show me the text in the chat, don't save"
      * must not open a Create Text step because the word "text" is not a CType request.
      */
@@ -281,8 +296,8 @@ final class AgentRequestChecklist
                     . $altText . ' Do not claim the request is finished until that succeeds.';
             }
             if (($step['kind'] ?? '') === 'alt_text') {
-                return 'Next: the image is attached without alt text. Set "alternative" on its sys_file_reference (write_table, table sys_file_reference, the uid from referenceUids)'
-                    . ' to a short text that describes the image. If that is not possible, tell the editor the alt text is not set — do not claim the request is finished.';
+                return 'Next: the image is attached without alt text. Call t3aa_update_file_metadata with the file uid/url and a short alternative text that describes the image.'
+                    . ' Never use write_table on sys_file or sys_file_reference for alt text. If that is not possible, tell the editor the alt text is not set — do not claim the request is finished.';
             }
             $cType = (string) ($step['cType'] ?? '');
             if ($cType !== '') {
@@ -424,6 +439,8 @@ final class AgentRequestChecklist
         );
         // "Alt text" is a field of an image, not a Text element.
         $s = (string) preg_replace('/\b(?:alt[\s-]?(?:texts?|tags?|attributes?)|alternative?\s+texts?)\b/u', ' ', $s);
+        // "Body text" / bodytext is the field a scan rewrite edits, not a new Text element.
+        $s = (string) preg_replace('/\bbody[\s-]?texts?\b|\bbodytext\b/u', ' ', $s);
         // "all images", "the images in the user_upload folder" are files that already exist, not an Images element.
         $s = (string) preg_replace(
             '/\b(?:all|existing|these|those|the|alle|vorhandenen?|diese)\s+(?:images|bilder)\b(?!\s+(?:content\s+)?elements?\b)'

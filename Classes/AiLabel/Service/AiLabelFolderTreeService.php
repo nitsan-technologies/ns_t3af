@@ -48,7 +48,6 @@ final class AiLabelFolderTreeService
     public function __construct(
         private readonly StorageRepository $storageRepository,
         private readonly ConnectionPool $connectionPool,
-        private readonly AiLabelRecordEvaluator $evaluator,
     ) {}
 
     /**
@@ -151,25 +150,85 @@ final class AiLabelFolderTreeService
         }
 
         $qb->andWhere($qb->expr()->eq('storage', $qb->createNamedParameter($storageUid, Connection::PARAM_INT)));
-        $qb->select('uid')->from('sys_file');
-        $fileUids = array_map('intval', $qb->executeQuery()->fetchFirstColumn());
-        $total = count($fileUids);
+        $qb->selectLiteral('COUNT(*)')->from('sys_file');
+        $total = (int) $qb->executeQuery()->fetchOne();
         if ($total === 0) {
             return ['total' => 0, 'open' => 0];
         }
 
+        // Same awaiting predicate as AiLabelRecordEvaluator::isAwaitingReview — SQL COUNT, no row dump.
         $metaQb = $this->connectionPool->getQueryBuilderForTable('sys_file_metadata');
+        // sys_file_metadata has no deleted column — restrict via joined sys_file only.
         $metaQb->getRestrictions()->removeAll();
-        $metaQb->select('*')
-            ->from('sys_file_metadata')
-            ->where($metaQb->expr()->in('file', $metaQb->createNamedParameter($fileUids, Connection::PARAM_INT_ARRAY)));
+        $metaQb->selectLiteral('COUNT(*)')
+            ->from('sys_file_metadata', 'm')
+            ->innerJoin(
+                'm',
+                'sys_file',
+                'f',
+                $metaQb->expr()->eq('m.file', $metaQb->quoteIdentifier('f.uid')),
+            )
+            ->where($metaQb->expr()->eq('f.storage', $metaQb->createNamedParameter($storageUid, Connection::PARAM_INT)));
 
-        $open = 0;
-        foreach ($metaQb->executeQuery()->fetchAllAssociative() as $row) {
-            if ($this->evaluator->isAwaitingReview($row)) {
-                ++$open;
-            }
+        if ($recursive) {
+            $metaQb->andWhere(
+                $metaQb->expr()->or(
+                    $metaQb->expr()->eq('f.identifier', $metaQb->createNamedParameter($folderIdentifier)),
+                    $metaQb->expr()->like(
+                        'f.identifier',
+                        $metaQb->createNamedParameter($this->escapeLike($prefix) . '%', Connection::PARAM_STR),
+                    ),
+                ),
+            );
+        } else {
+            $metaQb->andWhere(
+                $metaQb->expr()->like(
+                    'f.identifier',
+                    $metaQb->createNamedParameter($this->escapeLike($prefix) . '%', Connection::PARAM_STR),
+                ),
+            );
+            $metaQb->andWhere(
+                $metaQb->expr()->notLike(
+                    'f.identifier',
+                    $metaQb->createNamedParameter($this->escapeLike($prefix) . '%/%', Connection::PARAM_STR),
+                ),
+            );
         }
+
+        $metaQb->andWhere(
+            $metaQb->expr()->or(
+                $metaQb->expr()->isNull('m.tx_nst3af_ailabel_confirmed_at'),
+                $metaQb->expr()->eq('m.tx_nst3af_ailabel_confirmed_at', $metaQb->createNamedParameter(0, Connection::PARAM_INT)),
+            ),
+        );
+        $metaQb->andWhere(
+            $metaQb->expr()->or(
+                $metaQb->expr()->and(
+                    $metaQb->expr()->isNotNull('m.tx_nst3af_ailabel_recording_source'),
+                    $metaQb->expr()->neq(
+                        'm.tx_nst3af_ailabel_recording_source',
+                        $metaQb->createNamedParameter(''),
+                    ),
+                ),
+                $metaQb->expr()->and(
+                    $metaQb->expr()->isNotNull('m.tx_nst3af_ailabel_involvement'),
+                    $metaQb->expr()->neq(
+                        'm.tx_nst3af_ailabel_involvement',
+                        $metaQb->createNamedParameter(''),
+                    ),
+                    $metaQb->expr()->neq(
+                        'm.tx_nst3af_ailabel_involvement',
+                        $metaQb->createNamedParameter('not_reviewed'),
+                    ),
+                    $metaQb->expr()->neq(
+                        'm.tx_nst3af_ailabel_involvement',
+                        $metaQb->createNamedParameter('no_ai'),
+                    ),
+                ),
+            ),
+        );
+
+        $open = (int) $metaQb->executeQuery()->fetchOne();
 
         return ['total' => $total, 'open' => $open];
     }

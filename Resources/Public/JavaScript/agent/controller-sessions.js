@@ -252,7 +252,20 @@ export const sessionMethods = {
 
       const backendContext = resolveBackendContext();
       const query = new URL(url, window.location.href);
-      query.searchParams.set('pageId', String(backendContext.pageId));
+      // F1: consume-and-clear the pending openWithContext() payload for this one load.
+      // A plain toolbar/hotkey open never sets this, so the query is unchanged for that case.
+      const openPayload = this.pendingOpenPayload;
+      this.pendingOpenPayload = null;
+      const openChips = Array.isArray(openPayload?.chips) ? openPayload.chips : [];
+      const openPromptText = typeof openPayload?.promptText === 'string' ? openPayload.promptText : '';
+      const openPageId = Number(openPayload?.context?.pageId ?? 0);
+      const openPageIds = Array.isArray(openPayload?.context?.pageIds)
+        ? openPayload.context.pageIds.map((id) => Number(id)).filter((id) => id > 0)
+        : [];
+      const resolvedPageId = openPageId > 0
+        ? openPageId
+        : (openPageIds[0] > 0 ? openPageIds[0] : backendContext.pageId);
+      query.searchParams.set('pageId', String(resolvedPageId));
       query.searchParams.set('module', backendContext.module);
       const requestedUuid = String(options.sessionUuid ?? '').trim();
       if (requestedUuid !== '') {
@@ -260,6 +273,13 @@ export const sessionMethods = {
       }
       if (options.fresh) {
         query.searchParams.set('fresh', '1');
+      }
+      if (openPayload && typeof openPayload.context === 'object' && openPayload.context !== null) {
+        try {
+          query.searchParams.set('openContext', JSON.stringify(openPayload.context));
+        } catch {
+          // Non-serializable context (should not happen for a plain data object) — drop it, open as normal.
+        }
       }
 
       try {
@@ -273,6 +293,31 @@ export const sessionMethods = {
           meta: stripEphemeralWorkTraceMeta(message.meta ?? {}),
         }));
         this.context = payload.context ?? backendContext;
+        if (openPayload && typeof openPayload.context === 'object' && openPayload.context !== null) {
+          const openPage = Number(openPayload.context.pageId ?? 0);
+          const openLanguage = Number(openPayload.context.languageId ?? NaN);
+          const mergedPageIds = Array.isArray(openPayload.context.pageIds)
+            ? openPayload.context.pageIds.map((id) => Number(id)).filter((id) => id > 0)
+            : [];
+          const effectivePage = openPage > 0
+            ? openPage
+            : (mergedPageIds[0] > 0 ? mergedPageIds[0] : 0);
+          this.context = {
+            ...this.context,
+            ...(effectivePage > 0 ? { pageId: effectivePage } : {}),
+            ...(mergedPageIds.length > 0 ? { pageIds: mergedPageIds } : {}),
+            ...(Number.isFinite(openLanguage) ? { languageId: openLanguage } : {}),
+          };
+        }
+        // F1: caller-supplied chips are additional, informational-only — appended after
+        // whatever the server resolved, never replacing it (see AgentContextPresenter's chips()).
+        if (openChips.length > 0) {
+          const existingChips = Array.isArray(this.context.chips) ? this.context.chips : [];
+          this.context = { ...this.context, chips: [...existingChips, ...openChips] };
+        }
+        if (openPromptText !== '' && this.input) {
+          this.input.value = openPromptText;
+        }
         this.starters = payload.starters ?? { executable: [], locked: [] };
         this.greeting = payload.greeting ?? null;
         this.session = payload.session ?? null;

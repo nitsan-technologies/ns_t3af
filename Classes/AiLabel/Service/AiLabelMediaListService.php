@@ -58,20 +58,28 @@ final class AiLabelMediaListService
         $folderCounts = $this->folderTreeService->countFilesInFolder($storage->getUid(), $folderIdentifier, false);
         $folderLabel = $folderIdentifier === '/' ? 'fileadmin/' : 'fileadmin' . $folderIdentifier;
 
-        $rows = $this->fetchRows($storage->getUid(), $folderIdentifier);
-        $rows = $this->applyFilters($rows, $filters);
-        $total = count($rows);
+        // Stream folder rows (newest first): filter in PHP, keep only the page window —
+        // never materialise the full folder list (OOM on large fileadmin folders).
         $offset = ($filters->page - 1) * $filters->max;
-        $pageRows = array_slice($rows, $offset, $filters->max);
-
+        $matched = 0;
+        $pageRows = [];
         $spotlight = null;
-        foreach ($rows as $row) {
-            if ($this->evaluator->isAwaitingReview($row)) {
-                $spotlight = $row;
-                break;
+
+        foreach ($this->iterateFolderRows($storage->getUid(), $folderIdentifier) as $row) {
+            $normalized = $this->normalizeMediaRow($row);
+            if (!$this->rowMatchesFilters($normalized, $filters)) {
+                continue;
             }
+            if ($spotlight === null && ($normalized['awaitingReview'] ?? false)) {
+                $spotlight = $normalized;
+            }
+            if ($matched >= $offset && count($pageRows) < $filters->max) {
+                $pageRows[] = $normalized;
+            }
+            ++$matched;
         }
 
+        $total = $matched;
         $totalPages = max(1, (int) ceil($total / max(1, $filters->max)));
 
         return [
@@ -95,16 +103,30 @@ final class AiLabelMediaListService
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return \Generator<int, array<string, mixed>>
      */
-    private function fetchRows(int $storageUid, string $folderIdentifier): array
+    private function iterateFolderRows(int $storageUid, string $folderIdentifier): \Generator
     {
         $connection = $this->connectionPool->getConnectionForTable('sys_file');
         $qb = $connection->createQueryBuilder();
         $qb->getRestrictions()->removeAll()->add(new DeletedRestriction());
 
         $prefix = $folderIdentifier === '/' ? '/' : rtrim($folderIdentifier, '/') . '/';
-        $qb->select('f.uid AS file_uid', 'f.name', 'f.identifier', 'f.mime_type', 'f.creation_date AS file_crdate', 'm.*')
+        $qb->select(
+            'f.uid AS file_uid',
+            'f.name',
+            'f.identifier',
+            'f.mime_type',
+            'f.creation_date AS file_crdate',
+            'm.uid',
+            'm.crdate',
+            'm.tx_nst3af_ailabel_confirmed_at',
+            'm.tx_nst3af_ailabel_confirmed_by',
+            'm.tx_nst3af_ailabel_involvement',
+            'm.tx_nst3af_ailabel_labelling_mode',
+            'm.tx_nst3af_ailabel_recording_source',
+            'm.tx_nst3af_ailabel_ai_system',
+        )
             ->from('sys_file', 'f')
             ->leftJoin(
                 'f',
@@ -127,16 +149,12 @@ final class AiLabelMediaListService
             )
             ->orderBy('f.creation_date', 'DESC');
 
-        $rows = [];
-        foreach ($qb->executeQuery()->fetchAllAssociative() as $row) {
-            $metaUid = (int) ($row['uid'] ?? 0);
-            if ($metaUid <= 0) {
+        foreach ($qb->executeQuery()->iterateAssociative() as $row) {
+            if ((int) ($row['uid'] ?? 0) <= 0) {
                 continue;
             }
-            $rows[] = $this->normalizeMediaRow($row);
+            yield $row;
         }
-
-        return $rows;
     }
 
     /**
@@ -170,55 +188,52 @@ final class AiLabelMediaListService
     }
 
     /**
-     * @param list<array<string, mixed>> $rows
-     * @return list<array<string, mixed>>
+     * @param array<string, mixed> $row
      */
-    private function applyFilters(array $rows, AiLabelFilters $filters): array
+    private function rowMatchesFilters(array $row, AiLabelFilters $filters): bool
     {
-        return array_values(array_filter($rows, function (array $row) use ($filters): bool {
-            if ($filters->search !== '') {
-                $haystack = strtolower($row['fileName'] . ' ' . $row['aiSystem'] . ' ' . $row['recordingSource']);
-                if (!str_contains($haystack, strtolower($filters->search))) {
-                    return false;
-                }
-            }
-            if ($filters->involvement !== '' && $row['involvement'] !== $filters->involvement) {
+        if ($filters->search !== '') {
+            $haystack = strtolower($row['fileName'] . ' ' . $row['aiSystem'] . ' ' . $row['recordingSource']);
+            if (!str_contains($haystack, strtolower($filters->search))) {
                 return false;
             }
-            if ($filters->labelState !== '' && $row['labelState'] !== $filters->labelState) {
+        }
+        if ($filters->involvement !== '' && $row['involvement'] !== $filters->involvement) {
+            return false;
+        }
+        if ($filters->labelState !== '' && $row['labelState'] !== $filters->labelState) {
+            return false;
+        }
+        if ($filters->fileType !== '' && $row['kind'] !== $filters->fileType) {
+            return false;
+        }
+        if ($filters->confirmedBy === 'none' && $row['confirmedBy'] > 0) {
+            return false;
+        }
+        if ($filters->confirmedBy !== '' && $filters->confirmedBy !== 'none'
+            && (string) $row['confirmedBy'] !== $filters->confirmedBy) {
+            return false;
+        }
+        if ($filters->recordingSource !== '' && !str_contains($row['recordingSource'], $filters->recordingSource)) {
+            return false;
+        }
+        if ($filters->reasonCode !== '' && $row['reasonCode'] !== $filters->reasonCode) {
+            return false;
+        }
+        if ($filters->dateFrom !== '') {
+            $from = strtotime($filters->dateFrom . ' 00:00:00');
+            if ($from !== false && (int) $row['created'] < $from) {
                 return false;
             }
-            if ($filters->fileType !== '' && $row['kind'] !== $filters->fileType) {
+        }
+        if ($filters->dateTo !== '') {
+            $to = strtotime($filters->dateTo . ' 23:59:59');
+            if ($to !== false && (int) $row['created'] > $to) {
                 return false;
             }
-            if ($filters->confirmedBy === 'none' && $row['confirmedBy'] > 0) {
-                return false;
-            }
-            if ($filters->confirmedBy !== '' && $filters->confirmedBy !== 'none'
-                && (string) $row['confirmedBy'] !== $filters->confirmedBy) {
-                return false;
-            }
-            if ($filters->recordingSource !== '' && !str_contains($row['recordingSource'], $filters->recordingSource)) {
-                return false;
-            }
-            if ($filters->reasonCode !== '' && $row['reasonCode'] !== $filters->reasonCode) {
-                return false;
-            }
-            if ($filters->dateFrom !== '') {
-                $from = strtotime($filters->dateFrom . ' 00:00:00');
-                if ($from !== false && (int) $row['created'] < $from) {
-                    return false;
-                }
-            }
-            if ($filters->dateTo !== '') {
-                $to = strtotime($filters->dateTo . ' 23:59:59');
-                if ($to !== false && (int) $row['created'] > $to) {
-                    return false;
-                }
-            }
+        }
 
-            return true;
-        }));
+        return true;
     }
 
     /**

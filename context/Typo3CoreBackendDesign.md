@@ -2,8 +2,8 @@
 
 Design reference for **ns_t3af** backend modules. Use TYPO3 core markup and CSS first; add extension CSS only when core cannot express the layout.
 
-**Scope:** Backend module UI (Fluid templates, module CSS, JS toggles).  
-**Supported TYPO3:** `^13.4 || ^14.3` (see `composer.json`). Some tables still mention v12 for historical comparison only — ns_t3af does not support it.  
+**Scope:** Backend module UI (Fluid templates, module CSS, JS toggles). 
+**Supported TYPO3:** `^13.4 | — | ^14.3` (see `composer.json`). Some tables still mention v12 for historical comparison only — ns_t3af does not support it. 
 **Reference implementation:** `Resources/Private/Partials/`, `Resources/Public/Css/module/`.
 
 ---
@@ -69,7 +69,7 @@ Test v13 + v14 (light + dark backend theme)
 
 The **styleguide** extension ships with TYPO3 core. It is the live, browsable reference for backend UI — maintained by core developers alongside backend.css changes.
 
-| | |
+| — | |
 |---|---|
 | **Extension key** | `styleguide` |
 | **Typical path** | `typo3conf/ext/styleguide/` or `vendor/typo3/cms-styleguide/` |
@@ -209,9 +209,9 @@ Do **not** re-declare these if the element already uses the core class:
 |-----------------|-------------------|------------------|
 | `body`, module content | `font-size: var(--typo3-font-size); line-height: 1.5` | No override |
 | `h1`–`h6`, `.h1`–`.h6` | `font-family: var(--typo3-header-font-family); font-weight: 400` | Use semantic headings for page titles |
-| `.card-header .card-title` | `font-size: 1.35em; font-weight: 500; line-height: 1.2em` | No `font-size` on `.card-title` |
-| `.card-header .card-subtitle` | `font-size: 1em; line-height: 1.2em; color: subtle` | Use `card-subtitle`, not custom `<p class="small">` in header |
-| `.card-body .card-text` | Inherits component size / 1.5 | Prefer `card-text` over custom desc classes |
+| `.card-header.card-title` | `font-size: 1.35em; font-weight: 500; line-height: 1.2em` | No `font-size` on `.card-title` |
+| `.card-header.card-subtitle` | `font-size: 1em; line-height: 1.2em; color: subtle` | Use `card-subtitle`, not custom `<p class="small">` in header |
+| `.card-body.card-text` | Inherits component size / 1.5 | Prefer `card-text` over custom desc classes |
 | `.callout-title` | `font-size: 1.2em; line-height: 1.2` | No custom banner title size |
 | `.callout-body` | Inherits + last-child margin reset | Use `mb-0` on last paragraph only |
 | `.btn` / `.btn-default` | `font-size: var(--typo3-input-font-size); line-height: 1.5` | No override |
@@ -264,12 +264,12 @@ font-family: var(--typo3-font-family-code);
 For command tag buttons, only tighten size to match `btn-sm`:
 
 ```css
-.aiu-scheduler-cli__command-tags .btn {
+.aiu-scheduler-cli__command-tags.btn {
     font-family: var(--typo3-font-family-code);
 }
 ```
 
-Do **not** set separate `font-size: .6875rem` here — `btn-sm` already uses `--typo3-input-sm-font-size`.
+Do **not** set separate `font-size:.6875rem` here — `btn-sm` already uses `--typo3-input-sm-font-size`.
 
 ### Muted / secondary text
 
@@ -285,14 +285,14 @@ These overrides fight core typography and should be removed or rewritten when to
 
 | File | Problem | Change to |
 |------|---------|-----------|
-| **`dashboard.css`** | ~~`.aiu-providers, .aiu-providers * { font-family: Inter, … }`~~ | **Done** — inherit `--typo3-font-family` from backend |
+| **`dashboard.css`** | ~~`.aiu-providers,.aiu-providers * { font-family: Inter, … }`~~ | **Done** — inherit `--typo3-font-family` from backend |
 | **`dashboard.css`** | Pixel sizes: `10px`, `11px`, `12px`, `13px`, `24px` on KPIs, labels | Drop custom sizes; use default body, `small`, or semantic headings |
 | **`shared-components.css`** | Pixel sizes, `"Fira Code"` on `.aiu-cell-title`, `.aiu-model-badge` | `small`, `text-variant`, `var(--typo3-font-family-code)` |
 | **`credits.css`** | Custom title/stat sizes (`.7rem`, `1.35rem`, `font-weight: 800`) | `card-title`, `small text-variant`, semantic headings |
 | **`setup.css`** | Many pixel/`rem` overrides on wizard copy | Core headings + `text-variant` / `small` |
 | **`scheduler-cli.css`** | `.aiu-scheduler-cli__title { font-size: 1.45rem; font-weight: 700 }` | Replace template with `<h1>`; delete size/weight rules |
-| **`scheduler-cli.css`** | `.aiu-scheduler-cli__intro`, KPI labels, quickref `font-size: .68rem–.95rem` | Use `text-variant`, `small`, or remove if redundant with callout |
-| **`scheduler-cli.css`** | `.aiu-scheduler-cli__command-name { font-size: .875rem }` | Inherit; keep only `font-family: var(--typo3-font-family-code)` if needed |
+| **`scheduler-cli.css`** | `.aiu-scheduler-cli__intro`, KPI labels, quickref `font-size:.68rem–.95rem` | Use `text-variant`, `small`, or remove if redundant with callout |
+| **`scheduler-cli.css`** | `.aiu-scheduler-cli__command-name { font-size:.875rem }` | Inherit; keep only `font-family: var(--typo3-font-family-code)` if needed |
 | **`mcp-tools.css`** | `.aiu-tool-panel__name`, `__subtitle`, section titles with fixed rem | Rely on `btn-sm` / `small text-variant`; panel titles ≈ body + monospace |
 | **`mcp-server.css`** | Many `11px`, `12px`, `.9375rem` headings | Align to `h2`/`h3` + component tokens |
 | **Templates** | `<h3 class="card-title h6 mb-0">` | Use `<h2 class="card-title">` only — let core set size |
@@ -321,12 +321,12 @@ Implemented in `Resources/Public/Css/module/base.css`:
 .aiu-module-page h4,
 .aiu-module-page h5,
 .aiu-module-page h6,
-.aiu-module-page .h1,
-.aiu-module-page .h2,
-.aiu-module-page .h3,
-.aiu-module-page .h4,
-.aiu-module-page .h5,
-.aiu-module-page .h6 {
+.aiu-module-page.h1,
+.aiu-module-page.h2,
+.aiu-module-page.h3,
+.aiu-module-page.h4,
+.aiu-module-page.h5,
+.aiu-module-page.h6 {
     font-family: var(--typo3-header-font-family, inherit);
     font-weight: 400;
 }
@@ -334,7 +334,7 @@ Implemented in `Resources/Public/Css/module/base.css`:
 .aiu-module-page code,
 .aiu-module-page pre,
 .aiu-module-page pre code,
-.aiu-module-page .form-control.font-monospace {
+.aiu-module-page.form-control.font-monospace {
     font-family: var(--typo3-font-family-code, ui-monospace, monospace);
 }
 ```
@@ -351,7 +351,7 @@ Implemented in `Resources/Public/Css/module/base.css`:
 - [ ] Buttons use `btn` / `btn-sm` without font-size overrides
 - [ ] CLI/command strings use `var(--typo3-font-family-code)` only
 - [ ] No pixel font sizes (`10px`, `11px`, `13px`) in new CSS
-- [ ] No rem literals (.68rem, .72rem, .95rem) unless matching a documented core token
+- [ ] No rem literals (.68rem,.72rem,.95rem) unless matching a documented core token
 - [ ] Line-height not forced to `1.1` / `1.15` on body text (use core `1.5`)
 
 ---
@@ -397,15 +397,15 @@ Several T3Planet AI extensions embed the **same** AI Foundation setup checklist 
 
 ```
 ns_t3af (master)
-├── Partials/Module/SetupChecklist.html      ← markup (TYPO3 core card)
-├── Partials/Module/ChildSetupChecklistSlot.html  ← embed wrapper for child dashboards
-├── Partials/Backend/AiLogsModuleLink.html   ← “AI Foundation Logs” toolbar button
-├── Resources/Public/Css/module/base.css     ← tokens, badges, typography scope
-├── Resources/Public/Css/module/setup.css    ← checklist + wizard styles
+├── Partials/Module/SetupChecklist.html ← markup (TYPO3 core card)
+├── Partials/Module/ChildSetupChecklistSlot.html ← embed wrapper for child dashboards
+├── Partials/Backend/AiLogsModuleLink.html ← “AI Foundation Logs” toolbar button
+├── Resources/Public/Css/module/base.css ← tokens, badges, typography scope
+├── Resources/Public/Css/module/setup.css ← checklist + wizard styles
 ├── Resources/Public/JavaScript/setup-checklist.js
-├── Resources/Public/JavaScript/module-navigation.js  ← in-iframe filter/link nav (AI Logs)
-├── Classes/Service/SetupChecklistPresenter.php   ← PHP API for all extensions
-└── Classes/Utility/BackendModuleLinkUtility.php  ← buildAiLogsUri() for child deep links
+├── Resources/Public/JavaScript/module-navigation.js ← in-iframe filter/link nav (AI Logs)
+├── Classes/Service/SetupChecklistPresenter.php ← PHP API for all extensions
+└── Classes/Utility/BackendModuleLinkUtility.php ← buildAiLogsUri() for child deep links
 ```
 
 | Layer | Owner | Child extension rule |
@@ -493,7 +493,11 @@ Do **gradually**:
 2. **Phase 2:** Wrap the whole child `module-body` content in `<div class="aiu-module-page"><div class="aiu-module-content">…</div></div>` and load `base.css` once in the child layout or controller.
 3. **Phase 3:** Replace child-specific cards/buttons with patterns from this guide; delete duplicated CSS that fights core.
 
-Child-specific branding (tabs, breadcrumbs, product copy) stays in each extension. **Shared AI chrome** (checklist, AI Logs link, credits badge, provider drawer patterns) stays in `ns_t3af`.
+Child-specific branding (tabs, breadcrumbs, product copy) stays in each extension. **Shared AI chrome** (checklist, AI Logs link, credits badge, provider drawer patterns, **AI Agent composer provider select**) stays in `ns_t3af`.
+
+### AI Agent composer — provider select
+
+`Templates/Agent/MountPoint.html` `[data-nst3af-agent-provider]` (`.form-select.form-select-sm`). Options come from `AgentProviderOptions` (enabled tool-calling rows the editor may use). **Mistral is already a first-class adapter** (`symfony.mistral`); if a Mistral row is the default, the first option is “Default: mistral”. The select stays `hidden` until two or more usable providers exist. Child **Ask / Fix with AI Agent** buttons must not invent a second provider picker — they open this panel. See `context/features/ai-agent.md` and `context/features/providers.md`.
 
 ### Adding a new shared component (for all extensions)
 
@@ -600,11 +604,11 @@ Do **not** use `h-100` on cards inside `.card-container` — `height: 100%` brea
 .my-grid.card-container {
     align-items: stretch;
 }
-.my-grid.card-container .card {
+.my-grid.card-container.card {
     align-self: stretch;
     height: auto;
 }
-.my-grid.card-container .card .card-footer {
+.my-grid.card-container.card.card-footer {
     margin-top: auto;
 }
 ```
@@ -626,13 +630,13 @@ TYPO3 core card CSS (v13+):
 **Correct order:**
 
 ```
-card-header → card-body → [expandable section, hidden] → card-footer   ← last
+card-header → card-body → [expandable section, hidden] → card-footer ← last
 ```
 
 **Wrong:**
 
 ```
-card-header → card-body → card-footer → .tools[hidden]   ← breaks footer
+card-header → card-body → card-footer →.tools[hidden] ← breaks footer
 ```
 
 See `Partials/SchedulerCli/CommandLibrary.html`.
@@ -642,8 +646,8 @@ See `Partials/SchedulerCli/CommandLibrary.html`.
 Core strips most of `.table-fit` border inside `.card` (left/right/bottom) but **keeps `border-top`**. That stacks with the card edge and looks like a bold 2px line. For nested parameter tables, zero the table-fit border entirely — the card alone provides the frame:
 
 ```css
-.aiu-tool-panel__body .card > .table-fit,
-.aiu-mcp-tool-modal__body .card > .table-fit {
+.aiu-tool-panel__body.card >.table-fit,
+.aiu-mcp-tool-modal__body.card >.table-fit {
     border: 0;
     box-shadow: none;
 }
@@ -907,7 +911,7 @@ Reference: `Partials/McpTools/ToolDetailDrawer.html` (`ToolBody` + `Drawer` sect
 |------|---------|
 | Inline expand | `.aiu-tool-panel` accordion row inside extension card (not a Bootstrap modal) |
 | Parameter table | Section label (`text-variant fw-bold`) + nested `card mb-0` → `table-fit` → `table table-striped table-hover` |
-| Param names | Plain `<code>` in table cells — neutral colour via scoped CSS in `.aiu-tool-panel__body` / `.aiu-mcp-tool-drawer .aiu-drawer__body` (same as Scheduler CLI `CommandLibrary.html`) |
+| Param names | Plain `<code>` in table cells — neutral colour via scoped CSS in `.aiu-tool-panel__body` / `.aiu-mcp-tool-drawer.aiu-drawer__body` (same as Scheduler CLI `CommandLibrary.html`) |
 | Param types | `span.text-variant` — not chip-styled `<code>` |
 | Required column | `badge badge-default` for required; `text-variant small` for optional — not red text |
 | Example prompts | `ul.aiu-mcp-tool-prompts` list items with `--typo3-card-border-color` — not nested `card` per prompt |
@@ -942,7 +946,7 @@ Short field labels (especially pricing / cost fields) need inline help so users 
 
 **Why not only `@typo3/backend/context-help.js`?** Core CSH binds `.help-link` once at document ready. Slide-in drawers load HTML later, so popovers must be created in the drawer module after `panel.innerHTML = …`.
 
-**Compatibility (v13–v14):** Bootstrap 5 Popover, `.help-teaser` / `actions-system-help-open`, and ESM `import { Popover } from 'bootstrap'` are available on supported versions (`composer.json`: `typo3/cms-core` `^13.4 || ^14.3`). Avoid Fluid `<f:tag>` (not available / unreliable across Fluid builds). Prefer plain HTML wrappers.
+**Compatibility (v13–v14):** Bootstrap 5 Popover, `.help-teaser` / `actions-system-help-open`, and ESM `import { Popover } from 'bootstrap'` are available on supported versions (`composer.json`: `typo3/cms-core` `^13.4 | — | ^14.3`). Avoid Fluid `<f:tag>` (not available / unreliable across Fluid builds). Prefer plain HTML wrappers.
 
 **Forbidden:** Native `title="…"` alone for long help (truncates / inaccessible); popovers without `container: body` inside overflow drawers; assuming core `context-help.js` covers AJAX markup.
 
@@ -1096,7 +1100,7 @@ Preserve stable hooks: `data-scheduler-cli-toggle`, `data-scheduler-cli-card`, `
     background: var(--typo3-surface-container-low, var(--aiu-bg-soft));
     border: 1px solid var(--typo3-component-border-color, var(--aiu-border));
     color: var(--typo3-text-color-base, var(--aiu-text-700));
-    border-radius: var(--typo3-card-border-radius, var(--typo3-component-border-radius, .375rem));
+    border-radius: var(--typo3-card-border-radius, var(--typo3-component-border-radius,.375rem));
 }
 ```
 
@@ -1200,7 +1204,7 @@ Healthy / default “`0/50 cr`” text **and** the wallet icon (`.aiu-toolbar-cr
 | `font-family: "Fira Code"` on cells, badges, fields | `var(--typo3-font-family-code)` or plain `<code>` |
 | `.aiu-*__title` with `font-size: 1.45rem` | Semantic `<h1>` + core heading styles |
 | `10px` / `11px` / `13px` label CSS | `small`, `text-variant`, or default body |
-| `.aiu-tool-panel__subtitle { font-size: .72rem }` | `small text-variant` in markup |
+| `.aiu-tool-panel__subtitle { font-size:.72rem }` | `small text-variant` in markup |
 
 ---
 
@@ -1276,14 +1280,14 @@ When reporting “final status” after a design migration, **include all rows**
 ### Basic test cases (mandatory)
 | Test | Result | Notes |
 |------|--------|-------|
-| Cache flush + hard refresh | ☐ Pass / ☐ Fail | |
-| Core icons (no emoji / custom colour tiles) | ☐ Pass / ☐ Fail | |
-| Download / export actions (`btn-success` where specified) | ☐ Pass / ☐ Fail | |
-| Borders use `--typo3-card-border-color` (compare Styleguide) | ☐ Pass / ☐ Fail | |
-| Bare `<code>` not red/pink (use `aiu-mcp-inline-code`) | ☐ Pass / ☐ Fail | |
-| Expand / drawer / modal interactions still work | ☐ Pass / ☐ Fail | |
-| Light theme | ☐ Pass / ☐ Fail | |
-| Dark theme | ☐ Pass / ☐ Not tested | |
+| Cache flush + hard refresh | ☐ Pass / ☐ Fail | — |
+| Core icons (no emoji / custom colour tiles) | ☐ Pass / ☐ Fail | — |
+| Download / export actions (`btn-success` where specified) | ☐ Pass / ☐ Fail | — |
+| Borders use `--typo3-card-border-color` (compare Styleguide) | ☐ Pass / ☐ Fail | — |
+| Bare `<code>` not red/pink (use `aiu-mcp-inline-code`) | ☐ Pass / ☐ Fail | — |
+| Expand / drawer / modal interactions still work | ☐ Pass / ☐ Fail | — |
+| Light theme | ☐ Pass / ☐ Fail | — |
+| Dark theme | ☐ Pass / ☐ Not tested | — |
 
 ### Version coverage
 | v12.4 | v13.4 | v14.3 |

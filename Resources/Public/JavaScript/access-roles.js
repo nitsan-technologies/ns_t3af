@@ -372,7 +372,12 @@ function initAccessRolesRoot(root) {
         ? `<span class="badge badge-info">${escapeHtml(String(limits.qualityThresholdScore ?? 70))}%</span>`
         : boolBadge(false)],
       ['Logging policy', `<span class="badge badge-default">${escapeHtml(String(limits.loggingPolicy ?? 'always'))}</span>`],
-      ['Log retention', `${escapeHtml(String(limits.logRetentionDays ?? 30))} days`],
+      [
+        'Request-log retention',
+        `${escapeHtml(String(limits.logRetentionDays ?? 30))} days`
+          + '<div class="small text-body-secondary mt-1">Group limit for request telemetry. AI Logs (sys_log) cleanup uses'
+          + ' <code>t3af:ai-logs:cleanup --days</code> (default 90) — separate from this value.</div>',
+      ],
     ];
 
     if (limits.lockedContextProfile) {

@@ -95,7 +95,7 @@ final class AccessControlListenerTest extends TestCase
         ($this->makeListener())($event);
 
         self::assertTrue($event->isCancelled());
-        self::assertStringContainsString('nst3af:capability_embeddings', (string) $event->getCancellationReason());
+        self::assertSame("You don't have access to this AI feature", (string) $event->getCancellationReason());
     }
 
     public function testDeniesImageGenerationWhenCapabilityPermissionMissing(): void
@@ -111,7 +111,7 @@ final class AccessControlListenerTest extends TestCase
         ($this->makeListener())($event);
 
         self::assertTrue($event->isCancelled());
-        self::assertStringContainsString('nst3af:capability_image_generation', (string) $event->getCancellationReason());
+        self::assertSame("You don't have access to this AI feature", (string) $event->getCancellationReason());
     }
 
     public function testDeniesTtsWhenCapabilityPermissionMissing(): void
@@ -127,7 +127,7 @@ final class AccessControlListenerTest extends TestCase
         ($this->makeListener())($event);
 
         self::assertTrue($event->isCancelled());
-        self::assertStringContainsString('nst3af:capability_tts', (string) $event->getCancellationReason());
+        self::assertSame("You don't have access to this AI feature", (string) $event->getCancellationReason());
     }
 
     /**

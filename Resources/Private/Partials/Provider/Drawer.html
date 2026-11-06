@@ -34,6 +34,10 @@
 
         <f:render partial="Module/EnvironmentRequirementBanner" arguments="{environmentRequirementAlerts: environmentRequirementAlerts}" />
 
+        <f:if condition="{errors._storage} != ''">
+            <div class="aiu-flash aiu-flash--warn aiu-error" role="alert">{errors._storage}</div>
+        </f:if>
+
         <section class="aiu-section">
             <div class="aiu-section__label">
                 <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.identity"
@@ -109,10 +113,10 @@
                     <f:for each="{adapterRows}" as="row">
                         <f:if condition="{selectedAdapter} == {row.type}">
                             <f:then>
-                                <option value="{row.type}" selected="selected" data-endpoint="{row.defaultEndpoint}" data-requires-endpoint="{f:if(condition: row.requiresEndpoint, then: '1', else: '0')}">{row.label}</option>
+                                <option value="{row.type}" selected="selected" data-endpoint="{row.defaultEndpoint}" data-requires-endpoint="{f:if(condition: row.requiresEndpoint, then: '1', else: '0')}" data-requires-model="{f:if(condition: row.requiresModel, then: '1', else: '0')}">{row.label}</option>
                             </f:then>
                             <f:else>
-                                <option value="{row.type}" data-endpoint="{row.defaultEndpoint}" data-requires-endpoint="{f:if(condition: row.requiresEndpoint, then: '1', else: '0')}">{row.label}</option>
+                                <option value="{row.type}" data-endpoint="{row.defaultEndpoint}" data-requires-endpoint="{f:if(condition: row.requiresEndpoint, then: '1', else: '0')}" data-requires-model="{f:if(condition: row.requiresModel, then: '1', else: '0')}">{row.label}</option>
                             </f:else>
                         </f:if>
                     </f:for>
@@ -229,7 +233,7 @@
                     </select>
                     <input type="text" class="form-control" name="model_id" maxlength="128"
                            data-aiu-model-input
-                           value="{provider.modelId}" placeholder="gpt-4o-mini" />
+                           value="{provider.modelId}{submitted.model_id}" placeholder="gpt-4o-mini" />
                     <button type="button"
                             class="aiu-icon-btn"
                             data-aiu-model-refresh
@@ -238,6 +242,7 @@
                         <core:icon identifier="actions-refresh" size="small" />
                     </button>
                 </div>
+                <f:if condition="{errors.model_id} != ''"><small class="aiu-error">{errors.model_id}</small></f:if>
                 <small class="aiu-field-subnote" data-aiu-model-hint hidden></small>
             </div>
 
@@ -264,8 +269,9 @@
                     </select>
                     <input type="text" class="form-control" name="embedding_model_id" maxlength="128"
                            data-aiu-embedding-model-input
-                           value="{provider.embeddingModelId}" placeholder="mistral-embed" />
+                           value="{provider.embeddingModelId}{submitted.embedding_model_id}" placeholder="mistral-embed" />
                 </div>
+                <f:if condition="{errors.embedding_model_id} != ''"><small class="aiu-error">{errors.embedding_model_id}</small></f:if>
                 <small class="aiu-field-subnote">
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.embeddingModelId.subnote"
                                  default="Leave blank to use the chat model for embeddings." />

@@ -37,7 +37,7 @@ export const chromeMethods = {
           event.preventDefault();
           this.open(target.closest('[data-nst3af-agent-open]'));
         }
-        if (target.closest('[data-nst3af-agent-close]')) {
+        if (target.closest('[data-nst3af-agent-close]') || target.closest('[data-nst3af-agent-backdrop]')) {
           event.preventDefault();
           this.close();
         }
@@ -112,9 +112,6 @@ export const chromeMethods = {
               void this.openSession(openButton.dataset.nst3afAgentSessionOpen ?? '');
             }
           }
-        }
-        if (target.closest('[data-nst3af-agent-backdrop]')) {
-          this.close();
         }
         if (target.closest('[data-nst3af-agent-starter]')) {
           const btn = target.closest('[data-nst3af-agent-starter]');
@@ -506,6 +503,63 @@ export const chromeMethods = {
     },
 
   /**
+     * F1 — opens the panel pre-loaded with a caller's context chips and a
+     * pre-filled prompt (e.g. ns_t3ai's Fix button). Stores the payload for
+     * `restoreSession()` to consume-and-clear on the very next session
+     * load, then opens exactly as a plain toolbar/hotkey open would — no
+     * opener element, since this call did not originate from a click in
+     * this document.
+     *
+     * @param {{chips?: Array<{key: string, label: string, value: string}>, promptText?: string, context?: Record<string, unknown>, fresh?: boolean}} payload
+     */
+    openWithContext(payload) {
+      this.pendingOpenPayload = payload && typeof payload === 'object' ? payload : null;
+      const wantsFresh = this.pendingOpenPayload?.fresh === true;
+      const immediatePrompt = typeof this.pendingOpenPayload?.promptText === 'string'
+        ? this.pendingOpenPayload.promptText
+        : '';
+      // Show the caller prompt in the composer right away — restoreSession still
+      // reapplies it after the conversation AJAX, but the editor should not wait on that.
+      if (immediatePrompt !== '' && this.input) {
+        this.input.value = immediatePrompt;
+        this.resizeComposerInput?.();
+        this.syncSendButtonEnabled?.();
+      }
+      // Panel already open: open() is a no-op, so apply chips/prompt here (Fix from a module).
+      // A fresh Fix must not resume the previous conversation (stale page / checkIds).
+      if (this.isOpen) {
+        if (wantsFresh) {
+          // Await so the pending openWithContext payload (chips / prompt) is applied
+          // before the editor can send into a still-loading previous conversation.
+          void this.reloadSessionForCurrentScope({ fresh: true }).then(() => {
+            this.input?.focus?.();
+          });
+          return;
+        }
+        const openPayload = this.pendingOpenPayload;
+        this.pendingOpenPayload = null;
+        const openChips = Array.isArray(openPayload?.chips) ? openPayload.chips : [];
+        const openPromptText = typeof openPayload?.promptText === 'string' ? openPayload.promptText : '';
+        if (openPayload && typeof openPayload.context === 'object' && openPayload.context !== null) {
+          this.context = { ...this.context, ...openPayload.context };
+        }
+        if (openChips.length > 0) {
+          const existingChips = Array.isArray(this.context?.chips) ? this.context.chips : [];
+          this.context = { ...(this.context ?? {}), chips: [...existingChips, ...openChips] };
+        }
+        if (openPromptText !== '' && this.input) {
+          this.input.value = openPromptText;
+          this.resizeComposerInput?.();
+        }
+        this.syncSendButtonEnabled?.();
+        this.renderContext?.();
+        this.input?.focus?.();
+        return;
+      }
+      void this.open(null);
+    },
+
+  /**
      * @param {Element|null} opener
      */
     async open(opener) {
@@ -540,12 +594,30 @@ export const chromeMethods = {
       this.panel.setAttribute('aria-busy', 'true');
       this.renderLoadingSkeleton();
 
+      // Prefill before the conversation request so openWithContext prompts appear immediately.
+      const pendingPrompt = typeof this.pendingOpenPayload?.promptText === 'string'
+        ? this.pendingOpenPayload.promptText
+        : '';
+      if (pendingPrompt !== '' && this.input) {
+        this.input.value = pendingPrompt;
+        this.resizeComposerInput?.();
+      }
+      this.syncSendButtonEnabled?.();
+
       // Resume the last-viewed conversation for this conversation-scope key when remembered;
       // otherwise the server opens the latest of the configured scope (see restoreSession).
-      await this.restoreSession(this.lastSessionOpenOptions());
-      this.isLoadingSession = false;
-      this.loadedScopeKey = this.sessionScopeKey();
-      this.panel.removeAttribute('aria-busy');
+      // Fix buttons pass fresh:true so each finding starts a new conversation.
+      try {
+        const openOptions = this.pendingOpenPayload?.fresh === true
+          ? { fresh: true }
+          : this.lastSessionOpenOptions();
+        await this.restoreSession(openOptions);
+      } finally {
+        // Always clear loading chrome — a throw in restoreSession used to leave aria-busy stuck
+        // so Fix/openWithContext looked like a hang with an empty composer.
+        this.isLoadingSession = false;
+        this.panel.removeAttribute('aria-busy');
+      }
 
       this.renderContext();
       this.renderStream();
@@ -569,6 +641,7 @@ export const chromeMethods = {
       this.trapFocus();
       this.input?.focus();
       this.resizeComposerInput?.();
+      this.syncSendButtonEnabled?.();
       this.warnIfNoUsableProvider();
 
       try {
@@ -797,7 +870,9 @@ export const chromeMethods = {
         section('mode', lang('agent.info.modeTitle', 'Live or draft'),
           paragraph(live
             ? lang('agent.info.modeLive', 'You are in the live workspace: confirmed changes are visible on the website right away.')
-            : lang('agent.info.modeDraft', 'You are in the workspace "%1$s": confirmed changes stay a draft until they are published.', [String(details.workspace?.title ?? '')]))),
+            : (details.workspace?.fromLive === true
+              ? lang('agent.info.modeFromLive', 'You are working in Live, but confirmed changes go to the workspace "%1$s" (MCP Server > Workspace selection). Publish that workspace to see them in Live Layout.', [String(details.workspace?.title ?? '')])
+              : lang('agent.info.modeDraft', 'You are in the workspace "%1$s": confirmed changes stay a draft until they are published.', [String(details.workspace?.title ?? '')])))),
         section('conversations', lang('agent.info.conversationsTitle', 'Conversations'),
           paragraph(lang(`agent.info.conversations.${this.sessionListSettings.scope ?? 'page'}`, 'Each page has its own conversations.'))
           + paragraph(lang('agent.info.conversationsList', 'Find earlier conversations in the list; they are deleted after %1$s days without activity.', [String(this.sessionListSettings.retentionDays ?? 90)]))),

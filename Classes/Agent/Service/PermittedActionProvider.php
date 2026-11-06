@@ -29,7 +29,7 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 /**
- * Permitted tool catalog for the AI Agent (T4).
+ * Permitted tool catalog for the AI Agent.
  *
  * @internal
  */

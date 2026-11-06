@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Mcp\Command;
 
+use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
+use NITSAN\NsT3AF\Command\CommandIo;
 use NITSAN\NsT3AF\Mcp\Domain\Repository\CodeRepository;
 use NITSAN\NsT3AF\Mcp\Domain\Repository\SessionRepository;
 use NITSAN\NsT3AF\Mcp\Domain\Repository\TokenRepository;
@@ -29,12 +31,11 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
-#[AsCommand(name: 't3af:mcp:cleanup|nst3af:mcp:cleanup', description: 'Remove expired OAuth tokens/codes, stale MCP sessions and expired records_apply request ids')]
+#[AsCommand(name: 't3af:mcp:cleanup|nst3af:mcp:cleanup', description: 'Remove expired OAuth tokens/codes, stale MCP sessions, expired records_apply request ids and agent undo changes past retention')]
 class CleanupCommand extends Command
 {
     private const DEFAULT_SESSION_LIFETIME = 86400;
@@ -47,6 +48,7 @@ class CleanupCommand extends Command
         private readonly RateLimitService $rateLimitService,
         private readonly SessionRepository $sessionRepository,
         private readonly RecordsApplyIdempotency $recordsApplyIdempotency,
+        private readonly AgentDraftSession $agentDraftSession,
         ExtensionSettingsService $extensionSettingsService,
     ) {
         parent::__construct();
@@ -59,22 +61,25 @@ class CleanupCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
+        $io = new CommandIo($input, $output);
 
         $deletedTokens = $this->tokenRepository->deleteExpiredAndRevoked();
-        $io->writeln(sprintf('Deleted %d expired/revoked OAuth tokens.', $deletedTokens));
+        $io->line(sprintf('Deleted %d expired/revoked OAuth tokens.', $deletedTokens));
 
         $deletedCodes = $this->codeRepository->deleteExpired();
-        $io->writeln(sprintf('Deleted %d expired OAuth codes.', $deletedCodes));
+        $io->line(sprintf('Deleted %d expired OAuth codes.', $deletedCodes));
 
         $deletedSessions = $this->sessionRepository->deleteExpired(time() - $this->sessionLifetime);
-        $io->writeln(sprintf('Deleted %d stale MCP sessions.', $deletedSessions));
+        $io->line(sprintf('Deleted %d stale MCP sessions.', $deletedSessions));
 
         $deletedRateLimits = $this->rateLimitService->deleteExpiredEntries();
-        $io->writeln(sprintf('Deleted %d expired rate limit entries.', $deletedRateLimits));
+        $io->line(sprintf('Deleted %d expired rate limit entries.', $deletedRateLimits));
 
         $deletedRequestIds = $this->recordsApplyIdempotency->deleteExpired();
-        $io->writeln(sprintf('Deleted %d expired records_apply request ids.', $deletedRequestIds));
+        $io->line(sprintf('Deleted %d expired records_apply request ids.', $deletedRequestIds));
+
+        $deletedChanges = $this->agentDraftSession->pruneExpiredChanges();
+        $io->line(sprintf('Deleted %d agent changes past the 30-day undo retention window.', $deletedChanges));
 
         $io->success('Cleanup completed.');
 

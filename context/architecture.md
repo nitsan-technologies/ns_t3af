@@ -78,16 +78,16 @@ Prompt **defaults** live in code (`ns_t3ai`); prompt **management UI** lives in 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ Child extensions — runtime (catalog + resolver + providers)     │
-│  PromptContractRegistry      → built-in global prompt contracts │
-│  PromptResolver              → explicit → extConf title → DB  │
-│  PromptCatalogProviderInterface → categories for AI Prompts UI  │
+│ Child extensions — runtime (catalog + resolver + providers) │
+│ PromptContractRegistry → built-in global prompt contracts │
+│ PromptResolver → explicit → extConf title → DB │
+│ PromptCatalogProviderInterface → categories for AI Prompts UI │
 └────────────────────────────┬────────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────────┐
-│ ns_t3af — management UI + unified storage                       │
-│  AiPromptsService + PromptCatalogProviderRegistry               │
-│  AiPromptRepository + ModuleController (ai_prompts*)            │
+│ ns_t3af — management UI + unified storage │
+│ AiPromptsService + PromptCatalogProviderRegistry │
+│ AiPromptRepository + ModuleController (ai_prompts*) │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              ▼
@@ -125,16 +125,16 @@ Per-site **Brand Context Profiles** define brand voice for AI generations. Manag
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ Backend UI (ns_t3af)                                      │
-│  BrandContextController + ai-context.js (drawer, personas)      │
-│  BrandContextDashboardPresenter → Dashboard summary bar           │
-│  BrandContextFeatureSettingsService → AI Features override UI   │
+│ Backend UI (ns_t3af) │
+│ BrandContextController + ai-context.js (drawer, personas) │
+│ BrandContextDashboardPresenter → Dashboard summary bar │
+│ BrandContextFeatureSettingsService → AI Features override UI │
 └────────────────────────────┬────────────────────────────────────┘
                              │
          ┌───────────────────┴───────────────────┐
-         ▼                                       ▼
-tx_nst3af_brand_context_profile    settings_json.brandContextProfileUid
-(per site pid)                           (ns_t3ai site override, optional)
+         ▼ ▼
+tx_nst3af_brand_context_profile settings_json.brandContextProfileUid
+(per site pid) (ns_t3ai site override, optional)
          │
          ▼
 BrandContextResolver → BrandContextPlaceholderService / BrandContextAssembler
@@ -178,28 +178,28 @@ Per-group wizard + permission matrix for AI Foundation and child extensions. Thi
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ Child ext — AiAccessCatalogProviderInterface                    │
-│  module card | T3Ai:* features | record rows | tab/card bindings│
+│ Child ext — AiAccessCatalogProviderInterface │
+│ module card | T3Ai:* features | record rows | tab/card bindings│
 └────────────────────────────┬────────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────────┐
-│ ns_t3af                                                         │
-│  AiAccessCatalogProviderRegistry                                │
-│  FeatureAccessBindingRegistry (+ LegacyFeatureAccessBindings)   │
-│  ModuleAccessCatalog / FeaturePermissionCatalog /               │
-│    RecordPermissionCatalog (merge providers + legacy constants) │
-│  WizardBootstrapFactory → default GroupConfig                   │
-│  MatrixScopeCatalog → PermissionMatrixService                   │
-│  AiAccessCustomOptionsBootstrap → be_groups T3Ai:* on boot      │
-│  FeaturePermissionGate / RecordAccessEnforcer (runtime)         │
+│ ns_t3af │
+│ AiAccessCatalogProviderRegistry │
+│ FeatureAccessBindingRegistry (+ LegacyFeatureAccessBindings) │
+│ ModuleAccessCatalog / FeaturePermissionCatalog / │
+│ RecordPermissionCatalog (merge providers + legacy constants) │
+│ WizardBootstrapFactory → default GroupConfig │
+│ MatrixScopeCatalog → PermissionMatrixService │
+│ AiAccessCustomOptionsBootstrap → be_groups T3Ai:* on boot │
+│ FeaturePermissionGate / RecordAccessEnforcer (runtime) │
 └────────────────────────────┬────────────────────────────────────┘
                              │
          ┌───────────────────┴───────────────────┐
-         ▼                                       ▼
-  access-roles.js (wizard + matrix)        be_groups ACL
+         ▼ ▼
+  access-roles.js (wizard + matrix) be_groups ACL
 ```
 
-**Agent entry:** `context/features/ai-access-roles.md`  
+**Agent entry:** `context/features/ai-access-roles.md` 
 **Developer guide:** `Documentation/Developer/CustomAiAccess.rst`
 
 ---
@@ -215,13 +215,13 @@ Toolbar AgentToolbarItem → agent.js right-edge panel
 AgentAjaxController (turn / stream / tools / conversation / draft apply)
         │
    ┌────┴────┬──────────────┬─────────────────┐
-   ▼         ▼              ▼                 ▼
-Workflow  ReadFastPath  TurnOrchestrator  ToolTurnProcessor
-Service   (skip file)   + ToolRetriever   + ResultPresenter
+   ▼ ▼ ▼ ▼
+Workflow ReadFastPath TurnOrchestrator ToolTurnProcessor
+Service (skip file) + ToolRetriever + ResultPresenter
                                               + EditorLabelService
 ```
 
-**Agent entry:** `context/features/ai-agent.md`  
+**Agent entry:** `context/features/ai-agent.md` 
 **Ops docs:** `Documentation/Agent/VerifySuite.md`, `Documentation/Agent/NonDataHandlerToolClassification.md`
 
 ---

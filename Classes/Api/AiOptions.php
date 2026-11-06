@@ -63,6 +63,10 @@ final readonly class AiOptions
      *                                         adapters implementing {@see \NITSAN\NsT3AF\Provider\Contract\RequestTimeoutCapableInterface}
      *                                         and by T3Planet Credits calls; other adapters ignore it. A call that
      *                                         runs out of time fails like any other provider error.
+     * @param array<string, mixed>|null $jsonSchema Optional JSON Schema (type/properties/required) for structured
+     *                                         output. When set, adapters request `response_format: json_schema` and
+     *                                         {@see AiResponse::$structured} is filled from the decoded content when
+     *                                         possible. Additive — omit for plain text completions.
      */
     public function __construct(
         public ?string $providerIdentifier = null,
@@ -81,5 +85,6 @@ final readonly class AiOptions
         public string $requestUuid = '',
         public array $extra = [],
         public ?float $timeoutSeconds = null,
+        public ?array $jsonSchema = null,
     ) {}
 }

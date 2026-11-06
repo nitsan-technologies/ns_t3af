@@ -33,7 +33,12 @@
     <td><span class="aiu-adapter-type">{adapterLabel}</span></td>
     <td>
         <f:if condition="{provider.modelId} != ''">
-            <span class="badge badge-default">{provider.modelId}</span>
+            <f:then>
+                <span class="badge badge-default">{provider.modelId}</span>
+            </f:then>
+            <f:else>
+                <span class="text-body-secondary">—</span>
+            </f:else>
         </f:if>
     </td>
     <f:if condition="{showEmbeddingModelField} == 1">
@@ -129,17 +134,34 @@
                           id="aiu-provider-delete-{provider.uid}">
                         <input type="hidden" name="uid" value="{provider.uid}" />
                     </form>
-                    <button type="submit"
-                            class="btn btn-danger t3js-modal-trigger"
-                            data-target-form="aiu-provider-delete-{provider.uid}"
-                            title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.delete', default:'Delete')}"
-                            data-severity="warning"
-                            data-title="{f:translate(key:'LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:label.confirm.delete_record.title')}"
-                            data-content="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.confirmDelete', arguments: {0: provider.title}, default:'Delete this provider?')}"
-                            data-button-close-text="{f:translate(key:'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:cancel')}"
-                            data-button-ok-text="{f:translate(key:'LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:buttons.confirm.delete_record.yes')}">
-                        <core:icon identifier="actions-delete" size="small" />
-                    </button>
+                    <f:if condition="{provider.isDefault} == 1">
+                        <f:then>
+                            <button type="submit"
+                                    class="btn btn-danger t3js-modal-trigger"
+                                    data-target-form="aiu-provider-delete-{provider.uid}"
+                                    title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.delete', default:'Delete')}"
+                                    data-severity="warning"
+                                    data-title="{f:translate(key:'LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:label.confirm.delete_record.title')}"
+                                    data-content="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.confirmDeleteDefault', arguments: {0: provider.title}, default:'Delete the default provider \"%s\"? There is no fallback chain — AI requests will fail until another provider is set as default.')}"
+                                    data-button-close-text="{f:translate(key:'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:cancel')}"
+                                    data-button-ok-text="{f:translate(key:'LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:buttons.confirm.delete_record.yes')}">
+                                <core:icon identifier="actions-delete" size="small" />
+                            </button>
+                        </f:then>
+                        <f:else>
+                            <button type="submit"
+                                    class="btn btn-danger t3js-modal-trigger"
+                                    data-target-form="aiu-provider-delete-{provider.uid}"
+                                    title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.delete', default:'Delete')}"
+                                    data-severity="warning"
+                                    data-title="{f:translate(key:'LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:label.confirm.delete_record.title')}"
+                                    data-content="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.confirmDelete', arguments: {0: provider.title}, default:'Delete this provider?')}"
+                                    data-button-close-text="{f:translate(key:'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:cancel')}"
+                                    data-button-ok-text="{f:translate(key:'LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:buttons.confirm.delete_record.yes')}">
+                                <core:icon identifier="actions-delete" size="small" />
+                            </button>
+                        </f:else>
+                    </f:if>
                 </f:then>
                 <f:else>
                     <button type="button"

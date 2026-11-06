@@ -1,6 +1,6 @@
 # Feature — Backend Module & AI Features Drawer
 
-**Status:** Done (dashboard, providers, AI Context, credits, MCP Server, MCP Tools, AI Features drawer)  
+**Status:** Done (dashboard, providers, AI Context, credits, MCP Server, MCP Tools, AI Features drawer) 
 **Routes:** `Configuration/Backend/Modules.php`
 
 ---

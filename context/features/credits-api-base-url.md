@@ -1,6 +1,6 @@
 # Feature — Credits API base URL
 
-**Parent:** [`credits.md`](credits.md)  
+**Parent:** [`credits.md`](credits.md) 
 **Code:** `Classes/Credits/Service/CreditsApiBaseUrlResolver.php`, `RuntimeSettingsService::syncApiBaseUrlIfNeeded()`
 
 ---

@@ -500,7 +500,7 @@ See `context/features/ai-agent.md` (Backend context, Image texts, Runner safety 
 
 ## 2026-10-09 — SEO Apply no longer claims a refused save
 
-**Done:** Agent suggestion Apply uses `invokeWithMode`, which now treats a tool `{"error": ...}` as a failure. An editor without SEO field rights sees the refusal instead of "Applied 5 suggestion field(s)" with nothing saved. See `context/features/ai-agent.md`.
+**Done:** Agent suggestion Apply uses `invokeWithMode`, which now treats a tool `{"error":...}` as a failure. An editor without SEO field rights sees the refusal instead of "Applied 5 suggestion field(s)" with nothing saved. See `context/features/ai-agent.md`.
 
 **Last touched:** 2026-10-09
 
@@ -684,7 +684,7 @@ See `context/features/ai-agent.md` (Backend context, Image texts, Runner safety 
 
 ## 2026-09-30 — Drop TYPO3 12 support (2.0.0)
 
-**Done:** Raised `composer.json`/`ext_emconf.php` floor to `^13.4 || ^14.3`, pinned `symfony/ai-agent` to `~0.13.0`, bumped version to `2.0.0`. Removed TYPO3-12-only dual code paths: `ModuleController`/`ExtensionExtConfCategoryService` Fluid `StandaloneView` fallback (now `ViewFactoryInterface` only), `PagePathUtility` legacy icon-size reflection, `ProcessFileListActionsListener` legacy icon-size reflection, `AiUniverseUtilityHelper::getPageTreeNavigationComponent()` v12 branch, `AiApiAlertNotificationService` TYPO3-11 `Mailer` branch, `SetupChecklistPresenterTest` v12 adapter stub/test. Updated public docs (README, Installation/FAQ/Introduction RST, guides.xml/Includes.txt, CHANGELOG + `Documentation/ReleaseNotes/2.0.0/`, CONTRIBUTING, compliance-strings) and agent context (`core.md`, `Build/version-matrix.json`, `docs-map.md`, `Typo3CoreBackendDesign(.generic).md` support lines) to v13/v14 only. v1.x line stays on TYPO3 12 support for existing customers. Decided: drop v12, accept `~0.13.0`, no v12 CI job.
+**Done:** Raised `composer.json`/`ext_emconf.php` floor to `^13.4 | — | ^14.3`, pinned `symfony/ai-agent` to `~0.13.0`, bumped version to `2.0.0`. Removed TYPO3-12-only dual code paths: `ModuleController`/`ExtensionExtConfCategoryService` Fluid `StandaloneView` fallback (now `ViewFactoryInterface` only), `PagePathUtility` legacy icon-size reflection, `ProcessFileListActionsListener` legacy icon-size reflection, `AiUniverseUtilityHelper::getPageTreeNavigationComponent()` v12 branch, `AiApiAlertNotificationService` TYPO3-11 `Mailer` branch, `SetupChecklistPresenterTest` v12 adapter stub/test. Updated public docs (README, Installation/FAQ/Introduction RST, guides.xml/Includes.txt, CHANGELOG + `Documentation/ReleaseNotes/2.0.0/`, CONTRIBUTING, compliance-strings) and agent context (`core.md`, `Build/version-matrix.json`, `docs-map.md`, `Typo3CoreBackendDesign(.generic).md` support lines) to v13/v14 only. v1.x line stays on TYPO3 12 support for existing customers. Decided: drop v12, accept `~0.13.0`, no v12 CI job.
 
 Also fixed two pre-existing failures surfaced by `composer test`/`composer stan` during verification (unrelated to the v12 drop, both from local commit `f17edd7`): (1) `T3PlanetCreditsChatExecutor.php:182` PHPStan `object::invoke()` error — added the same `method_exists($platform, 'invoke')` guard already used in `SymfonyAiPlatform::invokeWithTools()`, since `T3PlanetCreditsPlatformFactory::create()` returns `object` (dynamic class resolution for phar-prefix support). (2) `DataHandlerServiceFileReferenceTest` — constructor was missing the `RecordService` arg; fixed by mocking `RecordService` plus the `TcaSchemaFactory`/`ConnectionPool` seams `BackendUtility::getRecord()` touches (reusing the `QueryBuilder`-mock pattern from `RelationUidListResolverTest`). `composer test` (1098/1098) and `composer stan` (0 errors) both fully green.
 
@@ -848,7 +848,7 @@ Also fixed two pre-existing failures surfaced by `composer test`/`composer stan`
 
 ## 2026-08-17 — Wizard model defaults + Composer stable pinning
 
-**Done:** Setup wizard step 4 derives `modelOptions` / `defaultModel` from `SymfonyAiCatalogReader` (static fallback when catalog empty). Updated EN/DE locallang catalog blurbs. Install + ExtensionIntegration docs: production must pin `nitsan/ns-t3af ^1.1` with `minimum-stability: stable`. Child-extensions note: no `|| @dev` in tagged releases.
+**Done:** Setup wizard step 4 derives `modelOptions` / `defaultModel` from `SymfonyAiCatalogReader` (static fallback when catalog empty). Updated EN/DE locallang catalog blurbs. Install + ExtensionIntegration docs: production must pin `nitsan/ns-t3af ^1.1` with `minimum-stability: stable`. Child-extensions note: no `| — | @dev` in tagged releases.
 
 **Post-merge ops:** Delete remote `dep/mcp-sdk-1786623877776-ns_t3af` after merge to `master`; tag patch only if merged work exceeds current Packagist tag.
 
@@ -1080,7 +1080,7 @@ Also fixed two pre-existing failures surfaced by `composer test`/`composer stan`
 - Public API: `NITSAN\NsT3AF\Api\AiServiceInterface` is the semver-stable surface. Child extensions (`ns_t3ai`, `ns_t3cs`, …) inject this; never touch adapters directly.
 - File list (add/modify) and verification steps are in the FEATURE file.
 - `BaseClient` / `AiRequestService` stay on ext_conf in v1 — switch happens in a follow-up patch after migration ships.
-- Branch separation: v2.x line is PHP 8.2+ / TYPO3 `^13.4 || ^14.3`; v1.x keeps TYPO3 12 for legacy customers.
+- Branch separation: v2.x line is PHP 8.2+ / TYPO3 `^13.4 | — | ^14.3`; v1.x keeps TYPO3 12 for legacy customers.
 
 **Forward-pointed features (separate FEATURE_*.md files later):**
 - Feature 2 — AI Credits (port from `autodudes/ai-suite` → `packages/ai-suite/Classes/Enumeration/CreditCostEnumeration.php`, `Backend/ToolbarItems/RequestsToolbarItem.php`).
@@ -1098,7 +1098,7 @@ Also fixed two pre-existing failures surfaced by `composer test`/`composer stan`
 - 3 reference unit tests already in `Tests/Unit/` — mirror their pattern
 
 **Decisions confirmed:**
-- **Compatibility (FINAL, 2026-05-08):** v2.x targets **TYPO3 13.4 + 14.0 × PHP 8.2 / 8.3 / 8.4 / 8.5**. Update `composer.json` (`php: ^8.2 || ^8.3 || ^8.4 || ^8.5`, `typo3/cms-core: ^13.4 || ^14.0`) + `ext_emconf.php` constraints in Feature 1. CI matrix expands to 4 PHP × 2 TYPO3 = 8 jobs. v1.x line keeps current floors on separate branch.
+- **Compatibility (FINAL, 2026-05-08):** v2.x targets **TYPO3 13.4 + 14.0 × PHP 8.2 / 8.3 / 8.4 / 8.5**. Update `composer.json` (`php: ^8.2 | — | ^8.3 | — | ^8.4 | — | ^8.5`, `typo3/cms-core: ^13.4 | — | ^14.0`) + `ext_emconf.php` constraints in Feature 1. CI matrix expands to 4 PHP × 2 TYPO3 = 8 jobs. v1.x line keeps current floors on separate branch.
 - PHPStan: level 3 baseline + level 8 on new namespaces (path-scoped). No global bump.
 - **Backend module relocation (FINAL, 2026-05-08):** Drop `tools_aiuniverse` (Admin Tools child). Register **new top-level parent module `aiuniverse`** in main nav, position **after Web, before File**. Access gated by configurable `be_groups` (TCA/extconf — not admin-only). Submodules under it:
   - `t3af_dashboard` — owned by ns_t3af. Single submodule containing landing card grid + Providers list + Stats (matches mockup, no further split).
@@ -1114,7 +1114,7 @@ Also fixed two pre-existing failures surfaced by `composer test`/`composer stan`
 **Phases — all six COMPLETE on `2.x` (2026-05-08):**
 
 - Phase 0 — Infra prep ✅
-  - composer.json: `php ^8.2 || ^8.3 || ^8.4 || ^8.5`, `typo3/cms-core ^13.4 || ^14.0`, plus `cms-backend` + `cms-fluid` (controller deps).
+  - composer.json: `php ^8.2 | — | ^8.3 | — | ^8.4 | — | ^8.5`, `typo3/cms-core ^13.4 | — | ^14.0`, plus `cms-backend` + `cms-fluid` (controller deps).
   - `ext_emconf.php` constraints aligned. Version `2.0.0-dev`.
   - CI matrix: 4 PHP × 2 TYPO3 = 8 jobs (`.github/workflows/ci.yml`).
   - Module relocation done. `Configuration/Services.php` registers `AdapterCompilerPass` (signature: `ContainerConfigurator $configurator, ContainerBuilder $containerBuilder` only — TYPO3 v13 doesn't pass `LoaderInterface`).
@@ -1276,48 +1276,48 @@ Grouped by area. Tick as features land.
 ```
 ns_t3af/
 ├── Classes/
-│   ├── Attribute/                  # #[AsAiProvider], #[AsAiMiddleware], #[McpTool]
-│   ├── Capability/                 # *CapableInterface
-│   ├── Client/                     # Provider clients (existing) — to be folded into Provider/
-│   ├── Provider/                   # Provider adapters + Contract/ + Symfony AI bridge
-│   ├── DependencyInjection/        # Compiler passes (Provider, Middleware, McpTool)
-│   ├── Middleware/                 # AI request middleware pipeline
-│   ├── Mcp/
-│   │   ├── Server/                 # Server factory, transports
-│   │   ├── OAuth/                  # AuthorizationService, PKCE, ClientRepository, RateLimit
-│   │   ├── Tool/                   # Tool/<Category>/* (Pages, Content, File, Schema, Search, Batch, Permission, Cache, Dynamic, …)
-│   ├── Service/
-│   │   ├── Feature/                # Feature/Completion, Feature/Translation, Feature/Embedding, …
-│   │   ├── AiRequestService.php    # existing
-│   │   ├── AiLogService.php        # existing
-│   │   └── AiStatisticsService.php # existing
-│   ├── Domain/                     # Entities, repos, DTOs, value objects, enums
-│   ├── Form/                       # TCA form elements, wizards
-│   ├── Controller/Backend/         # Backend modules (Providers, Request Log, OAuth Clients, Discovered Tables)
-│   ├── Widgets/DataProvider/       # Dashboard widgets
-│   ├── Logging/                    # AuditLogger
-│   ├── Helper/                     # existing
-│   └── Utility/                    # existing
+│ ├── Attribute/ # #[AsAiProvider], #[AsAiMiddleware], #[McpTool]
+│ ├── Capability/ # *CapableInterface
+│ ├── Client/ # Provider clients (existing) — to be folded into Provider/
+│ ├── Provider/ # Provider adapters + Contract/ + Symfony AI bridge
+│ ├── DependencyInjection/ # Compiler passes (Provider, Middleware, McpTool)
+│ ├── Middleware/ # AI request middleware pipeline
+│ ├── Mcp/
+│ │ ├── Server/ # Server factory, transports
+│ │ ├── OAuth/ # AuthorizationService, PKCE, ClientRepository, RateLimit
+│ │ ├── Tool/ # Tool/<Category>/* (Pages, Content, File, Schema, Search, Batch, Permission, Cache, Dynamic, …)
+│ ├── Service/
+│ │ ├── Feature/ # Feature/Completion, Feature/Translation, Feature/Embedding, …
+│ │ ├── AiRequestService.php # existing
+│ │ ├── AiLogService.php # existing
+│ │ └── AiStatisticsService.php # existing
+│ ├── Domain/ # Entities, repos, DTOs, value objects, enums
+│ ├── Form/ # TCA form elements, wizards
+│ ├── Controller/Backend/ # Backend modules (Providers, Request Log, OAuth Clients, Discovered Tables)
+│ ├── Widgets/DataProvider/ # Dashboard widgets
+│ ├── Logging/ # AuditLogger
+│ ├── Helper/ # existing
+│ └── Utility/ # existing
 ├── Configuration/
-│   ├── Backend/Modules.php
-│   ├── Services.yaml               # DI + tags: ai.provider, ai.middleware, mcp.tool, mcp.prompt
-│   ├── RequestMiddlewares.php      # OAuth + MCP HTTP middleware
-│   ├── TCA/                        # tx_nst3af_* tables
-│   ├── Caching.php                 # nst3af_responses (no hardcoded backend)
-│   └── SmartRouting/ComplexitySignals.php
+│ ├── Backend/Modules.php
+│ ├── Services.yaml # DI + tags: ai.provider, ai.middleware, mcp.tool, mcp.prompt
+│ ├── RequestMiddlewares.php # OAuth + MCP HTTP middleware
+│ ├── TCA/ # tx_nst3af_* tables
+│ ├── Caching.php # nst3af_responses (no hardcoded backend)
+│ └── SmartRouting/ComplexitySignals.php
 ├── Resources/
-│   ├── Private/Language/locallang*.xlf  # EN + DE minimum
-│   ├── Public/Icons/provider-*.svg
-│   └── Private/Templates/...
+│ ├── Private/Language/locallang*.xlf # EN + DE minimum
+│ ├── Public/Icons/provider-*.svg
+│ └── Private/Templates/...
 ├── Tests/
-│   ├── Unit/
-│   ├── Functional/
-│   ├── Architecture/               # phpat layered-boundary tests
-│   └── E2E/                        # Playwright + LLM-real
+│ ├── Unit/
+│ ├── Functional/
+│ ├── Architecture/ # phpat layered-boundary tests
+│ └── E2E/ # Playwright + LLM-real
 ├── Documentation/
-│   ├── Adr/                        # Architecture Decision Records
-│   ├── Credits.rst                 # Attribution for ported code
-│   └── ...
+│ ├── Adr/ # Architecture Decision Records
+│ ├── Credits.rst # Attribution for ported code
+│ └──...
 └── ext_*.php / composer.json
 ```
 
@@ -1363,8 +1363,8 @@ From `packages/ns_t3af/` (own `.Build/vendor/` after `composer install`):
 composer test
 composer test:functional
 composer stan
-composer cs:check          # dry-run; may be non-blocking in CI
-composer doc-watch        # optional documentation watcher
+composer cs:check # dry-run; may be non-blocking in CI
+composer doc-watch # optional documentation watcher
 ```
 
 Makefile `docs` target may still exist for legacy doc builds — prefer `composer doc-watch` when available.

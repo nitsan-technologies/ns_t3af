@@ -113,6 +113,7 @@ final class AgentDraftService
             'elicitation' => true,
             'totalFields' => count($fields),
             'safeFieldCount' => $this->lowRiskFieldMatrix->countSafeFields($plan),
+            'notice' => trim((string) ($plan->context['editorNotice'] ?? '')),
         ];
     }
 

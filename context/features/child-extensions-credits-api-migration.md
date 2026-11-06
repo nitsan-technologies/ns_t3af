@@ -1,6 +1,6 @@
 # Child extensions — T3Planet Credits API migration (2026-07-31)
 
-**T3AF commit:** `6175102` — `feat(credits): migrate T3Planet API client`  
+**T3AF commit:** `6175102` — `feat(credits): migrate T3Planet API client` 
 **Audience:** `ns_t3ai`, `ns_t3cs`, `ns_t3aa`, `ns_t3as`, `ns_t3ac`, and any extension calling `AiServiceInterface` / `TtsServiceInterface` / `ImageGenerationServiceInterface` with credits mode on.
 
 **Related:** `context/features/credits.md`, `context/features/child-extensions.md`, `Classes/Credits/CreditsFeatureKeyCatalog.php`

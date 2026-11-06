@@ -1,7 +1,7 @@
 # Feature — Public API (AiServiceInterface)
 
-**Status:** Done (semver-stable surface)  
-**Deep spec:** `Documentation/Api/PublicApi.rst`, `context/specs/FEATURE_AiProviderManagement.md` §CC-6  
+**Status:** Done (semver-stable surface) 
+**Deep spec:** `Documentation/Api/PublicApi.rst`, `context/specs/FEATURE_AiProviderManagement.md` §CC-6 
 **Architecture:** `context/architecture.md`
 
 ---

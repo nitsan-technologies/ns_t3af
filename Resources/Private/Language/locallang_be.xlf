@@ -762,6 +762,9 @@
       <trans-unit id="agent.turn.providerNoDefaultForSite" resname="agent.turn.providerNoDefaultForSite">
         <source>No default AI provider is configured for this site. Open AI Foundation → Providers on the current site and mark one provider as default.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.providerModelUnavailable" resname="agent.turn.providerModelUnavailable">
+        <source>The Gemini (or other) model set for this provider is no longer available. Open AI Foundation → Providers, choose a current chat model, and run Test connection.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.providerRateLimited" resname="agent.turn.providerRateLimited">
         <source>The AI provider rate limit was reached: %1$s Please wait a moment and try again.</source>
       </trans-unit>
@@ -803,6 +806,9 @@
       </trans-unit>
       <trans-unit id="agent.turn.imageGenerationUnavailable" resname="agent.turn.imageGenerationUnavailable">
         <source>AI image generation is not available to you (it needs T3AI with an image provider and access to T3AI Media), so no image will be generated. I will do the rest of the request.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.imageProviderCannotGenerate" resname="agent.turn.imageProviderCannotGenerate">
+        <source>%1$s cannot create images. Switch the AI Agent provider to OpenAI, Stability AI or MidJourney (or enable T3Planet Credits), then ask again. No image was prepared.</source>
       </trans-unit>
       <trans-unit id="agent.turn.filesPartlyUnavailable" resname="agent.turn.filesPartlyUnavailable">
         <source>Skipped %1$s: the file does not exist or is missing from the file storage. I will continue with the other files (%2$s).</source>
@@ -1820,6 +1826,9 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.info.modeDraft" resname="agent.info.modeDraft">
         <source>You are in the workspace "%1$s": confirmed changes stay a draft until they are published.</source>
       </trans-unit>
+      <trans-unit id="agent.info.modeFromLive" resname="agent.info.modeFromLive">
+        <source>You are working in Live, but confirmed changes go to the workspace "%1$s" (MCP Server > Workspace selection). Publish that workspace to see them in Live Layout.</source>
+      </trans-unit>
       <trans-unit id="agent.info.conversationsTitle" resname="agent.info.conversationsTitle">
         <source>Conversations</source>
       </trans-unit>
@@ -1919,6 +1928,9 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.draft.targetWorkspace" resname="agent.draft.targetWorkspace">
         <source>On confirm this is saved as a draft in the workspace “%1$s”.</source>
       </trans-unit>
+      <trans-unit id="agent.draft.targetWorkspaceFromLive" resname="agent.draft.targetWorkspaceFromLive">
+        <source>On confirm this is saved as a draft in the workspace “%1$s”. Publish that workspace to see it in Live Layout.</source>
+      </trans-unit>
       <trans-unit id="agent.link.edit" resname="agent.link.edit">
         <source>Edit</source>
       </trans-unit>
@@ -1938,7 +1950,13 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
         <source>Rename</source>
       </trans-unit>
       <trans-unit id="agent.field.hidden" resname="agent.field.hidden">
-        <source>Hidden (1 = hidden, 0 = visible)</source>
+        <source>Hidden</source>
+      </trans-unit>
+      <trans-unit id="agent.field.contentType" resname="agent.field.contentType">
+        <source>Content type</source>
+      </trans-unit>
+      <trans-unit id="agent.field.headingType" resname="agent.field.headingType">
+        <source>Heading type</source>
       </trans-unit>
       <trans-unit id="agent.field.copy" resname="agent.field.copy">
         <source>Copy</source>
@@ -2569,6 +2587,9 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       </trans-unit>
       <trans-unit id="agent.workspace.noAccess" resname="agent.workspace.noAccess">
         <source>The workspace selected under MCP Server > Workspace selection is not available to you. Ask your administrator for access or pick another workspace there.</source>
+      </trans-unit>
+      <trans-unit id="agent.workspace.createdNeedPublish" resname="agent.workspace.createdNeedPublish">
+        <source>Created in workspace "%1$s" — publish to see it in Live Layout.</source>
       </trans-unit>
       <trans-unit id="agent.plan.title" resname="agent.plan.title">
         <source>Progress</source>

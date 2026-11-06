@@ -56,4 +56,14 @@ final class AgentWorkspaceTargetTest extends TestCase
         self::assertSame(0, AgentWorkspaceTarget::target(3, $canUse));
         self::assertTrue(AgentWorkspaceTarget::unusable(3, $canUse));
     }
+
+    #[Test]
+    public function redirectedFromLiveWhenEditorIsLiveAndWriteGoesToADraftWorkspace(): void
+    {
+        self::assertTrue(AgentWorkspaceTarget::redirectedFromLive(0, 1));
+        self::assertTrue(AgentWorkspaceTarget::redirectedFromLive(-1, 3));
+        self::assertFalse(AgentWorkspaceTarget::redirectedFromLive(0, 0));
+        self::assertFalse(AgentWorkspaceTarget::redirectedFromLive(1, 1));
+        self::assertFalse(AgentWorkspaceTarget::redirectedFromLive(2, 1));
+    }
 }

@@ -1,7 +1,7 @@
 # Feature — Governance & Observability
 
-**Status:** Done  
-**Deep spec:** `Documentation/Governance/Index.rst`  
+**Status:** Done 
+**Deep spec:** `Documentation/Governance/Index.rst` 
 **Related:** `context/specs/FEATURE_AiProviderManagement.md` §CC-2, CC-8 (provider access fields); wizard/group caps → `context/features/ai-access-roles.md`
 
 ---
@@ -39,12 +39,12 @@
 ## UserTSconfig keys
 
 ```text
-nst3af.budget.period       = daily | weekly | monthly
-nst3af.budget.maxCost      = float
-nst3af.budget.maxTokens    = int
-nst3af.budget.maxRequests  = int
+nst3af.budget.period = daily | weekly | monthly
+nst3af.budget.maxCost = float
+nst3af.budget.maxTokens = int
+nst3af.budget.maxRequests = int
 nst3af.rateLimit.requestsPerMinute = int
-nst3af.privacyLevel        = standard | reduced | none
+nst3af.privacyLevel = standard | reduced | none
 ```
 
 Off by default — no TSconfig means no limits. Admins bypass `be_groups` and capability checks; budgets and rate limits apply to everyone.

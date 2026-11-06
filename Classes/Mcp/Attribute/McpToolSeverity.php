@@ -23,7 +23,7 @@ use Attribute;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 
 /**
- * Declares registry severity for an MCP tool handler (R13, R14).
+ * Declares registry severity for an MCP tool handler.
  */
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_METHOD)]
 final class McpToolSeverity

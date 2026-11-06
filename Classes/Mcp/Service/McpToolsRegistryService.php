@@ -470,10 +470,13 @@ PHP;
                 ];
             }
 
+            $severity = trim((string) ($tool['severity'] ?? ''));
+
             return [
                 'name' => $toolName,
                 'description' => $description,
                 'shortTitle' => $shortTitle,
+                'severity' => $severity !== '' ? $severity : 'unclassified',
                 'category' => $metadata['category'],
                 'status' => $metadata['status'],
                 'tagline' => $metadata['tagline'],

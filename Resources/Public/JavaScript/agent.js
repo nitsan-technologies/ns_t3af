@@ -8,7 +8,7 @@ import { preloadModuleStateStorage } from './agent/module-state.js';
 import '@typo3/backend/element/icon-element.js';
 import { hotkeyLabel, readHotkeyPref, matchesAgentHotkey, STORAGE_PREFS_KEY } from './agent/hotkeys.js';
 import { lang, hasTurnGuardWarning, errorMessage, errorText, messageContent, escapeHtml, formatWorkDuration, humanizeKey } from './agent/format.js';
-import { ajaxUrl, resolveBackendContext } from './agent/context.js';
+import { ajaxUrl, getBackendDocument, resolveBackendContext } from './agent/context.js';
 import { isSuggestionFieldSafe, renderImagePreviews, renderMediaPreview, resolveToolDisplayLabel, renderToolTrace, renderWorkTraceHtml, stripEphemeralWorkTraceMeta, ensureMessageRenderer, renderMessageBody } from './agent/render-helpers.js';
 import { sessionMethods } from './agent/controller-sessions.js';
 import { chromeMethods } from './agent/controller-chrome.js';
@@ -111,6 +111,8 @@ class AgentController {
     this.credits = null;
     this.creditsBadge = root.querySelector('[data-nst3af-agent-credits]');
     this.lastFocus = null;
+    /** F1: set by openWithContext(), consumed-and-cleared by the next restoreSession() call. */
+    this.pendingOpenPayload = null;
     this.messages = [];
     this.context = {};
     this.starters = { executable: [], locked: [] };
@@ -177,23 +179,6 @@ Object.defineProperty(AgentController.prototype, 'isRunning', {
     this.applyRunningChrome?.();
   },
 });
-
-/**
- * Backend shell (topbar/toolbar) renders outside the module iframe on TYPO3 v14+.
- * @returns {Document}
- */
-function getBackendDocument() {
-  try {
-    const topDoc = window.top?.document;
-    if (topDoc?.querySelector('.t3js-scaffold-topbar, .scaffold-topbar')) {
-      return topDoc;
-    }
-  } catch {
-    // Same-origin only; fall back to current document.
-  }
-
-  return document;
-}
 
 /**
  * Open/close (toggle) shortcut for TYPO3 13–14: bind keydown (capture) on the scaffold and every
@@ -383,6 +368,7 @@ function initialize() {
   backendDoc.addEventListener('typo3-iframe-loaded', bindOpenHotkeyAcrossFrames);
   backendDoc.addEventListener('typo3-module-loaded', bindOpenHotkeyAcrossFrames);
   scheduleMountLaunchBar();
+  exposeOpenWithContextBridge();
 
   window.addEventListener('storage', (event) => {
     if (event.key !== STORAGE_PREFS_KEY || controller === null) {
@@ -391,6 +377,35 @@ function initialize() {
     controller.hotkey = readHotkeyPref();
     controller.applyHotkeyChrome();
   });
+}
+
+/**
+ * F1 — additive agent-open API for child extensions (e.g. ns_t3ai's Fix
+ * buttons). Published on `window.top` because a backend module's content
+ * renders inside #typo3-contentIframe, a different document than the one
+ * agent.js boots in — same-origin `window.top` reach-through, no
+ * postMessage, no ns_t3af dependency on any caller.
+ *
+ * Exposed only once `controller` exists, i.e. only when the panel root
+ * already rendered server-side (the same availability gate the toolbar
+ * item itself is subject to — no new gate is introduced here). A caller
+ * must use optional chaining (`window.top.NsT3afAgent?.openWithContext(...)`)
+ * since the bridge is simply absent when the panel is unavailable.
+ */
+function exposeOpenWithContextBridge() {
+  const topWindow = window.top ?? window;
+  try {
+    topWindow.NsT3afAgent = {
+      /**
+       * @param {{chips?: Array<{key: string, label: string, value: string}>, promptText?: string, context?: Record<string, unknown>}} payload
+       */
+      openWithContext(payload) {
+        controller?.openWithContext(payload);
+      },
+    };
+  } catch {
+    // Cross-origin top (should not happen for a same-origin TYPO3 backend); no bridge, no crash.
+  }
 }
 
 export function boot() {

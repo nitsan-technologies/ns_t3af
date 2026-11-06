@@ -1,7 +1,7 @@
 # AI Permissions
 
-**Route:** `t3af_dashboard.ai_access_roles`  
-**Package:** `ns_t3af`  
+**Route:** `t3af_dashboard.ai_access_roles` 
+**Package:** `ns_t3af` 
 **Admin only:** yes (configure wizard + matrix); **enforcement applies to all backend users.**
 
 ## Purpose
@@ -49,25 +49,25 @@ Step chips reuse the existing setup-wizard look (`Resources/Public/Css/module/se
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ Child / suite extensions — AiAccessCatalogProviderInterface             │
-│  (tag t3af.ai_access_catalog_provider in child Services.yaml)           │
-│  ModuleAccessDescriptor | FeaturePermissionDescriptor |                 │
-│  RecordPermissionDescriptor | FeatureAccessBindingsDescriptor           │
+│ Child / suite extensions — AiAccessCatalogProviderInterface │
+│ (tag t3af.ai_access_catalog_provider in child Services.yaml) │
+│ ModuleAccessDescriptor | FeaturePermissionDescriptor | │
+│ RecordPermissionDescriptor | FeatureAccessBindingsDescriptor │
 └────────────────────────────┬────────────────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────────────────┐
-│ ns_t3af — merge + UI + enforcement                                        │
-│  AiAccessCatalogProviderRegistry → catalogs (modules / features / records)│
-│  FeatureAccessBindingRegistry → tab/card legacy + provider bindings       │
-│  WizardBootstrapFactory → default GroupConfig for new groups              │
-│  MatrixScopeCatalog → permission matrix scope tabs                        │
-│  AiAccessCustomOptionsBootstrap → be_groups custom_options T3Ai:*       │
+│ ns_t3af — merge + UI + enforcement │
+│ AiAccessCatalogProviderRegistry → catalogs (modules / features / records)│
+│ FeatureAccessBindingRegistry → tab/card legacy + provider bindings │
+│ WizardBootstrapFactory → default GroupConfig for new groups │
+│ MatrixScopeCatalog → permission matrix scope tabs │
+│ AiAccessCustomOptionsBootstrap → be_groups custom_options T3Ai:* │
 └────────────────────────────┬────────────────────────────────────────────┘
                              │
          ┌───────────────────┼───────────────────┐
-         ▼                   ▼                   ▼
-  access-roles.js      be_groups ACL      FeaturePermissionGate /
-  (wizard + matrix)    + group_settings   RecordAccessEnforcer
+         ▼ ▼ ▼
+  access-roles.js be_groups ACL FeaturePermissionGate /
+  (wizard + matrix) + group_settings RecordAccessEnforcer
 ```
 
 | Layer | Location |

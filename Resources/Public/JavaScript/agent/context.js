@@ -14,6 +14,25 @@ export function ajaxUrl(route) {
 }
 
 /**
+ * Backend shell (topbar/toolbar) renders outside the module iframe on TYPO3 v14+.
+ * Used by agent chrome and context resolution after hard-refresh on deep module URLs.
+ *
+ * @returns {Document}
+ */
+export function getBackendDocument() {
+  try {
+    const topDoc = window.top?.document;
+    if (topDoc?.querySelector('.t3js-scaffold-topbar, .scaffold-topbar')) {
+      return topDoc;
+    }
+  } catch {
+    // Same-origin only; fall back to current document.
+  }
+
+  return document;
+}
+
+/**
  * Active backend module route (e.g. web_layout, nst3af_providers).
  * Agent chrome lives outside the module iframe — use ModuleMenu, not body.dataset.
  * @returns {string}
@@ -48,6 +67,8 @@ export function resolveModuleRoute() {
     // iframe may be cross-origin or not ready.
   }
 
+  // Deep Extbase routes (e.g. ScanReport/index after hard refresh) may not expose ModuleMenu
+  // or data-module-id yet — fall back to body dataset, then empty string (caller still opens).
   return document.body?.dataset?.module ?? '';
 }
 

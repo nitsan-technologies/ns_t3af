@@ -51,7 +51,7 @@ Leadership ask: drop HMAC envelope complexity. Single opaque **token** per licen
 | POST | `/API/AI/Products.php` | Product catalog. Bearer token. 1h ETag. |
 | POST | `/API/AI/PurchaseHistory.php` | Paginated history for token's license. Bearer token. |
 | POST | `/API/AI/CurrentPlan.php` | Plan card snapshot. Bearer token. 60s ETag. |
-| POST | `/API/AI/Charge.php` | Hot path. Bearer token + `{domain, request_uuid, feature_key, prompt, ...}`. |
+| POST | `/API/AI/Charge.php` | Hot path. Bearer token + `{domain, request_uuid, feature_key, prompt,...}`. |
 | POST | `/API/AI/Stream.php` | SSE. Bearer token. |
 | POST | `/API/AI/Abort.php` | Stream cancel finalize. Bearer token. |
 | POST | `/API/AI/Embed.php` | Embeddings. Bearer token. |
@@ -126,33 +126,33 @@ Leadership ask: drop HMAC envelope complexity. Single opaque **token** per licen
 
 ```text
 Customer TYPO3 (ns_t3af, credits mode ON)
-   │ HTTPS  Authorization: Bearer <token>
+   │ HTTPS Authorization: Bearer <token>
    ▼
-composer.t3planet.cloud          (plain PHP only — no TYPO3)
-   ├─ composer/API/              (existing license endpoints, untouched)
-   └─ composer/API/AI/           (NEW credit endpoints)
+composer.t3planet.cloud (plain PHP only — no TYPO3)
+   ├─ composer/API/ (existing license endpoints, untouched)
+   └─ composer/API/AI/ (NEW credit endpoints)
 
-packages/<server-ai-ext>/        (separate TYPO3 install — e.g. T3Planet internal host)
+packages/<server-ai-ext>/ (separate TYPO3 install — e.g. T3Planet internal host)
    ├─ BE: AI Tokens / Features / Products / Usage / Dashboard
    └─ TCA on ns_ai_token, ns_ai_feature_cost, ns_ai_product (+ same MySQL as API)
 
-composer/API/Database/           (on composer host)
-   │     ├─ LicenseRepository.php         (existing, unchanged)
-   │     ├─ AiAccountRepository.php       (NEW — balances + rate limits)
-   │     ├─ AiRequestRepository.php       (NEW — per-call log + idempotency)
-   │     ├─ AiTransactionRepository.php   (NEW — purchases, debits, refunds)
-   │     ├─ AiFeatureCostRepository.php   (NEW)
-   │     └─ AiProductRepository.php       (NEW)
+composer/API/Database/ (on composer host)
+   │ ├─ LicenseRepository.php (existing, unchanged)
+   │ ├─ AiAccountRepository.php (NEW — balances + rate limits)
+   │ ├─ AiRequestRepository.php (NEW — per-call log + idempotency)
+   │ ├─ AiTransactionRepository.php (NEW — purchases, debits, refunds)
+   │ ├─ AiFeatureCostRepository.php (NEW)
+   │ └─ AiProductRepository.php (NEW)
    ├─ composer/API/Services/
-   │     ├─ AiCreditService.php           (NEW, debit logic)
-   │     ├─ AiCostCalculator.php          (NEW, reads ns_ai_feature_cost)
-   │     ├─ AiTokenRepository.php        (NEW)
-   │     ├─ AiTokenAuth.php              (NEW, Bearer → ns_ai_token + license CSV)
-   │     └─ AiErrorCodes.php              (NEW)
+   │ ├─ AiCreditService.php (NEW, debit logic)
+   │ ├─ AiCostCalculator.php (NEW, reads ns_ai_feature_cost)
+   │ ├─ AiTokenRepository.php (NEW)
+   │ ├─ AiTokenAuth.php (NEW, Bearer → ns_ai_token + license CSV)
+   │ └─ AiErrorCodes.php (NEW)
    ├─ composer/API/Utils/
-   │     ├─ DomainMatcher.php
-   │     └─ AiProviderRouter.php
-   └─ composer/API/Provider/              (outbound AI clients)
+   │ ├─ DomainMatcher.php
+   │ └─ AiProviderRouter.php
+   └─ composer/API/Provider/ (outbound AI clients)
 ```
 
 Plain PHP + raw mysqli on `composer.t3planet.cloud`. TYPO3 admin extension in **`packages/<server-ai-ext>/`** connects to the **same database** (not deployed to customer TYPO3 sites).
@@ -322,7 +322,7 @@ CREATE TABLE ns_ai_feature_cost (
   label VARCHAR(128) NOT NULL,
   default_cost INT NOT NULL,
   default_model VARCHAR(96),
-  default_backend VARCHAR(32),         -- 'openai|anthropic|gemini|mistral|openrouter'
+  default_backend VARCHAR(32), -- 'openai|anthropic|gemini|mistral|openrouter'
   active TINYINT(1) DEFAULT 1,
   sort INT DEFAULT 0,
   tstamp INT NOT NULL
@@ -339,19 +339,19 @@ CREATE TABLE ns_ai_feature_cost_override (
 -- 5) Product / SKU catalog (admin-editable via server TYPO3 ext)
 CREATE TABLE ns_ai_product (
   uid INT AUTO_INCREMENT PRIMARY KEY,
-  sku VARCHAR(64) NOT NULL,                  -- 'trial' | 'starter' | 'pro' | 'agency' | 'topup_1000' | 'topup_5000'
+  sku VARCHAR(64) NOT NULL, -- 'trial' | 'starter' | 'pro' | 'agency' | 'topup_1000' | 'topup_5000'
   type ENUM('plan','topup','trial') NOT NULL,
   title VARCHAR(190) NOT NULL,
   subtitle VARCHAR(255) DEFAULT NULL,
   description TEXT NULL,
-  credits INT UNSIGNED NOT NULL,             -- credits granted on purchase
+  credits INT UNSIGNED NOT NULL, -- credits granted on purchase
   renewal_period ENUM('monthly','yearly','one_time') NOT NULL DEFAULT 'one_time',
   price_amount DECIMAL(10,2) NULL,
   price_currency VARCHAR(8) NOT NULL DEFAULT 'EUR',
-  pabbly_sku VARCHAR(64) NOT NULL,           -- maps incoming Pabbly webhook payload back to this row
-  checkout_url VARCHAR(500) NOT NULL,        -- Pabbly checkout link; client opens in new tab w/ license_key appended
-  features_json MEDIUMTEXT NULL,             -- JSON array of bullet points for marketing card
-  badge VARCHAR(32) NULL,                    -- 'popular' | 'best_value' | NULL
+  pabbly_sku VARCHAR(64) NOT NULL, -- maps incoming Pabbly webhook payload back to this row
+  checkout_url VARCHAR(500) NOT NULL, -- Pabbly checkout link; client opens in new tab w/ license_key appended
+  features_json MEDIUMTEXT NULL, -- JSON array of bullet points for marketing card
+  badge VARCHAR(32) NULL, -- 'popular' | 'best_value' | NULL
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   sort_order INT NOT NULL DEFAULT 0,
   crdate INT NOT NULL,
@@ -364,9 +364,9 @@ CREATE TABLE ns_ai_product (
 -- Outbound AI provider configs (admin module)
 CREATE TABLE ns_ai_provider_config (
   uid INT AUTO_INCREMENT PRIMARY KEY,
-  backend VARCHAR(32) NOT NULL,        -- 'openai|anthropic|gemini|mistral|openrouter'
+  backend VARCHAR(32) NOT NULL, -- 'openai|anthropic|gemini|mistral|openrouter'
   endpoint VARCHAR(255) NOT NULL,
-  api_key_enc VARCHAR(1024) NOT NULL,  -- sodium_crypto_secretbox
+  api_key_enc VARCHAR(1024) NOT NULL, -- sodium_crypto_secretbox
   default_model VARCHAR(96),
   active TINYINT(1) DEFAULT 1,
   sort INT DEFAULT 0,
@@ -423,7 +423,7 @@ Headers:
   Content-Type: application/json
   Authorization: Bearer <token>
 Body:
-  { "domain": "<host>", "request_uuid": "<uuid-v4>", ... endpoint-specific }
+  { "domain": "<host>", "request_uuid": "<uuid-v4>",... endpoint-specific }
 ```
 
 Reject if (see §1.5): `token_missing`, `token_invalid`, `license_expired`, `domain_mismatch`, `rate_limited`, etc.
@@ -462,7 +462,7 @@ Reject if (see §1.5): `token_missing`, `token_invalid`, `license_expired`, `dom
       "type": "plan",
       "title": "Pro",
       "subtitle": "Best for growing agencies",
-      "description": "10,000 credits / month ...",
+      "description": "10,000 credits / month...",
       "credits": 10000,
       "renewal_period": "monthly",
       "price_amount": 49.00,
@@ -526,7 +526,7 @@ Reject if (see §1.5): `token_missing`, `token_invalid`, `license_expired`, `dom
 {
   "status": true,
   "request_uuid": "9a7c...",
-  "content": "Discover ...",
+  "content": "Discover...",
   "prompt_tokens": 245,
   "completion_tokens": 87,
   "credits": {
@@ -549,7 +549,7 @@ Reject if (see §1.5): `token_missing`, `token_invalid`, `license_expired`, `dom
 {
   "status": false,
   "error_code": "insufficient_credits",
-  "credits": { ... },
+  "credits": {... },
   "topup_url": "https://t3planet.de/buy-credits?license=...&return=..."
 }
 
@@ -574,7 +574,7 @@ Reject if (see §1.5): `token_missing`, `token_invalid`, `license_expired`, `dom
   "status": false,
   "error_code": "upstream_ai_error",
   "upstream_status": 500,
-  "credits": { ... },        // unchanged (refunded)
+  "credits": {... }, // unchanged (refunded)
   "request_uuid": "..."
 }
 ```
@@ -622,9 +622,9 @@ Notes:
 ## 6. Bucket debit order
 
 ```
-1. plan_credits        (use-it-or-lose-it monthly; drain first)
-2. free_credits        (trial gift; drain second)
-3. paid_credits        (top-up never expires; drain last)
+1. plan_credits (use-it-or-lose-it monthly; drain first)
+2. free_credits (trial gift; drain second)
+3. paid_credits (top-up never expires; drain last)
 ```
 
 Client UI shows all three; server decides bucket. `charged.bucket` reflects which was used.
@@ -713,22 +713,22 @@ Backend access gated by existing T3Planet admin BE group.
 ## 11. Error code vocabulary (snake_case only — no legacy errorN)
 
 ```
-token_missing               — Authorization Bearer absent
-token_invalid               — token not found or revoked
-license_invalid             — license not found (Token.php)
-license_expired             — past expiration_date, not lifetime
-license_suspended           — status=suspended manually
-domain_mismatch             — domain not in license CSV columns
-insufficient_credits        — pool drained, return topup_url
-plan_expired              — plan_expires_at < now, paid_credits still usable
-rate_limited              — per-license throttle hit
-idempotency_conflict      — request_uuid seen with different body hash
-feature_unknown           — feature_key not in ns_ai_feature_cost
-upstream_ai_error         — provider returned 5xx, credits refunded
-upstream_ai_timeout       — provider timeout, credits refunded
-required_field_missing    — body validation
-method_not_allowed        — non-POST
-internal_error            — catch-all server-side
+token_missing — Authorization Bearer absent
+token_invalid — token not found or revoked
+license_invalid — license not found (Token.php)
+license_expired — past expiration_date, not lifetime
+license_suspended — status=suspended manually
+domain_mismatch — domain not in license CSV columns
+insufficient_credits — pool drained, return topup_url
+plan_expired — plan_expires_at < now, paid_credits still usable
+rate_limited — per-license throttle hit
+idempotency_conflict — request_uuid seen with different body hash
+feature_unknown — feature_key not in ns_ai_feature_cost
+upstream_ai_error — provider returned 5xx, credits refunded
+upstream_ai_timeout — provider timeout, credits refunded
+required_field_missing — body validation
+method_not_allowed — non-POST
+internal_error — catch-all server-side
 ```
 
 Document in `composer/API/Services/AiErrorCodes.php` constants.

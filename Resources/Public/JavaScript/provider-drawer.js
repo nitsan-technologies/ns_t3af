@@ -67,6 +67,7 @@ const ROUTES = {
 const LL = {
   drawerLoadFailed: 'provider.js.error.drawerLoadFailed',
   saveFailed: 'provider.js.error.saveFailed',
+  modelRequired: 'provider.js.error.modelRequired',
   connectionFailed: 'provider.js.error.connectionFailed',
   testFailed: 'provider.js.error.testFailed',
   setDefaultFailed: 'provider.js.error.setDefaultFailed',
@@ -466,7 +467,19 @@ class ProviderDrawer {
         const firstError = this.panel?.querySelector('.aiu-error');
         if (firstError instanceof HTMLElement) {
           firstError.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          const message = (firstError.textContent || '').trim();
+          if (message !== '') {
+            Notification.warning(
+              ll(LL.saveFailed, 'Save failed'),
+              message,
+            );
+          }
         }
+        submitButtons.forEach((button) => {
+          if (button instanceof HTMLButtonElement || button instanceof HTMLInputElement) {
+            button.disabled = false;
+          }
+        });
         return;
       }
 
@@ -968,6 +981,27 @@ class ProviderDrawer {
     form.addEventListener('submit', (evt) => {
       evt.preventDefault();
       evt.stopPropagation();
+      // Native required/pattern must run — otherwise empty model/key fails only on the
+      // server and used to look like a silent no-op when the error field was missing.
+      if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+        return;
+      }
+      const selectedOpt = adapterSelect?.selectedOptions?.[0];
+      const requiresModel = selectedOpt?.dataset.requiresModel === '1';
+      const modelValue = (modelInput?.value || '').trim();
+      const embeddingValue = (embeddingModelInput?.value || '').trim();
+      if (requiresModel && modelValue === '' && embeddingValue === '') {
+        Notification.warning(
+          ll(LL.saveFailed, 'Save failed'),
+          ll(LL.modelRequired, 'Select or enter a chat / completion model.'),
+        );
+        if (modelSelect instanceof HTMLSelectElement && !modelSelect.hidden) {
+          modelSelect.focus();
+        } else {
+          modelInput?.focus();
+        }
+        return;
+      }
       void this.saveForm(form);
     });
   }

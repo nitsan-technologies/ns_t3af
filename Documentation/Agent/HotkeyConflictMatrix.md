@@ -1,4 +1,4 @@
-# AI Agent hotkey conflict matrix (T6)
+# AI Agent hotkey conflict matrix
 
 The global agent opens from the orange **Ask AI Agent** launch bar (toolbar item, optionally cloned into the topbar center on v13+) on **Ctrl/Cmd+Shift+K** by default (`Resources/Public/JavaScript/agent.js`). Editors can opt into **Ctrl/Cmd+K** under AI Agent settings (stored in browser `localStorage`). On **TYPO3 13–14**, the open shortcut is bound on the scaffold document **and** every same-origin iframe (`#typo3-contentIframe`, page tree, …), matching how Live Search reaches module content. Rebind on `typo3-iframe-loaded` / iframe `load`. Escape, autocomplete, and focus-trap keys while the modal is open still use a top-document `keydown` listener.
 

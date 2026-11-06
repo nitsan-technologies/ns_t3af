@@ -1203,6 +1203,15 @@
       <trans-unit id="module.schedulerCli.status.disabled" resname="module.schedulerCli.status.disabled">
         <source>Disabled</source>
       </trans-unit>
+      <trans-unit id="module.schedulerCli.status.failing" resname="module.schedulerCli.status.failing">
+        <source>Failing</source>
+      </trans-unit>
+      <trans-unit id="module.schedulerCli.failingBanner" resname="module.schedulerCli.failingBanner">
+        <source>%1$s scheduler task(s) reported a failure — inspect Scheduler &amp; CLI.</source>
+      </trans-unit>
+      <trans-unit id="module.schedulerCli.failingBanner.link" resname="module.schedulerCli.failingBanner.link">
+        <source>Open failed task: %1$s</source>
+      </trans-unit>
       <trans-unit id="module.schedulerCli.empty.tasks" resname="module.schedulerCli.empty.tasks">
         <source>No scheduled tasks found.</source>
       </trans-unit>
@@ -1263,6 +1272,15 @@
       </trans-unit>
       <trans-unit id="provider.meta.fallbackWarn" resname="provider.meta.fallbackWarn">
         <source>No fallback chain — requests will error if the default provider fails.</source>
+      </trans-unit>
+      <trans-unit id="provider.meta.fallbackWarnHint" resname="provider.meta.fallbackWarnHint">
+        <source>Add another enabled provider (New Provider). The next active non-default provider is used when the default fails.</source>
+      </trans-unit>
+      <trans-unit id="provider.meta.fallbackWarnAction" resname="provider.meta.fallbackWarnAction">
+        <source>Add a fallback provider</source>
+      </trans-unit>
+      <trans-unit id="provider.action.confirmDeleteDefault" resname="provider.action.confirmDeleteDefault">
+        <source>Delete the default provider "%s"? There is no fallback chain — AI requests will fail until another provider is set as default.</source>
       </trans-unit>
       <trans-unit id="provider.col.title" resname="provider.col.title">
         <source>Title</source>
@@ -2175,6 +2193,10 @@
       <trans-unit id="module.aiLabel.action.clear" resname="module.aiLabel.action.clear"><source>Clear confirmation</source></trans-unit>
       <trans-unit id="module.aiLabel.action.exportEvidence" resname="module.aiLabel.action.exportEvidence"><source>Export evidence</source></trans-unit>
       <trans-unit id="module.aiLabel.table.actions" resname="module.aiLabel.table.actions"><source>Actions</source></trans-unit>
+      <trans-unit id="module.aiLabel.state.shown" resname="module.aiLabel.state.shown"><source>Shown</source></trans-unit>
+      <trans-unit id="module.aiLabel.state.held" resname="module.aiLabel.state.held"><source>Held</source></trans-unit>
+      <trans-unit id="module.aiLabel.state.not_shown" resname="module.aiLabel.state.not_shown"><source>Not shown</source></trans-unit>
+      <trans-unit id="module.aiLabel.pagination.empty" resname="module.aiLabel.pagination.empty"><source>0 records</source></trans-unit>
       <trans-unit id="module.aiLabel.settings.saved" resname="module.aiLabel.settings.saved"><source>Settings saved.</source></trans-unit>
       <trans-unit id="module.aiLabel.settings.savedSchema" resname="module.aiLabel.settings.savedSchema"><source>Settings saved. Extra tables need AI Label columns: open Maintenance → Analyze Database Structure and apply the suggested fields, then reload this module.</source></trans-unit>
       <trans-unit id="module.aiLabel.flash.schemaMissing" resname="module.aiLabel.flash.schemaMissing"><source>AI Label columns are missing on this table. Open Maintenance → Analyze Database Structure, apply the AI Label fields, then save again.</source></trans-unit>

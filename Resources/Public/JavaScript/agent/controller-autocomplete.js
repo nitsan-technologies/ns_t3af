@@ -302,6 +302,7 @@ export const autocompleteMethods = {
       }
 
       this.resizeComposerInput();
+      this.syncSendButtonEnabled?.();
 
       // "/" and "@" only open a menu at the start of a word, so URLs, dates and e-mail
       // addresses typed in a message never contact the server.

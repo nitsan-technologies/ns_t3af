@@ -243,6 +243,21 @@
       <trans-unit id="module.aiAgent.governance.matrix" resname="module.aiAgent.governance.matrix">
         <source>Control matrix</source>
       </trans-unit>
+      <trans-unit id="module.aiAgent.governance.severityMatrix" resname="module.aiAgent.governance.severityMatrix">
+        <source>Severity access (who can run what)</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.who" resname="module.aiAgent.col.who">
+        <source>Who can run</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.severity.who.read" resname="module.aiAgent.governance.severity.who.read">
+        <source>All AI Agent users (unless the tool is in Blocked tools).</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.severity.who.write" resname="module.aiAgent.governance.severity.who.write">
+        <source>Groups without Read-only agent; still need Apply for drafts. Blocked tools never run.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.severity.who.destructive" resname="module.aiAgent.governance.severity.who.destructive">
+        <source>Same as write — Read-only agent blocks these; Blocked tools can deny specific names.</source>
+      </trans-unit>
       <trans-unit id="module.aiAgent.governance.source.group" resname="module.aiAgent.governance.source.group">
         <source>Backend user group (AI Permissions)</source>
       </trans-unit>
@@ -2761,7 +2776,7 @@
         <source>AI Foundation Setup Checklist</source>
       </trans-unit>
       <trans-unit id="checklist.card.progress" resname="checklist.card.progress">
-        <source>%1$d of 7 complete</source>
+        <source>%1$d of %2$d complete</source>
       </trans-unit>
       <trans-unit id="checklist.card.done" resname="checklist.card.done">
         <source>done</source>
@@ -2811,6 +2826,9 @@
       <trans-unit id="checklist.providers.descMissing" resname="checklist.providers.descMissing">
         <source>Add at least one AI provider under AI Providers.</source>
       </trans-unit>
+      <trans-unit id="checklist.providers.descAllDisabled" resname="checklist.providers.descAllDisabled">
+        <source>%1$s provider(s) are configured but all are disabled. Enable at least one under AI Providers.</source>
+      </trans-unit>
       <trans-unit id="checklist.default.title" resname="checklist.default.title">
         <source>Default provider set</source>
       </trans-unit>
@@ -2819,6 +2837,9 @@
       </trans-unit>
       <trans-unit id="checklist.default.descMissing" resname="checklist.default.descMissing">
         <source>Set a default provider so extensions know which connection to prefer.</source>
+      </trans-unit>
+      <trans-unit id="checklist.default.descDisabled" resname="checklist.default.descDisabled">
+        <source>Default provider “%1$s” is disabled. Enable it or choose another default under AI Providers.</source>
       </trans-unit>
       <trans-unit id="checklist.keys.title" resname="checklist.keys.title">
         <source>API credentials present</source>
@@ -2971,7 +2992,7 @@
         <source>Setup Wizard · Step </source>
       </trans-unit>
       <trans-unit id="wizard.kicker.after" resname="wizard.kicker.after">
-        <source> of 7</source>
+        <source> of 8</source>
       </trans-unit>
       <trans-unit id="dashboard.credits.claim.link" resname="dashboard.credits.claim.link">
         <source>I already have a claim code</source>
@@ -3050,6 +3071,9 @@
       </trans-unit>
       <trans-unit id="wizard.step1.lead" resname="wizard.step1.lead">
         <source>You've installed the AI Foundation extension. This quick wizard gets your suite ready in under 2 minutes.</source>
+      </trans-unit>
+      <trans-unit id="wizard.providersAllDisabled" resname="wizard.providersAllDisabled">
+        <source>%1$s provider(s) are configured on this site but all are disabled. Enable at least one under AI Foundation → AI Providers, or continue this wizard to add/reconnect a provider.</source>
       </trans-unit>
       <trans-unit id="wizard.step1.previewHeading" resname="wizard.step1.previewHeading">
         <source>What you'll configure</source>

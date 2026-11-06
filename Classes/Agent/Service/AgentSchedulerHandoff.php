@@ -29,7 +29,7 @@ use TYPO3\CMS\Core\Information\Typo3Version;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Offers Scheduler handoff after successful agent writes (T19).
+ * Offers Scheduler handoff after successful agent writes.
  *
  * @internal
  */

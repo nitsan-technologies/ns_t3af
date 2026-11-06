@@ -1,9 +1,9 @@
 # Feature — AI Label (EU AI Act Article 50)
 
-**Status:** Done (backend module UI, rule engines, origin capture, frontend renderer, evidence export)  
-**Routes:** `Configuration/Backend/Modules.php` → `t3af_dashboard.ai_label.*`  
-**Deep spec:** `context/specs/FEATURE_AiLabel.md`  
-**User doc:** `Documentation/Configuration/AiLabel/Index.rst`  
+**Status:** Done (backend module UI, rule engines, origin capture, frontend renderer, evidence export) 
+**Routes:** `Configuration/Backend/Modules.php` → `t3af_dashboard.ai_label.*` 
+**Deep spec:** `context/specs/FEATURE_AiLabel.md` 
+**User doc:** `Documentation/Configuration/AiLabel/Index.rst` 
 **Developer doc:** `Documentation/DeveloperGuide/AiLabelIntegration/Index.rst`
 
 ---

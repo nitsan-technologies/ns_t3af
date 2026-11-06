@@ -267,7 +267,7 @@ final class McpAnalyticsService
             'success',
             'error_message',
             'latency_ms',
-        ]);
+        ], ',', '"', '\\');
 
         foreach ($rows as $row) {
             fputcsv($handle, [
@@ -281,7 +281,7 @@ final class McpAnalyticsService
                 $row['success'] ?? '',
                 $row['error_message'] ?? '',
                 $row['latency_ms'] ?? '',
-            ]);
+            ], ',', '"', '\\');
         }
 
         rewind($handle);

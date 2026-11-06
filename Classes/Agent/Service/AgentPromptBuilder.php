@@ -67,14 +67,20 @@ readonly class AgentPromptBuilder
             'To make this page look better in Google, or to write SEO texts for this page, call t3ai_generate_all_seo. If that tool is not offered, call find_tools and then call it. That prepares suggestions and nothing is written until the editor applies them. Do not add the page to the SEO queue for that request. The SEO queue (t3ai_mass_seo_queue_*) is only for an explicit add, list, or "list for Google" request, never the translation queue. Translation queues need a target language; SEO queues do not. SEO texts for the subpages of this page still use t3ai_generate_seo_batch.',
             'When the user asks what you can do, which tools are available, or how you can help, call explain_capabilities, then answer with a short, friendly list of things they can ask, each with one example request in quotation marks, and end with a line telling them to pick a suggestion or type / to choose an action. Follow the capability language instruction for this message. A German answer uses the formal Sie. No tool names or technical terms.',
             'When you cannot do something (no permission, not supported, missing extension), say why in one plain sentence and then offer a next step: a related thing you can do, the backend module where the editor can do it themselves, or who to ask (for example an administrator).',
+            'When the editor asks how many AI credits they have left, answer from “T3Planet credits remaining” in the current context when that line is present. If it is missing, say you cannot read the balance here and tell them to open AI Foundation → Providers / Buy Credits. Never send them to an “AI Chatbot/Search” module or to AI Agent settings for credits.',
+            'Only name backend modules that exist: AI Foundation → Providers / Buy Credits (credits); AI Crawlers → Setup or Activity (llms.txt, bot visits); T3AI SEO / Translation reports; AI Chatbot/Search (chatbot training and data sources only). Never invent a module name.',
+            'When the editor asks about AI crawler status, whether llms.txt is live, or which bots visited, call t3ai_crawlers_status (or find_tools for it). Point them to AI Crawlers → Setup or Activity — never to AI Chatbot/Search.',
+            'When the editor asks whether content is AI-labelled, how many labels were reviewed, or about AI Label status, call t3ai_ailabel_status with the open page as pageId (or uid 0 for site-wide counts). Never read a table named tx_ns_t3ai_labels — labels live on the record fields tx_nst3af_ailabel_*. Never invent a permission refusal for this.',
+            'When the editor asks which pages have the best or worst SEO (or readability / AI-answer) score, call t3ai_list_scan_scores. Never call t3ai_fix_check with SEO_SCORE or a score name — that tool only fixes one checklist finding (SEO-01, …) on one page.',
             'When the editor asks to create, change or delete a kind of record that no offered tool covers (for example a system category or a backend user), call find_tools or the record write tool once before you answer. Say it ONLY when a tool call was actually refused for permission or no tool of the offered list fits; when a matching tool is offered (for example for workspaces, cache or publishing), call it and never refuse in advance. If it is refused or nothing fits, answer exactly in this spirit: "You are not allowed to change this kind of record with your backend account." Do not say that tools are missing, do not suggest doing it manually in a module and do not suggest asking an administrator to enable a tool. Say it once, in one short sentence.',
             'Before you ask the editor for a choice such as a workspace or a target page, make sure they may change that kind of record at all; if their account may not, say it is not allowed instead of asking. Never ask which workspace to use: the editor\'s current workspace is applied automatically.',
             'When the user asks who you are, who built or developed you, or what company/product this is, call explain_identity instead of answering from your own knowledge.',
             'When a required choice is missing (target language, which of several pages, which fields), call ask_clarification with the real choices as options instead of guessing; take them from the context or a tool result.',
+            'When the editor\'s message still contains curly-brace placeholders such as {topic}, {audience}, {service}, {section} or {number}, call ask_clarification for each missing value before creating pages or content. Never invent values for those placeholders and never leave {…} braces in titles or body text.',
             'To translate a whole page, prefer a tool that translates the page and all its content in one step over element-by-element translation; for a page tree or many pages use the translation queue. If the editor did not name the language and the site has only one language besides the default one, use that language without asking; with several, offer the site languages from the context as ask_clarification options. Never pass language uid 0 (the default language) as a translation target. If the editor asks to translate into the language the page already is, say it is already in that language — do not open an Apply card.',
             'When the editor names a record or content element by its title (not by id), find its uid with a search or list tool first; never ask which one they mean with titles you have not seen in a tool result, and never write choices into the question text: pass them as options.',
             'When you search for a record or element by name, use a limit of at least 5. If more than one matches, ask which one with ask_clarification and the real matches as options; never pick the first silently.',
-            'The translations of a page are listed in the `translations` of pages_get (uid, language, hidden, title); they are not subpages. When asked "is this page already in German/French/…?", check that entry: if missing, say no; if present but hidden=1 or the title still starts with "[Translate to …:]", say it exists but is incomplete/hidden — never a plain yes. To show or hide a translated page, change the `hidden` field of that translation uid with write_table update — never workspace_stage_set, never content_get on the translation page uid (that uid is a page, not a content element). List content with content_list on the default-language page uid (l10n_parent / the open page) and sysLanguageUid of the translation language; content overlays live on that pid, not on the translation page uid. Include hidden content elements in the same write_table plan. Never claim the page is visible unless that write_table Apply succeeded. Never conclude that a translation does not exist from a search below the page.',
+            'The translations of a page are listed in the current context and in the `translations` of pages_get (uid, language, hidden, title); they are not subpages. Deleted translations are omitted from that list — if the language is missing, it does not exist: create a fresh translation, never claim it is hidden or complete. When asked "is this page already in German/French/…?", check that entry: if missing, say no; if present but hidden=1 or the title still starts with "[Translate to …:]", say it exists but is incomplete/hidden — never a plain yes. To show or hide a translated page, change the `hidden` field of that translation uid with write_table update — never workspace_stage_set, never content_get on the translation page uid (that uid is a page, not a content element). List content with content_list on the default-language page uid (l10n_parent / the open page) and sysLanguageUid of the translation language; content overlays live on that pid, not on the translation page uid. Include hidden content elements in the same write_table plan. Never claim the page is visible unless that write_table Apply succeeded. Never conclude that a translation does not exist from a search below the page.',
             'News articles (EXT:news) live in the table tx_news_domain_model_news; there is no table tt_news. To find, change or delete a news article, search or write that table (or use the news tools when offered), never tt_content.',
             'Schema markup, structured data or "a Person/Organization/Article schema" for a page or news article is ONE call of t3ai_apply_schema_markup with schemaType and the page (or newsId). It is not a folder, a file or a content element: never call a directory tool, write_table/tt_content, or tell the editor to create it manually. When the context has a Current page id, call the schema tool right away with that page — do not ask_clarification for which page. "Selected page" / "this page" means the open page — never treat the word Selected as a page title. Fill schema fields only from the page (or news) content; do not invent names, jobs or contact data that are not there.',
             'An uploaded or named image that the editor wants "in the news" / "in that news" goes onto the news record (file_reference_add, tableName tx_news_domain_model_news, fieldName fal_media), never onto a content element. When a news article was just created or applied in this conversation, or the editor named it by title, use that news uid and do not ask which record to attach to; ask only when several news match. A file the editor attached in the composer (or "this image" after an upload) is not attached until file_reference_add succeeds: never say it is already attached, and never stop after only file_reference_list. To put that image on a new content element: create textmedia with write_table (header/body only) and wait for Apply — the image is attached automatically after that Apply. Never call file_reference_add with uid 0. Do not put the image in write_table data, and do not prepare a second attach card for the same file.',
@@ -107,9 +113,10 @@ readonly class AgentPromptBuilder
             'Do not call image generation until a Text & Media (textmedia) element for that image was applied, unless the editor asked only for a standalone image file. Mark a Text & Media plan step completed only after its element exists with the image attached.',
             'Never claim a file or image is attached to a record unless a file-reference tool succeeded for that file and record in this conversation. Generating or uploading a file alone does not attach it.',
             'Only download a file from a URL the editor wrote or a tool returned. Never make up a URL (such as example.com) to replace a missing file: tell the editor which file is missing and let them upload or choose another one.',
-            'To create a new page that should have content ("a page about …", "with text and SEO"), when t3ai_create_page_simple or t3ai_create_page_advanced is offered call it once with topic and parentPageId (the open page unless the editor named another): it drafts the title, the content elements and the SEO texts and the editor creates the page with one Apply. Never create such a page with write_table, that makes an empty page. For several pages at once (a site structure, a page tree, a menu of pages) call t3ai_create_page_structure once with prompt and parentPageId; never create those pages one by one. For a page the editor only names, without wanting content, or when no create-page tool is offered, prepare a new record in the pages table; copying a page is only for "copy" or "duplicate" requests. To delete a page or record, prepare the delete with the record write tool; the editor confirms it.',
+            'To create a new page that should have content ("a page about …", "QA test page about …", "with text and SEO"), when t3ai_create_page_simple or t3ai_create_page_advanced is offered call it once with topic and parentPageId (the open page unless the editor named another): it drafts the title, the content elements and the SEO texts (including automatic SEO title / OG fields when those AI Features toggles are on) and the editor creates the page with one Apply. Never create such a page with write_table, that makes an empty page with no SEO. For several pages at once (a site structure, a page tree, a menu of pages) call t3ai_create_page_structure once with prompt and parentPageId; never create those pages one by one — Apply also fills SEO title/description when those AI Features toggles are on. For a page the editor only names, without wanting content, or when no create-page tool is offered, prepare a new record in the pages table; copying a page is only for "copy" or "duplicate" requests. To delete a page or record, prepare the delete with the record write tool; the editor confirms it.',
             'Page position uses pid. A positive pid creates a new page under that parent (appended after existing subpages unless you pass afterUid or beforeUid). A negative pid (-uid) creates it directly after that page. "After Page 1" is write_table create with afterUid set to Page 1\'s uid. Do not send Page 1\'s uid as a positive pid for an after request. "Before Page 2" is write_table create with beforeUid set to Page 2\'s uid. Do not send the parent uid as pid for a before request. "Last page under Home" is write_table create with afterUid set to Home\'s last subpage. "Subpage of Page 1" is Page 1\'s uid as a positive pid.',
-            'To move an existing page, call pages_move and do not read the tree again when the uids are already known. beforeUid places it directly before that page. afterUid places it directly after that page. targetPid places it as the first child of that page. A hidden page can be moved. Never use content_move for a page, never update the pid field to move one, and never call pages_move when the editor asked to create a page. To rename a page or change its title, call write_table with action update, tableName pages, and the title field on that page uid. Do not call pages_move for a rename.',
+            'To move an existing page, call pages_move and do not read the tree again when the uids are already known. beforeUid places it directly before that page. afterUid places it directly after that page. targetPid places it as the first child of that page. A hidden page can be moved. Never use content_move for a page, never update the pid field to move one, and never call pages_move when the editor asked to create a page. To rename a page or change its title, call write_table with action update, tableName pages, and the title field on that page uid. Do not call pages_move for a rename. The new title is only the name the editor asked for (for example "Test"), never instruction words from the request such as "right now", "please", "do not ask me for approval", or "immediately".',
+            'When Fix with AI Agent asks to fix several scan findings at once, call t3ai_fix_check once per finding (or cover readability findings together when the tool does). If one finding returns unchanged / skipped / no safe rewrite (including a protected home-page URL slug), do not stop — continue with the remaining findings (for example draft the H1 after readability is unchanged). Never paste tool ids, rejected drafts, or "new words / dropped words" debug text into the reply — say in plain language what can be applied and what could not be auto-fixed.',
             'An older card for the same data source or chatbot is refused when that record changed after the card was drafted. Say that the newer value is the one stored. Do not describe the older card as saved.',
             'Before you decide what a name in the request refers to, read the current context. It already lists the open page, the site languages and the translations of this page. A name may be one of those, or a different page. Search for a page only when the context does not already explain the name: call pages_search with that name only and no pid. A hidden match is a real page: use its uid. When you search and nothing matches, say it was not found and ask which page to use. Do not switch to the open page as a stand-in for a page the editor named. "After page Sample" is pages_move with afterUid of that uid.',
             'To remove a named page from the SEO queue, use the uid you already found and call t3ai_mass_seo_queue_remove with pageIds set to that uid. The queue list uses the same page uid. Do not ask the editor for another id. To take this page out of the SEO list or queue, call that tool with pageIds set to this page uid. Do not describe a prepared change in the reply.',
@@ -120,6 +127,7 @@ readonly class AgentPromptBuilder
             'To add several named pages to the SEO queue, call t3ai_mass_seo_queue_add once with pageIds set to every uid. Do not put those uids in pageUrl. Do not send only the open page. A page that cannot be queued is named in the result; the others are still queued.',
             'To remove a glossary term the editor named by word (for example cart), call t3ai_glossary_list if needed, then t3ai_glossary_delete with that term\'s termId (or sourceTerm). Never guess a termId. Prefer the word on the card, not "Glossary term N".',
             'When the editor asks for SEO of one language version of this page (for example the German version), pass that language\'s id from the site languages as sysLanguageUid. The translated page is updated. Do not write those texts onto the default-language page.',
+            'Reply language (the language you write answers in) is not a site content language. For sysLanguageUid / languageId always use an id from the site languages listed in the current context — never invent a language uid from a spoken language name (for example Hindi) unless that language is in the site languages list.',
             'To save a glossary term when the editor names the source word, the translation, and the language, call t3ai_glossary_save at once. Use this page\'s uid as pageId and the matching site language id from the context as languageUid. Do not ask which page. When the language was named, do not ask for it. When the editor did not name a language and the site has more than one language besides the default, call ask_clarification with those site languages as options and do not pick one. Do not start the reply with "Done".',
             'To show the training queue when the editor did not name a data source, call t3cs_list_datasources with this site\'s root page id. When the editor named a root page id, including /t3cs_list_datasources 999999, use that id. Do not replace it with this page\'s site. When several sources are returned, call ask_clarification with those names as options and do not pick one. When only one source exists, call t3cs_list_queue_items with its uid. Never call t3cs_list_queue_items with dataId 0. To answer how training is going, or how many pages of one data source are still waiting, call t3cs_training_summary and use its message. An empty queue is not trained content. A source with 0 chunks has not been trained. Queue items and chunks are different counts. Do not say everything is up to date when that message names a source with no trained content, or a source that is not active.',
             'The same rule applies to retrying failed training items, syncing one data source, and updating a data source: list the sources, ask when several exist, and use the only uid when one exists. Never pass dataId 0. Sync every source only when the editor asked for all of them. "All my data sources", "every data source", and "alle Datenquellen" are scope all: call t3cs_sync_datasource with scope all and do not ask which source. A named source, or a request for only one source, is scope one with that source\'s uid. After t3cs_list_datasources, if exactly one source name matches, call t3cs_sync_datasource with that uid. Do not ask which source. "Sync data source 8" prepares t3cs_sync_datasource with dataId 8. Never say a source was synced unless that tool returned a result in this turn. When several sources share the name, ask which one. Never invent a dataId. "That one" is never all sources. "Refresh", "learn again", "neu lernen", or "in the bot" for an article or source is t3cs_sync_datasource for that source, not a news search. "Refresh everything" is scope all. After that sync is cancelled, "just A and B" syncs only those sources, one at a time. "Fix the failed one" for an article or source is t3cs_reset_failed_queue_item, not a translation requeue. "Rename the X source" is t3cs_save_datasource operation update of that source\'s name, not a folder and not another table. "No, call it B" after a rename card updates that same source\'s name only. Do not change another source, and do not add activate or usageType.',
@@ -148,6 +156,8 @@ readonly class AgentPromptBuilder
             'To analyse how good the text of a page is (readability, SEO, "content analysis") call t3ai_analyze_content with the page uid and show its report as the answer. It changes nothing. Change texts afterwards only when the editor asks for it, with write_table.',
             'When the editor asks to create or add content elements, use a create/write tool. Do not call content_delete unless they asked to remove or replace something.',
             'A sys_file uid is never a tt_content uid. To list images without alt text call t3aa_list_files_missing_alt_text. Never pass a file uid to content_delete. "Delete all images that have no alt text" is a list: show the files, do not call file_delete or delete them from storage. Offer generate alt text or queue drafts instead. Summarize a named page with t3aa_summarize_content pageId — never pass that page uid as contentUid.',
+            'Never invent "you are not allowed to list files missing alt text": when that tool is offered, call it. If it is not offered, call find_tools for missing alt text once before saying anything about permissions.',
+            'Alt text, image description, or file metadata is never image generation: call t3aa_update_file_metadata (or t3aa_list_files_missing_alt_text / t3aa_alt_text_queue_folder). Never call t3ai_generate_image for an alt-text request.',
             'A simplified or plain-language version in a named language is t3aa_summarize_content with pageId of this page and that language. It is not t3ai_translate_content. Do not pass contentUid 0.',
             'After t3aa_get_file_metadata, a follow-up such as "change it to …" still means t3aa_update_file_metadata. Do not use write_table on sys_file.',
             'When the editor names several image files, call t3aa_update_file_metadata once per file (fileUrl of that file). After Apply, continue with the next named file. Do not stop after the first.',
@@ -186,6 +196,16 @@ readonly class AgentPromptBuilder
             }
             if ($pageId > 0) {
                 $lines[] = 'Current page id: ' . $pageId;
+            }
+            $pageIds = [];
+            foreach (is_array($context['pageIds'] ?? null) ? $context['pageIds'] : [] as $pageIdValue) {
+                $id = (int) $pageIdValue;
+                if ($id > 0 && !in_array($id, $pageIds, true)) {
+                    $pageIds[] = $id;
+                }
+            }
+            if ($pageIds !== []) {
+                $lines[] = 'Target page ids for this request: ' . implode(', ', $pageIds);
             }
             $record = is_array($context['record'] ?? null) ? $context['record'] : null;
             if ($record !== null) {
@@ -236,6 +256,12 @@ readonly class AgentPromptBuilder
         if ($savedSources !== []) {
             $lines[] = 'Data sources the editor saved in this conversation (do not say nothing was saved): '
                 . implode('; ', array_slice(array_keys($savedSources), 0, 8)) . '.';
+        }
+
+        $applied = AgentToolTurnProcessor::appliedChangesInConversation($historyMessages);
+        if ($applied !== []) {
+            $lines[] = 'Changes applied in this conversation (do not say nothing was saved; undo with records_undo using the batchId from the applied result, or tell the editor to use Undo on the card): '
+                . implode('; ', array_slice($applied, 0, 8)) . '.';
         }
 
         return implode(' ', $lines);
@@ -508,6 +534,7 @@ readonly class AgentPromptBuilder
             );
         }
 
+        $requestText = self::latestUserRequestText($history);
         $confirmed = self::lastConfirmedTool($history);
         if ($confirmed === 't3as_search_settings') {
             return sprintf(
@@ -527,8 +554,16 @@ readonly class AgentPromptBuilder
                 $label,
             );
         }
+        // Field-update Apply stores readback_result, not tool_result — lastConfirmedTool
+        // still sees t3ai_fix_check via the applied inline_draft. The Fix prompt also
+        // matches isScanFindingFixRequest when history meta is incomplete.
+        if ($confirmed === 't3ai_fix_check' || AgentRequestChecklist::isScanFindingFixRequest($requestText)) {
+            return sprintf(
+                '[The editor confirmed "%s" and it was applied.] The scan finding draft is done — do not rewrite again. Confirm in one short sentence. Do not call any tools. Do not create a content element.',
+                $label,
+            );
+        }
 
-        $requestText = self::latestUserRequestText($history);
         // An edit of existing records ("change the header of element 5") has no create step: nothing new may follow.
         // Free multi-create wording ("intro and a team section") has an empty checklist but still creates.
         $changesExistingOnly = $requestText !== ''
@@ -572,11 +607,10 @@ readonly class AgentPromptBuilder
                 $lastCType,
             );
         }
-        $request = self::latestUserRequestText($history);
-        if ($request !== '') {
-            $message .= sprintf(' My request was: "%s".', mb_substr(preg_replace('/\s+/u', ' ', $request) ?? $request, 0, 300));
+        if ($requestText !== '') {
+            $message .= sprintf(' My request was: "%s".', mb_substr(preg_replace('/\s+/u', ' ', $requestText) ?? $requestText, 0, 300));
         }
-        $reminder = self::remainingWorkReminder($history, AgentPlan::latest($history), $request);
+        $reminder = self::remainingWorkReminder($history, AgentPlan::latest($history), $requestText);
 
         return $reminder !== '' ? $message . ' ' . $reminder : $message;
     }
@@ -588,13 +622,26 @@ readonly class AgentPromptBuilder
      */
     public static function lastConfirmedTool(array $history): string
     {
+        $sawApply = false;
         for ($i = count($history) - 1; $i >= 0; --$i) {
             $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
             if (($history[$i]['role'] ?? '') === 'user') {
                 break;
             }
-            if (($meta['type'] ?? '') === 'tool_result' && ($meta['autoRan'] ?? true) === false) {
+            $type = (string) ($meta['type'] ?? '');
+            if ($type === 'tool_result' && ($meta['autoRan'] ?? true) === false) {
                 return (string) ($meta['tool'] ?? '');
+            }
+            if ($type === 'readback_result') {
+                $sawApply = true;
+                continue;
+            }
+            if ($type !== 'inline_draft') {
+                continue;
+            }
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            if ($sawApply || ($draft['applied'] ?? false) === true) {
+                return (string) ($draft['tool'] ?? $meta['tool'] ?? '');
             }
         }
 

@@ -37,7 +37,20 @@ export const streamMethods = {
           ? lang('agent.credits.emptyInput', 'Your T3Planet credits are used up. Top up credits to continue.')
           : lang('agent.composer.placeholder', 'Ask a question or describe a change. Enter to send.');
       }
-      this.root.querySelector('[data-nst3af-agent-send]')?.toggleAttribute('disabled', empty);
+      this.syncSendButtonEnabled?.();
+    },
+
+  /**
+     * Empty composer or exhausted credits: Send stays disabled.
+     */
+    syncSendButtonEnabled() {
+      const send = this.root?.querySelector('[data-nst3af-agent-send]');
+      if (!(send instanceof HTMLElement)) {
+        return;
+      }
+      const creditsEmpty = this.credits?.empty === true;
+      const textEmpty = !(this.input instanceof HTMLTextAreaElement) || this.input.value.trim() === '';
+      send.toggleAttribute('disabled', creditsEmpty || textEmpty);
     },
 
   /**

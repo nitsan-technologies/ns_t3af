@@ -554,6 +554,10 @@ services:
         identifier: 'nst3af-mcp-slug-redirect-collect'
         event: TYPO3\CMS\Redirects\Event\AfterAutoCreateRedirectHasBeenPersistedEvent
         method: rememberCreatedRedirect
+      - name: event.listener
+        identifier: 'nst3af-mcp-slug-redirect-301'
+        event: TYPO3\CMS\Redirects\Event\ModifyAutoCreateRedirectRecordBeforePersistingEvent
+        method: forcePermanentRedirect
 
   NITSAN\NsT3AF\Mcp\Tool\:
     resource: '../Classes/Mcp/Tool/*'

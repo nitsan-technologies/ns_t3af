@@ -216,7 +216,7 @@
             <div class="callout callout-info mb-3">
                 <p class="mb-0"><f:translate key="{ll}:module.aiAgent.governance.lead" /></p>
             </div>
-            <div class="card">
+            <div class="card mb-3">
                 <div class="card-header"><f:translate key="{ll}:module.aiAgent.governance.matrix" /></div>
                 <div class="table-responsive">
                     <table class="table table-striped mb-0">
@@ -238,6 +238,29 @@
                                             <f:else><f:translate key="{ll}:{row.effect}" /></f:else>
                                         </f:if>
                                     </td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><f:translate key="{ll}:module.aiAgent.governance.severityMatrix" /></div>
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th><f:translate key="{ll}:module.aiAgent.col.severity" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.who" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.source" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{severityAccessMatrix}" as="row">
+                                <tr>
+                                    <td><f:translate key="{ll}:{row.severity}" /></td>
+                                    <td><f:translate key="{ll}:{row.who}" /></td>
+                                    <td><f:translate key="{ll}:{row.source}" /></td>
                                 </tr>
                             </f:for>
                         </tbody>

@@ -278,6 +278,12 @@ final class AgentProviderTurnErrorPresenter
         if ($detail === 'No default AI provider is configured.') {
             return $translator->translate('agent.turn.providerNoDefaultForSite');
         }
+        if (preg_match(
+            '/no longer available|is not (?:found|available)|model .+ (?:retired|deprecated)|update your code to use models?\//i',
+            $detail,
+        ) === 1) {
+            return $translator->translate('agent.turn.providerModelUnavailable');
+        }
 
         return null;
     }
@@ -328,20 +334,35 @@ final class AgentProviderTurnErrorPresenter
         return preg_match('/context[_ ]length|maximum context|context window|too many tokens|prompt is too long|reduce the length/i', $raw) === 1;
     }
 
-    private static function looksLikeTransportInfrastructure(\Throwable $exception, string $detail): bool
+    /** HTTP/2 resets, TLS, DNS, idle timeouts — never show the raw wire text to editors. */
+    private static function messageLooksLikeTransportInfrastructure(string $message): bool
     {
-        if (preg_match(
-            '/tls connect|ssl routines|broken pipe|send failure|connection refused|could not resolve host|name or service not known|failed to connect|network is unreachable|unexpected eof/i',
-            $detail,
-        ) === 1) {
+        return preg_match(
+            '/tls connect|ssl routines|broken pipe|send failure|connection refused|could not resolve host|name or service not known|failed to connect|network is unreachable|unexpected eof|idle timeout|timed out|timeout reached|operation timed out|protocol_error|http\/2 stream|stream \d+ was not closed|curl error 92|curl error 56/i',
+            $message,
+        ) === 1;
+    }
+
+    /**
+     * Network / TLS / DNS failures before a usable provider response (not account or rate-limit errors).
+     */
+    public static function looksLikeTransportInfrastructure(\Throwable $exception, string $detail = ''): bool
+    {
+        if ($detail === '') {
+            $detail = self::readableMessageFromThrowable($exception);
+        }
+
+        if (self::messageLooksLikeTransportInfrastructure($detail)) {
             return true;
         }
 
         for ($current = $exception; $current !== null; $current = $current->getPrevious()) {
-            if (preg_match(
-                '/tls connect|ssl routines|broken pipe|send failure|connection refused|could not resolve host|failed to connect|network is unreachable|unexpected eof/i',
-                $current->getMessage(),
-            ) === 1) {
+            if ($current instanceof \Symfony\Contracts\HttpClient\Exception\TimeoutExceptionInterface
+                || $current instanceof \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
+            ) {
+                return true;
+            }
+            if (self::messageLooksLikeTransportInfrastructure($current->getMessage())) {
                 return true;
             }
         }

@@ -202,6 +202,7 @@ final class AiLabelController extends AbstractAiUniverseModuleController
                 'holdList' => $autoConfirm->holdList(),
                 'autoConfirmSources' => $autoConfirm->autoConfirmSources(),
                 'folderDefaults' => $autoConfirm->folderDefaults(),
+                'auditSchedule' => $this->systemStatusService->auditSchedule(),
                 'settingsSaveUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.settings_save'),
                 'exportUri' => (string) $this->uriBuilder->buildUriFromRoute(
                     't3af_dashboard.ai_label.export',

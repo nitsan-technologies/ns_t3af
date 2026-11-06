@@ -88,10 +88,22 @@
                 <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.encrypted"
                              default="API keys encrypted at rest" />
             </span>
-            <span class="ms-auto badge badge-warning">
-                <core:icon identifier="actions-exclamation-triangle" size="small" />
-                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.fallbackWarn"
-                             default="No fallback chain — requests will error if the default provider fails." />
+            <span class="ms-auto d-inline-flex align-items-center gap-2">
+                <span class="badge badge-warning"
+                      title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.fallbackWarnHint', default:'Add another enabled provider (New Provider). The next active non-default provider is used when the default fails.')}">
+                    <core:icon identifier="actions-exclamation-triangle" size="small" />
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.fallbackWarn"
+                                 default="No fallback chain — requests will error if the default provider fails." />
+                </span>
+                <f:if condition="{canModifyProviders} == 1">
+                    <a class="btn btn-sm btn-default"
+                       href="{newProviderUri}"
+                       data-aiu-drawer-trigger="new"
+                       title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.fallbackWarnHint', default:'Add another enabled provider.')}">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.fallbackWarnAction"
+                                     default="Add a fallback provider" />
+                    </a>
+                </f:if>
             </span>
         </div>
 

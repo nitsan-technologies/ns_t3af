@@ -21,13 +21,13 @@ namespace NITSAN\NsT3AF\Agent\Context;
 
 use NITSAN\NsT3AF\Access\RecordAccessGate;
 use NITSAN\NsT3AF\Agent\Service\AgentTranslator;
+use NITSAN\NsT3AF\Mcp\Service\WorkspaceContextService;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
 use TYPO3\CMS\Backend\Module\ModuleProvider;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Site\SiteFinder;
@@ -131,6 +131,9 @@ final readonly class AgentContextPresenter
         $page = is_array($details['page'] ?? null) ? $details['page'] : null;
         if ($page !== null) {
             $line = sprintf('- Page: "%s" [uid %d]', $page['title'] ?? '', (int) ($page['uid'] ?? 0));
+            if (($page['deleted'] ?? false) === true) {
+                $line .= ' (deleted or missing — do not edit; ask for a live page)';
+            }
             if (($page['slug'] ?? '') !== '') {
                 $line .= ', slug ' . $page['slug'];
             }
@@ -160,6 +163,17 @@ final readonly class AgentContextPresenter
         } else {
             $lines[] = '- Page: none selected';
         }
+        $pageIds = [];
+        foreach (is_array($context['pageIds'] ?? null) ? $context['pageIds'] : [] as $pageIdValue) {
+            $id = (int) $pageIdValue;
+            if ($id > 0 && !in_array($id, $pageIds, true)) {
+                $pageIds[] = $id;
+            }
+        }
+        if ($pageIds !== []) {
+            $lines[] = '- Target page ids for this request (translate/fix these, not only the open page): '
+                . implode(', ', $pageIds);
+        }
         $languages = is_array($details['siteLanguages'] ?? null) ? $details['siteLanguages'] : [];
         $language = is_array($details['language'] ?? null) ? $details['language'] : null;
         if ($language !== null || $languages !== []) {
@@ -188,8 +202,20 @@ final readonly class AgentContextPresenter
                     '- Workspace: "%s" [%d] — confirmed changes go to this draft workspace%s',
                     $workspace['title'] ?? '',
                     (int) ($workspace['id'] ?? 0),
-                    ($workspace['fromLive'] ?? false) === true ? ' (the editor works in Live; nothing goes live until it is published)' : '',
+                    ($workspace['fromLive'] ?? false) === true
+                        ? ' (the editor works in Live; you MUST tell them records were created in this workspace and need publish before they appear in Live Layout)'
+                        : '',
                 );
+        }
+        $credits = is_array($context['credits'] ?? null) ? $context['credits'] : null;
+        if ($credits !== null) {
+            $remaining = trim((string) ($credits['remaining'] ?? $credits['label'] ?? ''));
+            if ($remaining !== '') {
+                $lines[] = sprintf(
+                    '- T3Planet credits remaining: %s (buy or check balance under AI Foundation → Providers / Buy Credits — not AI Chatbot/Search)',
+                    $remaining,
+                );
+            }
         }
 
         return implode("\n", $lines);
@@ -248,7 +274,16 @@ final readonly class AgentContextPresenter
      */
     private function pageDetails(int $pageId, ?BackendUserAuthentication $user = null): array
     {
-        $row = BackendUtility::getRecord('pages', $pageId, 'uid,pid,title,slug') ?? [];
+        $row = BackendUtility::getRecord('pages', $pageId, 'uid,pid,title,slug,deleted');
+        if (!is_array($row) || $row === [] || (int) ($row['deleted'] ?? 0) === 1) {
+            return [
+                'uid' => $pageId,
+                'title' => 'Page ' . $pageId . ' (deleted or missing)',
+                'slug' => '',
+                'parent' => null,
+                'deleted' => true,
+            ];
+        }
         $parentId = (int) ($row['pid'] ?? 0);
         // The parent of a mounted page can lie outside the editor's mount: its title is not theirs to see.
         $parentReadable = $user === null
@@ -265,27 +300,41 @@ final readonly class AgentContextPresenter
 
         // Translations sit next to the page (own pid), not below it; the model cannot find them with a
         // search below the page and then reports "the German version does not exist".
+        // Match pages_get: skip soft-deleted rows and workspace delete placeholders.
         $translations = [];
         try {
+            $workspaceContext = GeneralUtility::makeInstance(WorkspaceContextService::class);
             $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('pages');
-            $queryBuilder->getRestrictions()->removeAll()->add(GeneralUtility::makeInstance(DeletedRestriction::class));
+            $queryBuilder->getRestrictions()->removeAll();
+            $workspaceContext->applyRestriction($queryBuilder, 'pages');
             $rows = $queryBuilder
-                ->select('uid', 'sys_language_uid', 'hidden')
+                ->select('uid', 'sys_language_uid', 'hidden', 'deleted')
                 ->from('pages')
                 ->where(
                     $queryBuilder->expr()->eq('l10n_parent', $queryBuilder->createNamedParameter($pageId, Connection::PARAM_INT)),
                     $queryBuilder->expr()->gt('sys_language_uid', 0),
+                    $queryBuilder->expr()->eq('deleted', 0),
                 )
                 ->orderBy('sys_language_uid')
                 ->executeQuery()
                 ->fetchAllAssociative();
         } catch (\Throwable) {
             $rows = [];
+            $workspaceContext = null;
         }
         foreach ($rows as $translation) {
+            if ((int) ($translation['deleted'] ?? 0) === 1) {
+                continue;
+            }
+            if ($workspaceContext instanceof WorkspaceContextService) {
+                $record = BackendUtility::getRecord('pages', (int) $translation['uid']);
+                if (!is_array($record) || (int) ($record['deleted'] ?? 0) === 1 || $workspaceContext->overlay('pages', $record) === null) {
+                    continue;
+                }
+            }
             $translations[] = [
                 'uid' => (int) $translation['uid'],
-                'languageId' => (int) $translation['sys_language_uid'],
+                'languageId' => (int) ($translation['sys_language_uid']),
                 'hidden' => (int) ($translation['hidden'] ?? 0) === 1,
             ];
         }

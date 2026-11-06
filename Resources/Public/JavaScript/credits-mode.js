@@ -1277,7 +1277,7 @@ function initCreditsMode(root) {
       ),
       ll(LL.modalToCreditsOk, 'Switch to T3Planet Credits'),
       () => {
-        post(routes.toggle, { enabled: true })
+        post(routes.toggle, { enabled: '1' })
           .then((data) => {
             applyUiState(root, data);
             if (data.creditMode) {
@@ -1317,7 +1317,8 @@ function initCreditsMode(root) {
       ),
       ll(LL.modalToOwnKeysOk, 'Switch to Your Own API Keys'),
       () => {
-        post(routes.toggle, { enabled: false })
+        // Send "0"/"1" strings — boolean false can be dropped by some form encoders.
+        post(routes.toggle, { enabled: '0' })
           .then((data) => {
             applyUiState(root, data);
             if (!data.creditMode) {
@@ -1325,6 +1326,8 @@ function initCreditsMode(root) {
                 ll(LL.sectionProviders, 'AI providers'),
                 ll(LL.notificationOwnKeysAgain, 'Using your own API keys again.'),
               );
+              // Match the credits→active path: full reload so server-rendered panels match DB.
+              window.location.reload();
             }
           })
           .catch((err) =>
@@ -1448,6 +1451,10 @@ function boot() {
   initCreditsBundleTabs(document);
   requestAnimationFrame(() => initCreditsHeroProgress(document));
   document.addEventListener('typo3-module-loaded', () => {
+    // Soft module navigations replace the DOM — re-bind mode cards.
+    document
+      .querySelectorAll('[data-aiu-providers-credits-root]')
+      .forEach((root) => initCreditsMode(root));
     initDashboardRoots(document);
     initProvidersRoots(document);
     initCreditsBundleTabs(document);

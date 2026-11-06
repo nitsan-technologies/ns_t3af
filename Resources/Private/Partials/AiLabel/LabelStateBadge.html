@@ -1,8 +1,9 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       data-namespace-typo3-fluid="true">
 
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
 <f:variable name="badgeClass" value="badge-secondary" />
 <f:if condition="{state} == shown"><f:variable name="badgeClass" value="badge-success" /></f:if>
 <f:if condition="{state} == held"><f:variable name="badgeClass" value="badge-warning" /></f:if>
 
-<span class="badge {badgeClass}">{state -> f:format.case(mode: 'capital')}</span>
+<span class="badge {badgeClass}"><f:translate key="{ll}:module.aiLabel.state.{state}" default="{state}" /></span>
