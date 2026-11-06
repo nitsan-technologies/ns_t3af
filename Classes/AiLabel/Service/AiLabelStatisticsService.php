@@ -23,11 +23,32 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 
 /**
  * Aggregated scoreboard and domain breakdown for the AI Label module.
+ *
+ * Overview used to `SELECT *` every media/text row into PHP (OOM on large sites).
+ * Now streams only the AI Label columns needed for tallying — one row at a time.
  */
 final class AiLabelStatisticsService
 {
     private const MEDIA_TABLE = 'sys_file_metadata';
     private const TEXT_TABLES = ['tt_content', 'pages'];
+
+    /**
+     * Columns required by {@see AiLabelRecordEvaluator} / origin buckets.
+     *
+     * @var list<string>
+     */
+    private const PROJECTION = [
+        'uid',
+        'crdate',
+        'tx_nst3af_ailabel_confirmed_at',
+        'tx_nst3af_ailabel_confirmed_by',
+        'tx_nst3af_ailabel_involvement',
+        'tx_nst3af_ailabel_labelling_mode',
+        'tx_nst3af_ailabel_recording_source',
+        'tx_nst3af_ailabel_public_interest',
+        'tx_nst3af_ailabel_human_review',
+        'tx_nst3af_ailabel_responsible_person',
+    ];
 
     public function __construct(
         private readonly ConnectionPool $connectionPool,
@@ -40,7 +61,7 @@ final class AiLabelStatisticsService
      * @return array{
      *   global: array{confirmed: int, awaiting: int, labelled: int, notLabelled: int},
      *   media: array{confirmed: int, awaiting: int, labelled: int, notLabelled: int, open: int, total: int, percent: int},
-     *   texts: array{confirmed: int, awaiting: int, noticeShown: int, unnamedReview: int, open: int, total: int, percent: int},
+     *   texts: array{confirmed: int, awaiting: int, labelled: int, notLabelled: int, noticeShown: int, unnamedReview: int, open: int, total: int, percent: int},
      *   origins: array<string, int>,
      *   coverageBadges: array{done: int, needsPerson: int, blocked: int, total: int}
      * }
@@ -57,7 +78,7 @@ final class AiLabelStatisticsService
             'extension' => 0,
         ];
 
-        foreach ($this->fetchAllMediaRows() as $record) {
+        foreach ($this->iterateProjectedRows(self::MEDIA_TABLE) as $record) {
             $delta = $this->tally(self::MEDIA_TABLE, $record);
             $global = $this->addCounters($global, $delta);
             $media['confirmed'] += $delta['confirmed'];
@@ -69,7 +90,7 @@ final class AiLabelStatisticsService
         }
 
         foreach ($this->textTables() as $table) {
-            foreach ($this->fetchTableRows($table) as $record) {
+            foreach ($this->iterateProjectedRows($table) as $record) {
                 $delta = $this->tally($table, $record);
                 $global = $this->addCounters($global, $delta);
                 $texts['confirmed'] += $delta['confirmed'];
@@ -179,14 +200,6 @@ final class AiLabelStatisticsService
     }
 
     /**
-     * @return list<array<string, mixed>>
-     */
-    private function fetchAllMediaRows(): array
-    {
-        return $this->fetchTableRows(self::MEDIA_TABLE);
-    }
-
-    /**
      * @return list<string>
      */
     private function textTables(): array
@@ -203,17 +216,36 @@ final class AiLabelStatisticsService
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return \Generator<int, array<string, mixed>>
      */
-    private function fetchTableRows(string $table): array
+    private function iterateProjectedRows(string $table): \Generator
     {
-        if (!$this->connectionPool->getConnectionForTable($table)->createSchemaManager()->tablesExist([$table])) {
-            return [];
+        $connection = $this->connectionPool->getConnectionForTable($table);
+        if (!$connection->createSchemaManager()->tablesExist([$table])) {
+            return;
         }
 
-        return $this->connectionPool->getConnectionForTable($table)
-            ->select(['*'], $table)
-            ->fetchAllAssociative();
+        $available = [];
+        foreach ($connection->createSchemaManager()->listTableColumns($table) as $column) {
+            $available[$column->getName()] = true;
+        }
+
+        $select = [];
+        foreach (self::PROJECTION as $column) {
+            if (isset($available[$column])) {
+                $select[] = $column;
+            }
+        }
+        if ($select === []) {
+            return;
+        }
+
+        $qb = $connection->createQueryBuilder();
+        $qb->select(...$select)->from($table);
+
+        foreach ($qb->executeQuery()->iterateAssociative() as $row) {
+            yield $row;
+        }
     }
 
     private function percent(int $confirmed, int $total): int
