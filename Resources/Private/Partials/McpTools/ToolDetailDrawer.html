@@ -7,6 +7,13 @@
         <p class="card-text text-variant">{tool.description}</p>
     </f:if>
 
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <span class="badge badge-default">{tool.severity}</span>
+        <f:if condition="{tool.category}">
+            <span class="badge badge-default">{tool.category}</span>
+        </f:if>
+    </div>
+
     <f:if condition="{tool.notes}">
         <div class="callout callout-notice mb-3">
             <div class="callout-body"><p class="mb-0 small">{tool.notes}</p></div>

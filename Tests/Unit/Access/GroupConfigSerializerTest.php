@@ -92,6 +92,30 @@ final class GroupConfigSerializerTest extends TestCase
         self::assertContains('t3af_dashboard', $serialized['groupMods']);
         self::assertContains('nitsan_nst3ai_dashboard', $serialized['groupMods']);
         self::assertContains('nst3af:capability_chat', $serialized['customOptions']);
+        self::assertNotContains('nst3af:capability_image_generation', $serialized['customOptions']);
+    }
+
+    #[Test]
+    public function mediaFeatureWritesImageGenerationCapability(): void
+    {
+        $modules = $this->defaultGroupModules();
+        $modules['t3ai'] = true;
+
+        $features = $this->defaultGroupFeatures();
+        $features['media'] = FeatureLevel::Use->value;
+
+        $config = new GroupConfig(
+            modules: $modules,
+            features: $features,
+            records: $this->defaultGroupRecords(),
+            limits: new LimitsConfig(),
+        );
+
+        $serialized = $this->serializer->serialize($config);
+
+        self::assertContains('nst3af:capability_chat', $serialized['customOptions']);
+        self::assertContains('nst3af:capability_image_generation', $serialized['customOptions']);
+        self::assertNotContains('nst3af:capability_tts', $serialized['customOptions']);
     }
 
     #[Test]

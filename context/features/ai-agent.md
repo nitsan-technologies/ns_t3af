@@ -1,9 +1,13 @@
 # Feature — AI Agent (backend right-edge panel)
 
-**Status:** Done (structural + NL routing on Symfony AI Agent, core tool set + find_tools, DualMode preview→apply, BE i18n)  
-**UI:** Global toolbar **Ask AI Agent** (`AgentToolbarItem`), right-edge sliding panel JS `@nitsan/nst3af/agent.js` (persistent sessions rail, remembered last conversation via Persistent)  
-**Settings route:** `t3af_dashboard.ai_agent`  
+**Status:** Done (structural + NL routing on Symfony AI Agent, core tool set + find_tools, DualMode preview→apply, BE i18n) 
+**UI:** Global toolbar **Ask AI Agent** (`AgentToolbarItem`), right-edge sliding panel JS `@nitsan/nst3af/agent.js` (persistent sessions rail, remembered last conversation via Persistent) 
+**Settings route:** `t3af_dashboard.ai_agent` 
 **Verify:** `Documentation/Agent/VerifySuite.md`, `Tests/Unit/Agent/` · routing docs: `Documentation/Agent/Routing.md`, `PreviewApply.md`, `Eval.md`
+
+### Spec amendment — locked 21 Oct 2026
+
+The agent surface for T3AI (and child Fix / ask-bar callers) is **this** right-edge panel as shipped: full-height, ~800px, with the existing full-screen dimming backdrop (`Resources/Public/Css/module/agent.css`, `AgentToolbarItem`). **No** bottom drawer inside the module content area, **no** centred modal, **no** separate "AI Agent workspace" screen in `ns_t3ai`. Earlier prototype / pattern-library text that described a bottom drawer or centred modal is superseded; amend external `ux-spec.md` / revision-log / open item 2 to match this note rather than changing the panel.
 
 ---
 
@@ -102,7 +106,7 @@ Reasoning models (0.13 `MultiPartResult`: thinking + text / tool calls) are read
 | Piece | Path |
 |---|---|
 | Preview DualMode | `McpPlaygroundService::preview` + `McpModeOverride` → suggestions meta |
-| Suggestions apply | `AgentWriteService::applySuggestions` (context mode content params). A tool `{"error": ...}` (for example an editor without SEO field rights) is a failed apply, not "Applied". Undo writes the preview field `column` (pages `seo_title`, not the suggestion key `metaTitle`). |
+| Suggestions apply | `AgentWriteService::applySuggestions` (context mode content params). A tool `{"error":...}` (for example an editor without SEO field rights) is a failed apply, not "Applied". Undo writes the preview field `column` (pages `seo_title`, not the suggestion key `metaTitle`). |
 | Plan + draft card | `AgentToolPlanResolver`, `AgentDraftService`, `SatelliteToolPlanService` |
 | Apply (non-preview) | `AgentWriteService::apply` → DataHandler or tool confirmation invoke |
 | Tool confirmation kind | `PLAN_KIND_TOOL_CONFIRMATION` — run-after-confirm for non-DataHandler tools |
@@ -178,7 +182,7 @@ Writing SEO texts for the subpages of the open page uses `t3ai_generate_seo_batc
 - `agentConversationRetentionDays` (default 90; soft delete, removed 7 days later by `t3af:agent:conversations:cleanup`)
 - `agentContinueAfterConfirm` (default on)
 - `agentHistoryTokenBudget` (default 6000 tokens of replayed history)
-- Workspace: no agent setting; it follows **MCP Server > Workspace selection** (`WorkspacePreferenceService`, `be_users.uc['nst3af_mcp_workspace']`, 0 = Live chosen, absent = never chosen = Live). An editor already in a workspace keeps it; from Live the selected workspace gets the changes, Live means Live (a group policy with `workspaceEnforcement` still blocks that). A selected workspace the editor may not use is never replaced: Apply is refused (`agent.workspace.noAccess`). `AgentWorkspaceTarget`; the switch is per request (`setTemporaryWorkspace`), never the editor's backend workspace.
+- Workspace: no agent setting; it follows **MCP Server > Workspace selection** (`WorkspacePreferenceService`, `be_users.uc['nst3af_mcp_workspace']`, 0 = Live chosen, absent = never chosen = Live). An editor already in a workspace keeps it; from Live the selected workspace gets the changes, Live means Live (a group policy with `workspaceEnforcement` still blocks that). A selected workspace the editor may not use is never replaced: Apply is refused (`agent.workspace.noAccess`). When Live is redirected into that preferred workspace (`fromLive` / `AgentWorkspaceTarget::redirectedFromLive`), the draft card, Apply reply (`agent.workspace.createdNeedPublish`), info window, and system prompt all say the records need publish before Live Layout shows them. `AgentWorkspaceTarget`; the switch is per request (`setTemporaryWorkspace`), never the editor's backend workspace.
 - All `AI Agent` settings also appear in the **AI Agent** card of AI Features (scope `ai agent`).
 - `agentConversationScope` (`page` | `module` | `user`), `agentSessionListEnabled`, `agentSessionListDefaultFilter`, `agentMaxSessionsPerScope` (20), `agentMaxSessionsPerUser` (200)
 

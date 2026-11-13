@@ -26,7 +26,7 @@ use NITSAN\NsT3AF\Domain\Repository\RequestLogRepository;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
- * Agent-only governance: group limits, model override, PII masking, turn guard (T15/T16).
+ * Agent-only governance: group limits, model override, PII masking, turn guard.
  *
  * @internal
  */

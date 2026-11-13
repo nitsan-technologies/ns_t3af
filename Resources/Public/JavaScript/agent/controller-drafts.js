@@ -53,6 +53,11 @@ export function draftApplySkipsFollowUp(tool, content, planSteps = []) {
   if (tool === 't3cs_sync_datasource') {
     return true;
   }
+  // A scan-finding Apply already wrote the draft. A follow-up turn invents a second rewrite
+  // or a new Text element ("Create Text element" leftover in Progress).
+  if (tool === 't3ai_fix_check') {
+    return true;
+  }
   if (tool !== 't3ai_create_page_structure') {
     return false;
   }
@@ -69,9 +74,20 @@ export const draftMethods = {
     renderDraftTarget(destructive, cannotUndo = false) {
       const workspace = this.context.details?.workspace ?? null;
       const live = workspace === null || workspace.live !== false;
-      const text = live
-        ? lang('agent.draft.targetLive', 'On confirm this goes live on the website.')
-        : lang('agent.draft.targetWorkspace', 'On confirm this is saved as a draft in the workspace “%1$s”.', [String(workspace.title ?? '')]);
+      const fromLive = workspace?.fromLive === true;
+      const title = String(workspace?.title ?? '');
+      let text;
+      if (live) {
+        text = lang('agent.draft.targetLive', 'On confirm this goes live on the website.');
+      } else if (fromLive) {
+        text = lang(
+          'agent.draft.targetWorkspaceFromLive',
+          'On confirm this is saved as a draft in the workspace “%1$s”. Publish that workspace to see it in Live Layout.',
+          [title],
+        );
+      } else {
+        text = lang('agent.draft.targetWorkspace', 'On confirm this is saved as a draft in the workspace “%1$s”.', [title]);
+      }
       const warn = destructive || cannotUndo ? ` ${lang('agent.draft.targetDestructive', 'This cannot be undone.')}` : '';
       return `<p class="nst3af-agent-draft__target nst3af-agent-draft__target--${live ? 'live' : 'draft'}">${escapeHtml(text + warn)}</p>`;
     },
@@ -304,12 +320,16 @@ export const draftMethods = {
       const fieldRows = fields.map((field) => {
         const key = String(field.key ?? '');
         const label = String(field.label ?? key);
-        const current = String(field.current ?? '');
         const selectedIndex = Number(meta.selections[key] ?? 0);
         const editValue = Object.prototype.hasOwnProperty.call(meta.edits, key)
           ? String(meta.edits[key] ?? '')
           : null;
         const toolName = String(meta.tool ?? suggestions.tool ?? '');
+        const schemaField = key === 'schemaContent' || toolName === 't3ai_apply_schema_markup';
+        const textClass = schemaField
+          ? 'nst3af-agent-suggestions__option-text nst3af-agent-suggestions__option-text--schema'
+          : 'nst3af-agent-suggestions__option-text';
+        const current = formatSuggestionFieldText(toolName, key, String(field.current ?? ''));
         const variantOptions = variants.map((variant, index) => {
           const values = variant?.values && typeof variant.values === 'object' ? variant.values : {};
           const text = formatSuggestionFieldText(toolName, key, String(values[key] ?? ''));
@@ -318,7 +338,7 @@ export const draftMethods = {
           return `<label class="nst3af-agent-suggestions__option">
             <input type="radio" name="nst3af-sug-${messageIndex}-${escapeHtml(key)}" value="${index}" data-nst3af-agent-suggestions-select="1" data-message-index="${messageIndex}" data-field-key="${escapeHtml(key)}" data-variant-index="${index}"${checked}>
             <span class="nst3af-agent-suggestions__option-label">${escapeHtml(variantLabel)}</span>
-            <span class="nst3af-agent-suggestions__option-text">${escapeHtml(text)}</span>
+            <span class="${textClass}">${escapeHtml(text)}</span>
           </label>`;
         }).join('');
 
@@ -332,7 +352,7 @@ export const draftMethods = {
         return `<div class="nst3af-agent-suggestions__field" data-field-key="${escapeHtml(key)}">
           <div class="nst3af-agent-suggestions__field-head">
             <strong>${escapeHtml(label)}</strong>
-            <span class="nst3af-agent-suggestions__current">${escapeHtml(lang('agent.suggestions.current', 'Current'))}: ${escapeHtml(current || '—')}</span>
+            <span class="nst3af-agent-suggestions__current${schemaField ? ' nst3af-agent-suggestions__option-text--schema' : ''}">${escapeHtml(lang('agent.suggestions.current', 'Current'))}: ${escapeHtml(current || '—')}</span>
           </div>
           <div class="nst3af-agent-suggestions__options">${variantOptions}${editBox}</div>
         </div>`;
@@ -409,12 +429,27 @@ export const draftMethods = {
   /**
      * Reload what the editor is looking at (and the page tree) after the agent changed or restored
      * something, so the page behind the panel shows the new state.
+     *
+     * Child modules may claim the content refresh (cancelable `nst3af:agent:applied`) so they can
+     * finish an async rescan before reloading the iframe — ContentContainer.refresh() would abort
+     * that request. Page tree always refreshes; content refresh is the default when nobody claims.
      */
     refreshBackendContent() {
       try {
         const top = window.top;
-        top?.TYPO3?.Backend?.ContentContainer?.refresh?.();
+        const pageId = Number(this.context?.pageId ?? 0);
+        const applied = new CustomEvent('nst3af:agent:applied', {
+          cancelable: true,
+          detail: {
+            pageId: pageId > 0 ? pageId : 0,
+            languageId: Number(this.context?.languageId ?? 0),
+          },
+        });
+        const claimed = top?.document != null && !top.document.dispatchEvent(applied);
         top?.document?.dispatchEvent(new CustomEvent('typo3:pagetree:refresh'));
+        if (!claimed) {
+          top?.TYPO3?.Backend?.ContentContainer?.refresh?.();
+        }
       } catch {
         // Cross-origin or no backend shell: nothing to refresh.
       }
@@ -544,6 +579,7 @@ export const draftMethods = {
           <div class="nst3af-agent-draft__cols" aria-hidden="true"><span></span><span>${escapeHtml(lang('agent.draft.colCurrent', 'Now'))}</span><span>${escapeHtml(lang('agent.draft.colProposed', 'New'))}</span><span></span></div>
           <div class="nst3af-agent-draft__fields">${rows}</div>
           ${this.renderDraftTarget(isDestructive)}
+          ${String(draft.notice ?? '').trim() !== '' ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(String(draft.notice).trim())}</p>` : ''}
           ${nothingKept ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(lang('agent.draft.nothingKept', 'Nothing is selected. Include at least one change or cancel.'))}</p>` : ''}
           ${!nothingKept && blankProposed ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(lang('agent.draft.blankProposed', 'A change has no new value. Leave it out or cancel.'))}</p>` : ''}
           <div class="nst3af-agent-draft__actions">
@@ -828,7 +864,7 @@ export const draftMethods = {
           const visibleNotice = notice !== ''
             ? notice
             : (contentText.includes('cannot create images') ? contentText.trim() : '');
-          const appliedTool = String(result.tool ?? draft.tool ?? '');
+          const appliedTool = String(result.tool || draft.tool || message.meta?.tool || '');
           const planSteps = typeof this.currentPlan === 'function' ? this.currentPlan() : [];
           const skipsFollowUp = draftApplySkipsFollowUp(appliedTool, message.content, planSteps);
           const willContinue = !skipsFollowUp
@@ -867,7 +903,11 @@ export const draftMethods = {
           });
           this.renderStream();
           this.refreshBackendContent();
-          this.queueContinuation(message, 'applied', String(payload.message ?? ''));
+          const appliedTool = String(result.tool || draft.tool || message.meta?.tool || '');
+          const planSteps = typeof this.currentPlan === 'function' ? this.currentPlan() : [];
+          if (!draftApplySkipsFollowUp(appliedTool, String(payload.message ?? ''), planSteps)) {
+            this.queueContinuation(message, 'applied', String(payload.message ?? ''));
+          }
         }
       } catch (error) {
         draft.applying = false;

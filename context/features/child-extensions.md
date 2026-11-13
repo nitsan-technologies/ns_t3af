@@ -1,6 +1,6 @@
 # Feature — Child Extension Integration
 
-**Status:** Ongoing (ns_t3ai, ns_t3cs, ns_t3aa in monorepo)  
+**Status:** Ongoing (ns_t3ai, ns_t3cs, ns_t3aa in monorepo) 
 **Deep spec:** `Documentation/Developer/ExtensionIntegration.rst`
 
 ---
@@ -43,8 +43,8 @@ MyVendor\MyExt\Access\:
   resource: '../Classes/Access/'
 ```
 
-Demo adapter: `packages/ns_t3ai/Classes/Provider/AcmeAdapter.php` (when present).  
-Demo access provider: see `Documentation/Developer/CustomAiAccess.rst` and shipped `T3*AccessCatalogProvider.php` classes.
+Demo adapter: `packages/ns_t3ai/Classes/Provider/AcmeAdapter.php` (when present). 
+Demo access provider: see `Documentation/Developer/CustomAiAccess.rst` and shipped `*AccessCatalogProvider.php` classes.
 
 ---
 
@@ -72,7 +72,7 @@ Full guide: `Documentation/DeveloperGuide/AiLabelIntegration/Index.rst`.
 
 **Don't:** Assume `ns_t3af` ext_conf has `openai_api_key` — use provider DB.
 
-**Don't:** Require `nitsan/ns-t3af` with `|| @dev` in tagged child releases — use `"^1.1"` so production locks resolve stable Packagist tags.
+**Don't:** Require `nitsan/ns-t3af` with `| — | @dev` in tagged child releases — use `"^1.1"` so production locks resolve stable Packagist tags.
 
 ---
 
@@ -83,7 +83,7 @@ When `ns_t3af` is loaded, child modules show **AI Foundation Logs** in the dashb
 - `id` — current page-tree selection
 - `extension` — pre-filter (`ns_t3ai`, `ns_t3aa`, `ns_t3cs`, …)
 
-**Implementation:** `BackendModuleLinkUtility::buildAiLogsUri()` + `Partials/Backend/AiLogsModuleLink.html` + `SetupChecklistPresenter::configureViewPartials()`.  
+**Implementation:** `BackendModuleLinkUtility::buildAiLogsUri()` + `Partials/Backend/AiLogsModuleLink.html` + `SetupChecklistPresenter::configureViewPartials()`. 
 **Full guide:** `context/features/ai-logs.md` (do not fork the button partial).
 
 ---

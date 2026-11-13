@@ -39,6 +39,7 @@ use NITSAN\NsT3AF\Settings\ExtensionSettingsSchemaService;
 use NITSAN\NsT3AF\Utility\AiUniverseUtilityHelper;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Http\JsonResponse;
 
 /**
@@ -72,6 +73,10 @@ final class WizardController
 
     public function ensureProviderAction(ServerRequestInterface $request): ResponseInterface
     {
+        if (($denied = $this->denyUnlessAdmin()) !== null) {
+            return $denied;
+        }
+
         $body = $request->getParsedBody();
         if (!is_array($body)) {
             $body = [];
@@ -98,6 +103,10 @@ final class WizardController
 
     public function progressAction(ServerRequestInterface $request): ResponseInterface
     {
+        if (($denied = $this->denyUnlessAdmin()) !== null) {
+            return $denied;
+        }
+
         if ($this->wizardProgress->isCompleted()) {
             return new JsonResponse(['ok' => true]);
         }
@@ -120,6 +129,10 @@ final class WizardController
 
     public function finalizeAction(ServerRequestInterface $request): ResponseInterface
     {
+        if (($denied = $this->denyUnlessAdmin()) !== null) {
+            return $denied;
+        }
+
         $body = $request->getParsedBody();
         if (!is_array($body)) {
             $body = [];
@@ -325,5 +338,15 @@ final class WizardController
             return;
         }
         $this->mcpAdvancedSettings->save(['enableMcpServer' => $body['mcp'] ? 1 : 0]);
+    }
+
+    private function denyUnlessAdmin(): ?ResponseInterface
+    {
+        $user = $GLOBALS['BE_USER'] ?? null;
+        if ($user instanceof BackendUserAuthentication && $user->isAdmin()) {
+            return null;
+        }
+
+        return new JsonResponse(['ok' => false, 'message' => 'Quick Setup is available to administrators only.'], 403);
     }
 }

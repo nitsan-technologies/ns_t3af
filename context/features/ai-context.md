@@ -1,7 +1,7 @@
 # Feature — AI Context (Brand Context Profiles)
 
-**Status:** Done (profiles CRUD, runtime injection, dashboard bar, wizard step 6, per-feature overrides, auto-research, document upload)  
-**Route:** `t3af_dashboard.ai_context` (`Configuration/Backend/Modules.php`)  
+**Status:** Done (profiles CRUD, runtime injection, dashboard bar, wizard step 6, per-feature overrides, auto-research, document upload) 
+**Route:** `t3af_dashboard.ai_context` (`Configuration/Backend/Modules.php`) 
 **Deep plan (historical):** `Documentation/Architecture/AiContextImplementationPlan.md`
 
 ---
@@ -141,7 +141,7 @@ Declared in `BrandContextService::PLACEHOLDERS`:
 
 > **Duplicate system-prompt guard (CTX-11):** within `ns_t3af` the listener never double-injects the brand block — `injectBrandSystemMessage()` and the `systemPrompt` fallback both check `str_contains($existing, $brandBlock)` before prepending, and an inline `[brand_profile]` token suppresses the separate system block. So a single request cannot carry the brand block twice from this package.
 >
-> **Known cross-package redundancy (cleanup deferred, out of `ns_t3af` scope):** several ns_t3ai `PromptContractRegistry` templates embed inline brand tokens (e.g. `Brand: {brand_name}. Voice: {brand_voice}. …`) in the user prompt. Because the system block is also injected, brand details appear **twice** per request (system block + inline). Functionally harmless — the model receives consistent data — but costs a few extra input tokens and can leave cosmetic fragments from empty fields (e.g. `Avoid: .` when `{forbidden_words}` is empty; the assembled block skips empty fields, the inline copy does not). **Planned cleanup lives in the `ns_t3ai` package:** strip the inline brand tokens from those templates and rely solely on the system block. Deferred — not yet done.
+> **Known cross-package redundancy (cleanup deferred, out of `ns_t3af` scope):** several ns_t3ai `PromptContractRegistry` templates embed inline brand tokens (e.g. `Brand: {brand_name}. Voice: {brand_voice}. …`) in the user prompt. Because the system block is also injected, brand details appear **twice** per request (system block + inline). Functionally harmless — the model receives consistent data — but costs a few extra input tokens and can leave cosmetic fragments from empty fields (e.g. `Avoid:.` when `{forbidden_words}` is empty; the assembled block skips empty fields, the inline copy does not). **Planned cleanup lives in the `ns_t3ai` package:** strip the inline brand tokens from those templates and rely solely on the system block. Deferred — not yet done.
 >
 > **Embeddings (CTX-10):** for `embed` (and `tts`/`image_generation`) the listener substitutes brand tokens in the **plain prompt string only** and returns early — the brand *system block* is never injected and `extra['messages']` is left untouched. Only chat-style `complete`/`stream` calls get the system block and message substitution. This keeps embedding inputs from being polluted with a large brand preamble.
 

@@ -82,11 +82,32 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => 'sk-plain-secret',
+            'model_id' => 'gpt-4o-mini',
             // capabilities omitted — same as unchecking every box in the drawer
         ], 1);
 
         self::assertFalse($result->ok);
         self::assertSame('Select at least one capability.', $result->errors['capabilities'] ?? null);
+    }
+
+    public function testRejectsEmptyChatModelForLlmAdapters(): void
+    {
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->expects(self::never())->method('save');
+
+        $service = new ProviderFormService($repo, new AdapterRegistry([$this->fakeAdapter()]), new CredentialCipher());
+        $result = $service->save(0, [
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => 'sk-plain-secret',
+            'capabilities' => ['chat'],
+            // model_id omitted — drawer "Select a model…"
+        ], 1);
+
+        self::assertFalse($result->ok);
+        self::assertSame('Chat / completion model is required.', $result->errors['model_id'] ?? null);
     }
 
     public function testRejectsExplicitEmptyCapabilitiesOnEdit(): void
@@ -111,6 +132,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => '',
+            'model_id' => 'gpt-4o-mini',
             'capabilities' => [],
         ], 1);
 
@@ -285,6 +307,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => 'sk-plain-secret',
+            'model_id' => 'gpt-4o-mini',
             'capabilities' => ['chat'],
         ], 1);
 
@@ -324,6 +347,7 @@ final class ProviderFormServiceTest extends TestCase
             'adapter_type' => Provider::ADAPTER_OPENAI_COMPATIBLE,
             'endpoint_url' => 'https://llm.example.com/v1',
             'api_key' => 'sk-plain-secret',
+            'model_id' => 'gpt-4o-mini',
             'capabilities' => ['chat'],
         ], 1);
 
@@ -435,6 +459,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'Ollama',
             'adapter_type' => Provider::ADAPTER_SYMFONY_OLLAMA,
             'endpoint_url' => '',
+            'model_id' => 'llama3.2',
             'capabilities' => ['chat'],
         ], 1);
 
@@ -461,6 +486,7 @@ final class ProviderFormServiceTest extends TestCase
             'adapter_type' => Provider::ADAPTER_SYMFONY_OLLAMA,
             'endpoint_url' => 'http://host.docker.internal:11434',
             'api_key' => '',
+            'model_id' => 'llama3.2',
             'capabilities' => ['chat'],
         ], 1);
 
@@ -489,6 +515,7 @@ final class ProviderFormServiceTest extends TestCase
             'adapter_type' => 'symfony.openai_compatible',
             'endpoint_url' => 'https://example.com/v1',
             'api_key' => 'sk-plain-secret',
+            'model_id' => 'gpt-4o-mini',
             'capabilities' => ['chat'],
         ], 1);
 
@@ -514,6 +541,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => 'sk-plain-secret',
+            'model_id' => 'gpt-4o-mini',
             'capabilities' => ['chat', 'streaming'],
             'is_default' => '1',
             'temperature' => '0.55',
@@ -547,6 +575,7 @@ final class ProviderFormServiceTest extends TestCase
                 'title' => 'OpenAI',
                 'adapter_type' => 'symfony.openai',
                 'api_key' => 'sk-plain-secret',
+                'model_id' => 'gpt-4o-mini',
                 'capabilities' => ['chat'],
             ], 1);
 
@@ -576,6 +605,7 @@ final class ProviderFormServiceTest extends TestCase
                 'title' => 'OpenAI',
                 'adapter_type' => 'symfony.openai',
                 'api_key' => 'sk-plain-secret',
+                'model_id' => 'gpt-4o-mini',
                 'capabilities' => ['chat'],
             ], 1);
 
@@ -609,6 +639,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => 'sk-plain-secret',
+            'model_id' => 'gpt-4o-mini',
             'capabilities' => ['chat'],
         ], 1);
 
@@ -980,6 +1011,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => '',
+            'model_id' => 'gpt-4o-mini',
             'capabilities' => ['chat'],
         ], 1);
 
@@ -1058,6 +1090,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'A',
             'adapter_type' => 'symfony.openai',
             'api_key' => 'sk-plain-secret',
+            'model_id' => 'gpt-4o-mini',
             'is_default' => '1',
             'capabilities' => ['chat'],
         ], 1);
@@ -1091,6 +1124,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => '',
+            'model_id' => 'gpt-4o-mini',
             'capabilities' => ['chat'],
         ], 1);
 
@@ -1128,6 +1162,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => '',
+            'model_id' => 'gpt-4o-mini',
             'capabilities' => ['chat'],
         ], 1);
 

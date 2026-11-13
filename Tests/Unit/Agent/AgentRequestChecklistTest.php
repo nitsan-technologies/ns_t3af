@@ -33,6 +33,24 @@ use PHPUnit\Framework\TestCase;
 final class AgentRequestChecklistTest extends TestCase
 {
     #[Test]
+    public function aScanFindingFixIsNotACreateTextRequest(): void
+    {
+        $prompt = "Please fix the Reading ease finding on this page.\n"
+            . "Finding: Score 51.0, fairly difficult.\n"
+            . "What to change: Body text (simplify wording)\n"
+            . "How: Call t3ai_fix_check. It drafts one bodytext rewrite.\n"
+            . "Use t3ai_fix_check with checkId SEO-11.\n"
+            . 'Show a draft only — nothing is saved until I approve.';
+
+        self::assertTrue(AgentRequestChecklist::isScanFindingFixRequest($prompt));
+        self::assertFalse(AgentCoreToolSet::isCreateContentRequest($prompt));
+        self::assertSame([], AgentRequestChecklist::parse($prompt));
+        self::assertSame([], AgentRequestChecklist::parse(
+            'Please fix the Passive voice finding on this page. What to change: Passive sentences in body text.',
+        ));
+    }
+
+    #[Test]
     public function rewritingTheTextOfAnExistingBlockIsNotACreateRequest(): void
     {
         self::assertSame([], AgentRequestChecklist::parse('Rewrite the text of the block "QA visible element" so it sounds friendlier for customers.'));

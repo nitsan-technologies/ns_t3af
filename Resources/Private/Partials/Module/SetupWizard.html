@@ -92,6 +92,16 @@
                         </div>
                     </div>
                 </div>
+                <f:if condition="{wizardProvidersAllDisabled} == 1">
+                    <div class="callout callout-warning mb-3" role="alert">
+                        <div class="callout-icon">
+                            <core:icon identifier="actions-exclamation" size="small" alternativeMarkupIdentifier="inline" />
+                        </div>
+                        <div class="callout-body">
+                            <p class="mb-0"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.providersAllDisabled" arguments="{0: wizardDisabledProviderCount}" /></p>
+                        </div>
+                    </div>
+                </f:if>
                 <h3 class="h4 mb-1"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step1.previewHeading" /></h3>
                 <ul class="aiu-wizard__preview-list list-group mb-1">
                     <li class="aiu-wizard__preview-item list-group-item d-flex align-items-center gap-3">
@@ -148,6 +158,16 @@
                      aria-labelledby="aiu-wizard-tab-2"
                      id="aiu-wizard-panel-2"
                      hidden="">
+                <f:if condition="{wizardProvidersAllDisabled} == 1">
+                    <div class="callout callout-warning mb-3" role="alert">
+                        <div class="callout-icon">
+                            <core:icon identifier="actions-exclamation" size="small" alternativeMarkupIdentifier="inline" />
+                        </div>
+                        <div class="callout-body">
+                            <p class="mb-0"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.providersAllDisabled" arguments="{0: wizardDisabledProviderCount}" /></p>
+                        </div>
+                    </div>
+                </f:if>
                 <div class="aiu-mode aiu-wizard__mode" role="radiogroup" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.mainHeading')}">
                     <header class="aiu-mode__head aiu-wizard__mode-head">
                         <p class="aiu-mode__head-sub"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.sub" /></p>

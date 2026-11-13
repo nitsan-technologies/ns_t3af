@@ -27,7 +27,7 @@ use NITSAN\NsT3AF\Mcp\Service\McpToolOwnershipResolver;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 /**
- * View-model builder for the AI Agent settings module (T21).
+ * View-model builder for the AI Agent settings module.
  *
  * @internal
  */
@@ -168,6 +168,24 @@ final readonly class AgentSettingsPresenter
                         (string) AgentGovernanceGuard::TURN_GUARD_WARN,
                         (string) AgentGovernanceGuard::TURN_GUARD_ABORT,
                     ],
+                ],
+            ],
+            // Who can run which tool severity — mirrors AI Permissions → Limits (agentReadOnly / blocked tools).
+            'severityAccessMatrix' => [
+                [
+                    'severity' => 'module.aiAgent.severity.read',
+                    'who' => 'module.aiAgent.governance.severity.who.read',
+                    'source' => 'module.aiAgent.governance.source.group',
+                ],
+                [
+                    'severity' => 'module.aiAgent.severity.write',
+                    'who' => 'module.aiAgent.governance.severity.who.write',
+                    'source' => 'module.aiAgent.governance.source.group',
+                ],
+                [
+                    'severity' => 'module.aiAgent.severity.destructive',
+                    'who' => 'module.aiAgent.governance.severity.who.destructive',
+                    'source' => 'module.aiAgent.governance.source.group',
                 ],
             ],
             'audit' => [

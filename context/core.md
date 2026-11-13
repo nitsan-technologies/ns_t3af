@@ -23,11 +23,11 @@
 
 ## Compatibility (shipped)
 
-| | Floor |
+| — | Floor |
 |---|---|
 | PHP | `>=8.2 <9` |
 | TYPO3 | `^13.4 \|\| ^14.3` |
-| Version | `2.0.4` (`ext_emconf.php` / TER) |
+| Version | `2.0.6` (`ext_emconf.php` / TER) |
 
 Match `composer.json` + `ext_emconf.php` — do not invent a separate “v2.x” floor unless those files change.
 

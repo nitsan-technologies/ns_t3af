@@ -34,7 +34,7 @@ use TYPO3\CMS\Core\Locking\LockingStrategyInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Applies kept draft fields via DataHandler and read-backs results (T13).
+ * Applies kept draft fields via DataHandler and read-backs results.
  * Preview drafts (`flow === agent_preview`) apply via DualMode context content params.
  *
  * @internal

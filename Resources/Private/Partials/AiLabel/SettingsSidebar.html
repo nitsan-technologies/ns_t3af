@@ -5,10 +5,24 @@
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h3 class="card-title mb-0"><f:translate key="{ll}:module.aiLabel.sidebar.audit" default="Scheduled audit" /></h3>
-        <span class="badge badge-success"><f:translate key="{ll}:module.aiLabel.sidebar.auditSchedule" default="Weekly, Mon 06:00" /></span>
+        <f:if condition="{auditSchedule.scheduled}">
+            <f:then>
+                <span class="badge badge-success"><f:translate key="{ll}:module.aiLabel.sidebar.auditSchedule" default="Weekly, Mon 06:00" /></span>
+            </f:then>
+            <f:else>
+                <span class="badge badge-warning"><f:translate key="{ll}:module.aiLabel.sidebar.auditNotScheduled" default="Not scheduled" /></span>
+            </f:else>
+        </f:if>
     </div>
     <div class="card-body">
-        <p class="text-variant small"><f:translate key="{ll}:module.aiLabel.sidebar.auditIntro" default="Labelling is not a one-off project. The scheduled task re-checks the site and reports; it never labels anything on its own." /></p>
+        <f:if condition="{auditSchedule.scheduled}">
+            <f:then>
+                <p class="text-variant small"><f:translate key="{ll}:module.aiLabel.sidebar.auditIntro" default="Labelling is not a one-off project. The scheduled task re-checks the site and reports; it never labels anything on its own." /></p>
+            </f:then>
+            <f:else>
+                <p class="text-variant small"><f:translate key="{ll}:module.aiLabel.sidebar.auditSetup" default="No Scheduler task runs this audit yet. Open Scheduler &amp; CLI and add a CLI task for t3af:ailabel:audit (report-only; it never labels on its own)." /></p>
+            </f:else>
+        </f:if>
         <dl class="aiu-ailabel-kv mb-3">
             <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.sidebar.newUnconfirmed" default="New content recorded but not yet confirmed" /></dt><dd>{statistics.global.awaiting} <f:translate key="{ll}:module.aiLabel.sidebar.foundLastRun" default="found last run" /></dd></div>
             <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.sidebar.unnamedReview" default="Reviewed texts with no responsible person named" /></dt><dd>{statistics.texts.unnamedReview}</dd></div>

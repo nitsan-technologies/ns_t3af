@@ -26,6 +26,7 @@ namespace NITSAN\NsT3AF\Mcp\Service;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
@@ -820,23 +821,27 @@ readonly class RecordService
             ->executeQuery()
             ->fetchAllAssociative();
 
-        return array_map(
-            static function (array $row) use ($hiddenField, $titleField): array {
-                $entry = [
-                    'uid' => (int) $row['uid'],
-                    'sys_language_uid' => (int) $row['sys_language_uid'],
-                ];
-                if ($hiddenField !== null) {
-                    $entry['hidden'] = (int) ($row['hidden_flag'] ?? 0);
-                }
-                if ($titleField !== null) {
-                    $entry['title'] = (string) ($row['title_label'] ?? '');
-                }
+        $translations = [];
+        foreach ($rows as $row) {
+            $record = BackendUtility::getRecord($table, (int) $row['uid']);
+            if (!is_array($record) || $this->workspaceContext->overlay($table, $record) === null) {
+                // Soft-deleted or removed in the current workspace — must not look "already translated".
+                continue;
+            }
+            $entry = [
+                'uid' => (int) $row['uid'],
+                'sys_language_uid' => (int) $row['sys_language_uid'],
+            ];
+            if ($hiddenField !== null) {
+                $entry['hidden'] = (int) ($row['hidden_flag'] ?? 0);
+            }
+            if ($titleField !== null) {
+                $entry['title'] = (string) ($row['title_label'] ?? '');
+            }
+            $translations[] = $entry;
+        }
 
-                return $entry;
-            },
-            $rows,
-        );
+        return $translations;
     }
 
     /**

@@ -1583,6 +1583,18 @@
                 <source>Disabled</source>
                 <target>Deaktiviert</target>
             </trans-unit>
+            <trans-unit id="module.schedulerCli.status.failing">
+                <source>Failing</source>
+                <target>Fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="module.schedulerCli.failingBanner">
+                <source>%1$s scheduler task(s) reported a failure — inspect Scheduler &amp; CLI.</source>
+                <target>%1$s Scheduler-Aufgabe(n) haben einen Fehler gemeldet — Scheduler &amp; CLI prüfen.</target>
+            </trans-unit>
+            <trans-unit id="module.schedulerCli.failingBanner.link">
+                <source>Open failed task: %1$s</source>
+                <target>Fehlgeschlagene Aufgabe öffnen: %1$s</target>
+            </trans-unit>
             <trans-unit id="module.schedulerCli.empty.tasks">
                 <source>No scheduled tasks found.</source>
                 <target>Keine geplanten Aufgaben gefunden.</target>

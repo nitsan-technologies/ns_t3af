@@ -2,6 +2,7 @@
 
 Release notes live in the documentation:
 
+- [2.0.6](Documentation/ReleaseNotes/2.0.6/Index.rst) — 5 November 2026 (AI Agent QA, AI Label, Setup, MCP, structured output API)
 - [2.0.5](Documentation/ReleaseNotes/2.0.5/Index.rst) — 30 October 2026 (Agent Apply/Undo, MCP write safety, Credits dashboard)
 - [2.0.4](Documentation/ReleaseNotes/2.0.4/Index.rst) — 27 October 2026 (Symfony AI 0.14.x, mcp/sdk ^0.9, Agent/Credits/MCP hardening)
 - [2.0.3](Documentation/ReleaseNotes/2.0.3/Index.rst) — 19 October 2026 (AI Agent image texts and named pages, MCP personal token, collection child writes)

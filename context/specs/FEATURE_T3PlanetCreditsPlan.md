@@ -44,17 +44,17 @@ Supersedes `Documentation/T3PlanetCreditsPlan.md` (kept as historical sketch). T
 ## 2. Architecture
 
 ```text
-TYPO3  (ns_t3af + private ns_t3p_credits)
+TYPO3 (ns_t3af + private ns_t3p_credits)
   ┌───────────────────────────────────────────┐
-  │ Caller                                    │
-  │   └─► AiServiceInterface                  │
-  │         └─► T3PlanetCreditAiService (decorates)
-  │               ├─ ON  → ProxyAiExecutor ──► T3Planet API (auth+balance+exec+debit)
-  │               └─ OFF → inner AiService (existing adapters / BYO keys)
-  │                                           │
-  │  Dashboard ──► ProductCatalogService ─────┼─► T3Planet GET /v1/products (ETag)
-  │            ──► BalanceService ────────────┼─► T3Planet GET /v1/balance
-  │            ──► LocalReceiptCache (DB)     │     (filled from proxy responses)
+  │ Caller │
+  │ └─► AiServiceInterface │
+  │ └─► T3PlanetCreditAiService (decorates)
+  │ ├─ ON → ProxyAiExecutor ──► T3Planet API (auth+balance+exec+debit)
+  │ └─ OFF → inner AiService (existing adapters / BYO keys)
+  │ │
+  │ Dashboard ──► ProductCatalogService ─────┼─► T3Planet GET /v1/products (ETag)
+  │ ──► BalanceService ────────────┼─► T3Planet GET /v1/balance
+  │ ──► LocalReceiptCache (DB) │ (filled from proxy responses)
   └───────────────────────────────────────────┘
                                               │
                                               ▼
@@ -122,7 +122,7 @@ final class AiOptions
         public readonly ?string $systemPrompt = null,
         public readonly ?int $maxTokens = null,
         public readonly bool $noCache = false,
-        public readonly string $featureKey = 'default',   // NEW — lowercase, e.g. seo|translation|image
+        public readonly string $featureKey = 'default', // NEW — lowercase, e.g. seo|translation|image
     ) {}
 }
 ```
@@ -171,7 +171,7 @@ final class AiResponse
         public readonly ?int $promptTokens = null,
         public readonly ?int $completionTokens = null,
         public readonly array $raw = [],
-        public readonly ?CreditsUsage $credits = null,   // NEW — null when toggle OFF
+        public readonly ?CreditsUsage $credits = null, // NEW — null when toggle OFF
     ) {}
 }
 
@@ -369,9 +369,9 @@ Explicit in `Documentation/Index.rst` + `README.md`: `ns_t3af` runs standalone w
 |---|---|---|
 | `POST /v1/install/register` | First-boot install registration (host, public key) | One-shot per install |
 | `POST /v1/install/secret/activate` | Confirm pending rotation key | Dashboard one-click |
-| `GET  /v1/balance` | Current balance | 60 s cache; ETag |
-| `GET  /v1/products` | Catalog (bundles, Pabbly URLs, prices, sort, active) | ETag + 304; `If-None-Match` honoured. Refresh button bypasses cache (sends `Cache-Control: no-cache`); server rate-limits 1/min/install |
-| `GET  /v1/features` | Registered feature keys + costs (with per-install overrides) | 1h cache |
+| `GET /v1/balance` | Current balance | 60 s cache; ETag |
+| `GET /v1/products` | Catalog (bundles, Pabbly URLs, prices, sort, active) | ETag + 304; `If-None-Match` honoured. Refresh button bypasses cache (sends `Cache-Control: no-cache`); server rate-limits 1/min/install |
+| `GET /v1/features` | Registered feature keys + costs (with per-install overrides) | 1h cache |
 | `POST /v1/ai/invoke` | Non-streaming AI op | Encrypted body, idempotent on `request_id` |
 | `POST /v1/ai/stream` | SSE streaming AI op | Final `event: usage` frame mandatory |
 | `POST /v1/ai/abort` | Client-disconnect finalize | Idempotent on `request_id` |
@@ -383,9 +383,9 @@ Common envelope header (all endpoints):
 
 ```
 X-T3p-Install: <install_id>
-X-T3p-Ts:      <unix seconds>
-X-T3p-Nonce:   <hex 32>
-X-T3p-Sig:     base64(hmac_sha256(secret, method|path|ts|nonce|sha256(body)))
+X-T3p-Ts: <unix seconds>
+X-T3p-Nonce: <hex 32>
+X-T3p-Sig: base64(hmac_sha256(secret, method|path|ts|nonce|sha256(body)))
 Content-Encoding: gzip
 ```
 

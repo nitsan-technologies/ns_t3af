@@ -85,6 +85,31 @@ final class AgentToolTurnProcessorRequeueTest extends TestCase
     }
 
     #[Test]
+    public function translateOnlyNameIsTakenFromTheRequest(): void
+    {
+        self::assertSame('DeepL', AgentToolTurnProcessor::translateOnlyNameFromQuery('please use DeepL'));
+        self::assertSame('google', AgentToolTurnProcessor::translateOnlyNameFromQuery('translate with google'));
+        self::assertNull(AgentToolTurnProcessor::translateOnlyNameFromQuery('translate this page to German'));
+    }
+
+    #[Test]
+    public function translateOnlyNameIsTakenFromAdapterType(): void
+    {
+        self::assertSame('DeepL', AgentToolTurnProcessor::translateOnlyNameFromAdapterType('ns_t3ai.deepl_translate'));
+        self::assertSame('Google Translate', AgentToolTurnProcessor::translateOnlyNameFromAdapterType('ns_t3ai.google_translate'));
+        self::assertNull(AgentToolTurnProcessor::translateOnlyNameFromAdapterType('symfony.mistral'));
+    }
+
+    #[Test]
+    public function pageIdIsTakenFromTranslateArguments(): void
+    {
+        self::assertSame(20, AgentToolTurnProcessor::pageIdFromTranslateArguments(['pageId' => 20]));
+        self::assertSame(7, AgentToolTurnProcessor::pageIdFromTranslateArguments(['pid' => 7]));
+        self::assertSame(9, AgentToolTurnProcessor::pageIdFromTranslateArguments(['pageIds' => [9, 10]]));
+        self::assertSame(0, AgentToolTurnProcessor::pageIdFromTranslateArguments([]));
+    }
+
+    #[Test]
     public function wrappedLanguageConfigBecomesAPlainList(): void
     {
         self::assertSame([1], AgentToolTurnProcessor::unwrapLanguageConfig(['languageUids' => [1]]));

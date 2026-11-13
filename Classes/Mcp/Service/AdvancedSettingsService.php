@@ -189,19 +189,184 @@ readonly class AdvancedSettingsService
         ];
     }
 
+    /** @var list<string> */
+    public const ALLOWED_OAUTH_SCOPES = ['mcp:read', 'mcp:write', 'mcp:tools'];
+
+    private const MIN_ACCESS_TOKEN_LIFETIME = 60;
+    private const MAX_ACCESS_TOKEN_LIFETIME = 31536000;
+    private const MIN_MAX_BODY_BYTES = 4194304;
+    private const MAX_MAX_BODY_BYTES = 536870912;
+    private const MIN_MAX_FILE_SIZE_MB = 1;
+    private const MAX_MAX_FILE_SIZE_MB = 10240;
+    private const MIN_UPLOAD_TOKEN_TTL = 60;
+    private const MAX_UPLOAD_TOKEN_TTL = 86400;
+    private const MIN_MAX_BASE64_UPLOAD_BYTES = 1024;
+    private const MAX_MAX_BASE64_UPLOAD_BYTES = 536870912;
+    private const MIN_MAX_ACTIVE_TOKENS = 1;
+    private const MAX_MAX_ACTIVE_TOKENS = 100;
+
+    /**
+     * Validate and persist Advanced MCP settings. Rejects out-of-range numbers,
+     * unknown OAuth scopes, and unparseable redirect URI lines.
+     *
+     * @param array<string, mixed> $settings
+     * @return array{ok: bool, message: string, settings: array<string, mixed>}
+     */
+    public function save(array $settings): array
+    {
+        $validated = $this->validateIncoming($settings);
+        if ($validated['ok'] !== true) {
+            return [
+                'ok' => false,
+                'message' => $validated['message'],
+                'settings' => $this->all(),
+            ];
+        }
+
+        $this->extensionSettingsService->mergeGlobal(self::EXTENSION_KEY, $validated['normalized']);
+
+        return [
+            'ok' => true,
+            'message' => '',
+            'settings' => $this->all(),
+        ];
+    }
+
     /**
      * @param array<string, mixed> $settings
+     * @return array{ok: bool, message: string, normalized: array<string, string>}
      */
-    public function save(array $settings): void
+    private function validateIncoming(array $settings): array
     {
         $normalized = [];
         foreach ($settings as $key => $value) {
             if (!is_string($key)) {
                 continue;
             }
-            $normalized[$key] = (string) $value;
+            $normalized[$key] = is_scalar($value) || $value === null ? (string) $value : '';
         }
-        $this->extensionSettingsService->mergeGlobal(self::EXTENSION_KEY, $normalized);
+
+        $intChecks = [
+            'accessTokenLifetime' => [self::MIN_ACCESS_TOKEN_LIFETIME, self::MAX_ACCESS_TOKEN_LIFETIME, 'Access token lifetime'],
+            'mcpMaxBodyBytes' => [self::MIN_MAX_BODY_BYTES, self::MAX_MAX_BODY_BYTES, 'Max MCP POST body size'],
+            'mcpMaxFileSizeMb' => [self::MIN_MAX_FILE_SIZE_MB, self::MAX_MAX_FILE_SIZE_MB, 'Max MCP file size'],
+            'mcpUploadTokenTtl' => [self::MIN_UPLOAD_TOKEN_TTL, self::MAX_UPLOAD_TOKEN_TTL, 'MCP upload token lifetime'],
+            'mcpMaxBase64UploadBytes' => [self::MIN_MAX_BASE64_UPLOAD_BYTES, self::MAX_MAX_BASE64_UPLOAD_BYTES, 'Max inline base64 upload'],
+            'oauthMaxActiveTokensPerUser' => [self::MIN_MAX_ACTIVE_TOKENS, self::MAX_MAX_ACTIVE_TOKENS, 'Max active tokens per user'],
+        ];
+        foreach ($intChecks as $field => [$min, $max, $label]) {
+            if (!array_key_exists($field, $normalized)) {
+                continue;
+            }
+            $raw = trim($normalized[$field]);
+            if ($raw === '' || !preg_match('/^-?\d+$/', $raw)) {
+                return ['ok' => false, 'message' => sprintf('%s must be a whole number.', $label), 'normalized' => []];
+            }
+            $intValue = (int) $raw;
+            if ($intValue < $min || $intValue > $max) {
+                return [
+                    'ok' => false,
+                    'message' => sprintf('%s must be between %d and %d.', $label, $min, $max),
+                    'normalized' => [],
+                ];
+            }
+            $normalized[$field] = (string) $intValue;
+        }
+
+        if (array_key_exists('oauthDefaultScopes', $normalized)) {
+            $scopesError = $this->validateOauthScopes($normalized['oauthDefaultScopes']);
+            if ($scopesError !== null) {
+                return ['ok' => false, 'message' => $scopesError, 'normalized' => []];
+            }
+            $normalized['oauthDefaultScopes'] = $this->normalizeOauthScopes($normalized['oauthDefaultScopes']);
+        }
+
+        if (array_key_exists('oauthDefaultRedirectUris', $normalized)) {
+            $urisError = $this->validateOauthRedirectUris($normalized['oauthDefaultRedirectUris']);
+            if ($urisError !== null) {
+                return ['ok' => false, 'message' => $urisError, 'normalized' => []];
+            }
+        }
+
+        return ['ok' => true, 'message' => '', 'normalized' => $normalized];
+    }
+
+    private function validateOauthScopes(string $raw): ?string
+    {
+        $tokens = preg_split('/\s+/', trim($raw)) ?: [];
+        $tokens = array_values(array_filter($tokens, static fn(string $t): bool => $t !== ''));
+        if ($tokens === []) {
+            return 'Default OAuth scopes must include at least one allowed scope (mcp:read, mcp:write, mcp:tools).';
+        }
+        $allowed = array_fill_keys(self::ALLOWED_OAUTH_SCOPES, true);
+        foreach ($tokens as $token) {
+            if (!isset($allowed[$token])) {
+                return sprintf('Unknown OAuth scope "%s". Allowed: %s.', $token, implode(', ', self::ALLOWED_OAUTH_SCOPES));
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeOauthScopes(string $raw): string
+    {
+        $tokens = preg_split('/\s+/', trim($raw)) ?: [];
+        $unique = [];
+        foreach ($tokens as $token) {
+            $token = trim($token);
+            if ($token !== '' && !isset($unique[$token])) {
+                $unique[$token] = true;
+            }
+        }
+
+        return implode(' ', array_keys($unique));
+    }
+
+    private function validateOauthRedirectUris(string $raw): ?string
+    {
+        $lines = preg_split('/\R/', $raw) ?: [];
+        foreach ($lines as $line) {
+            $entry = trim($line);
+            if ($entry === '') {
+                continue;
+            }
+            if (!$this->isValidRedirectUriAllowListEntry($entry)) {
+                return sprintf('Invalid OAuth redirect URI "%s". Use absolute URIs or patterns like https://host/path* or http://127.0.0.1:*.', $entry);
+            }
+        }
+
+        return null;
+    }
+
+    private function isValidRedirectUriAllowListEntry(string $entry): bool
+    {
+        if (str_ends_with($entry, '*')) {
+            $prefix = substr($entry, 0, -1);
+            if ($prefix === 'cursor://' || strcasecmp($entry, 'cursor:*') === 0) {
+                return true;
+            }
+            if (preg_match('#^https?://#i', $prefix) === 1) {
+                $parts = parse_url(rtrim($prefix, '/') . '/');
+                return is_array($parts)
+                    && isset($parts['scheme'], $parts['host'])
+                    && is_string($parts['scheme'])
+                    && is_string($parts['host'])
+                    && $parts['host'] !== ''
+                    && !isset($parts['user'])
+                    && !isset($parts['pass']);
+            }
+
+            return false;
+        }
+
+        $parts = parse_url($entry);
+        return is_array($parts)
+            && isset($parts['scheme'], $parts['host'])
+            && is_string($parts['scheme'])
+            && is_string($parts['host'])
+            && $parts['host'] !== ''
+            && !isset($parts['user'])
+            && !isset($parts['pass']);
     }
 
     /**

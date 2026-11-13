@@ -25,7 +25,6 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 't3af:agent:index-tools',
@@ -47,7 +46,7 @@ final class IndexAgentToolsCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
+        $io = new CommandIo($input, $output);
         try {
             $this->toolIndex->rebuild();
             $io->success('Agent tool embedding index rebuilt.');

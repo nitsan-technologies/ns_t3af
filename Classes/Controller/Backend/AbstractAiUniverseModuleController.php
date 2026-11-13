@@ -237,9 +237,16 @@ abstract class AbstractAiUniverseModuleController
                 'modulePath' => $this->moduleTabUtility->resolveActivePath($activeTabKey),
                 'creditOverview' => $this->resolveCreditOverviewLine(),
                 'creditsFeatureAvailable' => self::fluidFlag((new CreditsReleaseGate())->isPubliclyAvailable()),
-                'quickSetupLabel' => $this->translateModule('module.quickSetup'),
+                // Quick Setup mutates providers / API keys / MCP — admin-only.
+                'quickSetupLabel' => $this->backendUserIsAdmin($backendUser)
+                    ? $this->translateModule('module.quickSetup')
+                    : '',
                 'wizardCompleted' => self::fluidFlag($wizardCompleted),
-                'wizardAutoOpen' => self::fluidFlag(!$wizardCompleted && $tabAccessDenied === 0),
+                'wizardAutoOpen' => self::fluidFlag(
+                    $this->backendUserIsAdmin($backendUser)
+                    && !$wizardCompleted
+                    && $tabAccessDenied === 0,
+                ),
                 'wizardResumeStep' => $this->wizardProgress->getLastStep(),
                 'wizardMaxStep' => $this->wizardProgress->getMaxStep(),
                 'providersUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.providers', $routeParams),
@@ -265,6 +272,10 @@ abstract class AbstractAiUniverseModuleController
                 'wizardCatalogJson' => $this->encodeWizardCatalogJson(),
                 'wizardExtensionsJson' => $this->encodeWizardExtensionsJson(),
                 'wizardUiJson' => $this->encodeWizardUiJson(),
+                'wizardProvidersAllDisabled' => self::fluidFlag(
+                    $this->siteHasOnlyDisabledProviders($resolution->storagePid),
+                ),
+                'wizardDisabledProviderCount' => $this->countDisabledProviders($resolution->storagePid),
                 'wizardExtensionsAvailable' => self::fluidFlag($this->wizardExtensionCatalog->hasEligibleExtensions()),
                 'nsT3aiLoaded' => self::fluidFlag(ExtensionManagementUtility::isLoaded('ns_t3ai')),
                 'brandContextIndustries' => BrandContextProfile::INDUSTRIES,
@@ -360,6 +371,42 @@ abstract class AbstractAiUniverseModuleController
         return json_encode($rows, JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     }
 
+    /**
+     * True when the site has provider rows but every one is toggled off (no-provider QA).
+     */
+    private function siteHasOnlyDisabledProviders(int $storagePid): bool
+    {
+        if ($storagePid <= 0) {
+            return false;
+        }
+        $providers = $this->providerRepository->findAllByStoragePid($storagePid, includeHidden: false);
+        if ($providers === []) {
+            return false;
+        }
+        foreach ($providers as $provider) {
+            if ($provider->isEnabled) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function countDisabledProviders(int $storagePid): int
+    {
+        if ($storagePid <= 0) {
+            return 0;
+        }
+        $count = 0;
+        foreach ($this->providerRepository->findAllByStoragePid($storagePid, includeHidden: false) as $provider) {
+            if (!$provider->isEnabled) {
+                ++$count;
+            }
+        }
+
+        return $count;
+    }
+
     private function encodeWizardUiJson(): string
     {
         $payload = [
@@ -407,5 +454,10 @@ abstract class AbstractAiUniverseModuleController
         ];
 
         return json_encode($payload, JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    private function backendUserIsAdmin(?BackendUserAuthentication $backendUser): bool
+    {
+        return $backendUser !== null && $backendUser->isAdmin();
     }
 }

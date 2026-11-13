@@ -19,13 +19,20 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\AiLabel\Service;
 
+use TYPO3\CMS\Core\Database\Connection;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
+
 /**
  * System readiness checks for the Overview status card.
  */
 final class AiLabelSystemStatusService
 {
+    public const AUDIT_COMMAND = 't3af:ailabel:audit';
+
     public function __construct(
         private readonly EuIconManifestService $iconManifest,
+        private readonly ?ConnectionPool $connectionPool = null,
     ) {}
 
     /**
@@ -67,10 +74,11 @@ final class AiLabelSystemStatusService
             'variant' => 'secondary',
         ];
 
+        $scheduled = $this->schedulerRegistered();
         $checks[] = [
             'label' => 'Scheduled AI Label audit',
-            'status' => $this->schedulerRegistered() ? 'runs weekly' : 'not scheduled',
-            'variant' => $this->schedulerRegistered() ? 'success' : 'warning',
+            'status' => $scheduled ? 'runs weekly' : 'not scheduled',
+            'variant' => $scheduled ? 'success' : 'warning',
         ];
 
         return $checks;
@@ -84,12 +92,62 @@ final class AiLabelSystemStatusService
         ));
     }
 
-    private function schedulerRegistered(): bool
+    /**
+     * Settings sidebar: only claim a schedule when a real Scheduler CLI task exists.
+     *
+     * @return array{scheduled: bool, badge: string, variant: string}
+     */
+    public function auditSchedule(): array
+    {
+        if ($this->schedulerRegistered()) {
+            return [
+                'scheduled' => true,
+                'badge' => 'Weekly, Mon 06:00',
+                'variant' => 'success',
+            ];
+        }
+
+        return [
+            'scheduled' => false,
+            'badge' => 'Not scheduled',
+            'variant' => 'warning',
+        ];
+    }
+
+    public function schedulerRegistered(): bool
     {
         if (!class_exists(\TYPO3\CMS\Scheduler\Scheduler::class)) {
             return false;
         }
 
-        return true;
+        try {
+            $pool = $this->connectionPool ?? GeneralUtility::makeInstance(ConnectionPool::class);
+            $connection = $pool->getConnectionForTable('tx_scheduler_task');
+            if (!$connection->createSchemaManager()->tablesExist(['tx_scheduler_task'])) {
+                return false;
+            }
+
+            $qb = $pool->getQueryBuilderForTable('tx_scheduler_task');
+            $qb->getRestrictions()->removeAll();
+            $rows = $qb->select('uid', 'disable', 'deleted', 'serialized_task_object')
+                ->from('tx_scheduler_task')
+                ->where($qb->expr()->eq('deleted', $qb->createNamedParameter(0, Connection::PARAM_INT)))
+                ->executeQuery()
+                ->fetchAllAssociative();
+        } catch (\Throwable) {
+            return false;
+        }
+
+        foreach ($rows as $row) {
+            if ((int) ($row['disable'] ?? 0) === 1) {
+                continue;
+            }
+            $blob = (string) ($row['serialized_task_object'] ?? '');
+            if ($blob !== '' && str_contains($blob, self::AUDIT_COMMAND)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

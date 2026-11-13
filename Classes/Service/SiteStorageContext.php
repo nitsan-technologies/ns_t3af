@@ -161,9 +161,13 @@ final class SiteStorageContext
             }
 
             $siteTitle = $site->getIdentifier();
-            $pageRecord = BackendUtility::getRecord('pages', $storagePid);
-            if (is_array($pageRecord) && trim((string) ($pageRecord['title'] ?? '')) !== '') {
-                $siteTitle = trim((string) $pageRecord['title']);
+            try {
+                $pageRecord = BackendUtility::getRecord('pages', $storagePid);
+                if (is_array($pageRecord) && trim((string) ($pageRecord['title'] ?? '')) !== '') {
+                    $siteTitle = trim((string) $pageRecord['title']);
+                }
+            } catch (\Throwable) {
+                // Title is cosmetic; a missing/broken pages row must not fail site resolution.
             }
 
             return SiteStorageResolution::resolved(

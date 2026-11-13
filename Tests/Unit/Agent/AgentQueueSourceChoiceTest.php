@@ -187,6 +187,7 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertFalse(AgentToolTurnProcessor::latestSaveFailed($waitingUpdate));
         self::assertFalse(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Sync that one now.', $waitingUpdate));
         self::assertTrue(AgentToolTurnProcessor::asksWhatChangedInConversation('What did you change in this conversation?'));
+        self::assertTrue(AgentToolTurnProcessor::asksWhatChangedInConversation('What did you just change?'));
         self::assertTrue(AgentToolTurnProcessor::asksWhatChangedInConversation('What did you save?'));
         self::assertTrue(AgentToolTurnProcessor::asksWhatChangedInConversation('Was hast du geändert?'));
         self::assertFalse(AgentToolTurnProcessor::asksWhatChangedInConversation('change it back'));

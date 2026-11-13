@@ -1,7 +1,7 @@
 # Feature — MCP Server & Tools
 
-**Status:** Done  
-**Deep spec:** [`FEATURE_McpServer.md`](../specs/FEATURE_McpServer.md)  
+**Status:** Done 
+**Deep spec:** [`FEATURE_McpServer.md`](../specs/FEATURE_McpServer.md) 
 **User docs:** `Documentation/McpServer/Index.rst`, `Documentation/McpServer/Tools.rst`, `Documentation/Developer/CustomMcpTools.rst`
 
 ---

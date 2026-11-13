@@ -57,10 +57,13 @@ final class DashboardProviderCardBuilder
 
             if (!$provider->isEnabled) {
                 $statusKey = 'offline';
+                $statusReason = 'Provider is disabled.';
             } elseif ($missingKey || $highErrorRate) {
                 $statusKey = 'attention';
+                $statusReason = $this->attentionReason($missingKey, $highErrorRate, $errorRate);
             } else {
                 $statusKey = 'active';
+                $statusReason = '';
             }
 
             $cards[] = [
@@ -78,6 +81,7 @@ final class DashboardProviderCardBuilder
                 'periodTokens' => $tokens,
                 'lastUsedLabel' => $this->formatLastUsed($provider->lastUsedAt),
                 'statusKey' => $statusKey,
+                'statusReason' => $statusReason,
             ];
         }
 
@@ -88,6 +92,19 @@ final class DashboardProviderCardBuilder
         );
 
         return array_slice($cards, 0, self::MAX_CARDS);
+    }
+
+    private function attentionReason(bool $missingKey, bool $highErrorRate, float $errorRate): string
+    {
+        $parts = [];
+        if ($missingKey) {
+            $parts[] = 'API key missing';
+        }
+        if ($highErrorRate) {
+            $parts[] = sprintf('Error rate %.1f%% in selected period', $errorRate);
+        }
+
+        return implode('; ', $parts);
     }
 
     private function formatLastUsed(int $timestamp): string

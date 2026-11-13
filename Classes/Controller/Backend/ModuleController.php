@@ -1136,11 +1136,26 @@ PY);
         $filters = $this->aiUsageAnalyticsService->normalizeFilters($query);
         $mode = $this->resolveAiUsageMode($query);
         $creditsModeEnabled = $this->creditModeResolver->isEnabled();
-        $usageData = $this->aiUsageAnalyticsService->buildUsageData($period, $filters, $creditsModeEnabled);
+        // Same Credits / Own Keys (+ site provider UIDs) scope as the dashboard KPIs.
+        $usageScope = $creditsModeEnabled
+            ? RequestLogProviderScope::Credits
+            : RequestLogProviderScope::OwnKeys;
+        $usageProviderUids = $creditsModeEnabled
+            ? null
+            : $this->dashboardAnalytics->resolveOwnKeysProviderUids(
+                $this->resolveSiteStorage($request)->storagePid,
+            );
+        $usageData = $this->aiUsageAnalyticsService->buildUsageData(
+            $period,
+            $filters,
+            $creditsModeEnabled,
+            $usageScope,
+            $usageProviderUids,
+        );
         $routeContext = $this->buildAiUsageRouteContext($query, $mode, $filters);
 
         $logPage = $mode === 'log'
-            ? $this->aiUsageAnalyticsService->buildLogPage($period, $filters)
+            ? $this->aiUsageAnalyticsService->buildLogPage($period, $filters, $usageScope, $usageProviderUids)
             : null;
         $filtersForView = $filters;
         $aiUsagePagination = null;
@@ -1230,9 +1245,23 @@ PY);
         $filters = $this->aiUsageAnalyticsService->normalizeFilters($query);
         $format = strtolower(trim((string) ($query['format'] ?? 'json')));
         $creditsModeEnabled = $this->creditModeResolver->isEnabled();
+        $usageScope = $creditsModeEnabled
+            ? RequestLogProviderScope::Credits
+            : RequestLogProviderScope::OwnKeys;
+        $usageProviderUids = $creditsModeEnabled
+            ? null
+            : $this->dashboardAnalytics->resolveOwnKeysProviderUids(
+                $this->resolveSiteStorage($request)->storagePid,
+            );
 
         if ($format === 'csv') {
-            $rows = $this->aiUsageAnalyticsService->buildLogCsvRows($period, $filters, $creditsModeEnabled);
+            $rows = $this->aiUsageAnalyticsService->buildLogCsvRows(
+                $period,
+                $filters,
+                $creditsModeEnabled,
+                $usageScope,
+                $usageProviderUids,
+            );
             $lines = array_map(
                 static fn(array $row): string => implode(',', array_map(
                     static fn(string $cell): string => '"' . str_replace('"', '""', $cell) . '"',
@@ -1247,7 +1276,13 @@ PY);
                 ->withHeader('Content-Disposition', 'attachment; filename="ai-usage-' . date('Ymd-His') . '.csv"');
         }
 
-        $payload = $this->aiUsageAnalyticsService->buildExportPayload($period, $filters, $creditsModeEnabled);
+        $payload = $this->aiUsageAnalyticsService->buildExportPayload(
+            $period,
+            $filters,
+            $creditsModeEnabled,
+            $usageScope,
+            $usageProviderUids,
+        );
 
         $filename = sprintf('ai-usage-%s.json', date('Ymd-His'));
         $response = new JsonResponse($payload);
@@ -1552,6 +1587,7 @@ PY);
     {
         $view = $this->createModuleView($request, 'schedulerCli');
         $this->pageRenderer->loadJavaScriptModule('@nitsan/nst3af/scheduler-cli.js');
+        $this->pageRenderer->loadJavaScriptModule('@typo3/scheduler/new-scheduler-task-wizard-button.js');
         $query = $request->getQueryParams();
         $mode = $this->resolveSchedulerCliMode($query);
         $commands = $this->schedulerCliCommandCatalog->all();
@@ -1569,8 +1605,18 @@ PY);
         $typo3Version = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Core\Information\Typo3Version::class);
         $routeName = $typo3Version->getMajorVersion() >= 14 ? 'scheduler' : 'scheduler_manage';
         $schedulerManageUri = (string) $this->uriBuilder->buildUriFromRoute($routeName);
-        $schedulerManageAddUri = (string) $this->uriBuilder->buildUriFromRoute($routeName, ['action' => 'add']);
+        // TYPO3 14+ ignores action=add on the list route; use the new-task wizard AJAX URL.
+        $schedulerManageAddUri = $typo3Version->getMajorVersion() >= 14
+            ? (string) $this->uriBuilder->buildUriFromRoute('ajax_new_scheduler_task_wizard', [
+                'returnUrl' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.scheduler_cli'),
+            ])
+            : (string) $this->uriBuilder->buildUriFromRoute($routeName, ['action' => 'add']);
+        $schedulerManageAddWizard = $typo3Version->getMajorVersion() >= 14;
 
+        $failingTasks = array_values(array_filter(
+            $tasks,
+            static fn(array $task): bool => ((int) ($task['hasFailure'] ?? 0)) === 1,
+        ));
         $view->assignMultiple([
             'flash' => $this->flashFromQuery($request) ?? '',
             'schedulerCliRunOutput' => (string) ($query['runOutput'] ?? ''),
@@ -1579,16 +1625,18 @@ PY);
             'schedulerCliExtensionGroups' => $extensionGroups,
             'schedulerCliCommands' => $commands,
             'schedulerCliTasks' => $tasks,
+            'schedulerCliFirstFailingTask' => $failingTasks[0] ?? [],
             'routeName' => $routeName,
             'schedulerCliKpis' => [
                 'totalCommands' => count($commands),
                 'totalTasks' => count($tasks),
                 'activeTasks' => count(array_filter($tasks, static fn(array $task): bool => ((int) ($task['disabled'] ?? 1)) === 0)),
-                'failingTasks' => count(array_filter($tasks, static fn(array $task): bool => ((int) ($task['hasFailure'] ?? 0)) === 1)),
+                'failingTasks' => count($failingTasks),
             ],
             'schedulerCliRunUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.scheduler_cli.run'),
             'schedulerManageUri' => $schedulerManageUri,
             'schedulerManageAddUri' => $schedulerManageAddUri,
+            'schedulerManageAddWizard' => $schedulerManageAddWizard,
             'schedulerCliCommandsJson' => json_encode($commands, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?: '[]',
             'schedulerCliTasksJson' => json_encode($tasks, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?: '[]',
         ]);

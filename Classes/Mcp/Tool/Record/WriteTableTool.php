@@ -294,25 +294,48 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
         // A model sometimes wraps the object in a code fence.
         $data = trim((string) preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($data)));
-        try {
+        $attempts = [
+            static fn(string $raw): mixed => json_decode($raw, true, 512, JSON_THROW_ON_ERROR),
+            // Mistral: raw breaks/tabs inside strings, bad UTF-8, unescaped HTML quotes.
+            static fn(string $raw): mixed => json_decode(
+                self::escapeControlCharsInStrings($raw),
+                true,
+                512,
+                JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE,
+            ),
+            static fn(string $raw): mixed => json_decode(
+                self::escapeControlCharsInStrings(self::escapeInnerQuotes($raw)),
+                true,
+                512,
+                JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE,
+            ),
+        ];
+        $payload = null;
+        $lastException = null;
+        foreach ($attempts as $attempt) {
             try {
-                $payload = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
+                $payload = $attempt($data);
+                break;
             } catch (\JsonException $exception) {
-                if (!in_array($exception->getCode(), [JSON_ERROR_CTRL_CHAR, JSON_ERROR_SYNTAX], true)) {
-                    throw $exception;
-                }
-                // Some models (Mistral) put raw line breaks or tabs, or unescaped quotes (HTML attributes), inside a string value.
-                try {
-                    $payload = json_decode(self::escapeControlCharsInStrings($data), true, 512, JSON_THROW_ON_ERROR);
-                } catch (\JsonException) {
-                    $payload = json_decode(self::escapeControlCharsInStrings(self::escapeInnerQuotes($data)), true, 512, JSON_THROW_ON_ERROR);
+                $lastException = $exception;
+                if (!in_array($exception->getCode(), [
+                    JSON_ERROR_CTRL_CHAR,
+                    JSON_ERROR_SYNTAX,
+                    JSON_ERROR_UTF8,
+                ], true)) {
+                    break;
                 }
             }
-        } catch (\JsonException $exception) {
+        }
+        if ($payload === null && $lastException instanceof \JsonException) {
+            $snippet = mb_substr(preg_replace('/\s+/u', ' ', $data) ?? $data, 0, 180);
             throw new \InvalidArgumentException(
-                'data must be a JSON object of field values, e.g. {"pid": 12, "title": "News"} (' . $exception->getMessage() . ').',
+                'data must be a JSON object of field values, e.g. {"pid": 12, "title": "News"} ('
+                . $lastException->getMessage()
+                . '). Payload starts: '
+                . $snippet,
                 1790400001,
-                $exception,
+                $lastException,
             );
         }
         // Double-encoded: the object arrived as a JSON string holding JSON.
@@ -377,7 +400,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         return $out;
     }
 
-    /** Escapes raw control characters inside JSON string literals only; whitespace between tokens stays. */
+    /**
+     * Escapes raw control characters inside JSON string literals.
+     * Outside strings, keeps JSON whitespace (space/tab/LF/CR) and drops other controls.
+     * A bare control after a backslash is escaped too (models sometimes emit `\` + raw newline).
+     */
     private static function escapeControlCharsInStrings(string $json): string
     {
         $out = '';
@@ -386,17 +413,41 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         $length = strlen($json);
         for ($i = 0; $i < $length; ++$i) {
             $char = $json[$i];
-            if ($inString && !$escaped && ord($char) < 0x20) {
-                $out .= sprintf('\\u%04x', ord($char));
-                continue;
-            }
+            $ord = ord($char);
             if ($inString) {
-                $escaped = !$escaped && $char === '\\';
-                if (!$escaped && $char === '"') {
+                if ($escaped) {
+                    $escaped = false;
+                    if ($ord < 0x20) {
+                        // `\` was not a real escape — emit escaped control instead of raw bytes.
+                        $out .= sprintf('\\u%04x', $ord);
+                        continue;
+                    }
+                    $out .= $char;
+                    continue;
+                }
+                if ($char === '\\') {
+                    $escaped = true;
+                    $out .= $char;
+                    continue;
+                }
+                if ($ord < 0x20) {
+                    $out .= sprintf('\\u%04x', $ord);
+                    continue;
+                }
+                if ($char === '"') {
                     $inString = false;
                 }
-            } elseif ($char === '"') {
+                $out .= $char;
+                continue;
+            }
+            if ($char === '"') {
                 $inString = true;
+                $out .= $char;
+                continue;
+            }
+            // Structural whitespace is valid JSON; other controls between tokens are not.
+            if ($ord < 0x20 && $char !== "\t" && $char !== "\n" && $char !== "\r") {
+                continue;
             }
             $out .= $char;
         }
@@ -420,6 +471,13 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
         unset($payload['pid'], $payload['beforeUid'], $payload['afterUid']);
         $filteredData = self::withoutEmptyCreateFields($this->normalizer->filterWritableFields($tableName, $payload));
+        // Agent page/news drafts default hidden unless the editor/model explicitly set visibility.
+        if (
+            in_array($tableName, ['pages', 'tx_news_domain_model_news'], true)
+            && !array_key_exists('hidden', $filteredData)
+        ) {
+            $filteredData['hidden'] = 1;
+        }
         // Empty "add a text element" must still get a draft card — fill from the page title (no error card).
         if ($tableName === 'tt_content' && ($filteredData['CType'] ?? '') === 'text'
             && trim((string) ($filteredData['header'] ?? '')) === ''

@@ -26,7 +26,7 @@ use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
- * In-conversation explanation when a locked tool is activated (T18).
+ * In-conversation explanation when a locked tool is activated.
  *
  * @internal
  */

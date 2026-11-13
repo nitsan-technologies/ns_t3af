@@ -99,6 +99,7 @@ final class AgentSettingsPresenterTest extends TestCase
         self::assertCount(3, $viewModel['overview']['availability']);
         self::assertCount(4, $viewModel['severityPolicyTable']);
         self::assertCount(6, $viewModel['governanceMatrix']);
+        self::assertCount(3, $viewModel['severityAccessMatrix']);
         self::assertCount(4, $viewModel['audit']['coverage']);
         self::assertSame(
             AgentGovernanceGuard::TURN_GUARD_WARN,

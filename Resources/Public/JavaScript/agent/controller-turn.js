@@ -56,7 +56,14 @@ export const turnMethods = {
      * @param {{continuation?: {outcome: string, label: string, result: string}}} [options]
      */
     async submitTurn(explicitTool = '', toolArguments = {}, starterAction = '', options = {}) {
-      if (!this.input || this.isRunning) {
+      if (!this.input) {
+        return;
+      }
+      if (this.isRunning) {
+        this.announce(lang(
+          'agent.turn.alreadyRunning',
+          'The AI Agent is still working on your previous request. Please wait until it has finished, then send your message again.',
+        ));
         return;
       }
       if (this.credits?.empty === true) {
@@ -79,6 +86,7 @@ export const turnMethods = {
       if (continuation === null) {
         this.input.value = '';
         this.resizeComposerInput?.();
+        this.syncSendButtonEnabled?.();
       }
       this.hideAutocomplete();
 

@@ -135,20 +135,40 @@ final class GroupConfigSerializer
      */
     private function serializeCapabilityOptions(GroupConfig $config): array
     {
+        $hasGrantingModule = false;
         foreach ($this->bindingRegistry->allBindings() as $bindings) {
             if (!$bindings->grantsCapabilities) {
                 continue;
             }
             if (!empty($config->modules[$bindings->moduleKey])) {
-                return [
-                    'nst3af:capability_chat',
-                    'nst3af:capability_streaming',
-                    'nst3af:capability_embeddings',
-                ];
+                $hasGrantingModule = true;
+                break;
             }
         }
+        if (!$hasGrantingModule) {
+            return [];
+        }
 
-        return [];
+        // Base LLM capabilities whenever any grantsCapabilities module is on.
+        $options = [
+            'nst3af:capability_chat',
+            'nst3af:capability_streaming',
+            'nst3af:capability_embeddings',
+        ];
+
+        // Image generation is gated by the Media feature.
+        $mediaLevel = FeatureLevel::tryFromString($config->features['media'] ?? FeatureLevel::Disabled->value);
+        if ($mediaLevel !== FeatureLevel::Disabled) {
+            $options[] = 'nst3af:capability_image_generation';
+        }
+
+        // TTS is gated by AI Accessibility audio/voiceover.
+        $ttsLevel = FeatureLevel::tryFromString($config->features['t3aaMedia'] ?? FeatureLevel::Disabled->value);
+        if ($ttsLevel !== FeatureLevel::Disabled) {
+            $options[] = 'nst3af:capability_tts';
+        }
+
+        return $options;
     }
 
     /**

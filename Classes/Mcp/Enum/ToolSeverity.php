@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Enum;
 
 /**
- * Declared severity for MCP tools in the T3AF registry (R13).
+ * Declared severity for MCP tools in the T3AF registry.
  */
 enum ToolSeverity: string
 {

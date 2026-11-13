@@ -2,8 +2,8 @@
 
 # T3Planet AI Credits — Customer rollout (`ns_t3af`)
 
-**Audience:** Developers implementing Credits mode in **`ns_t3af`** (TYPO3 customer sites).  
-**Server reference:** [`FEATURE_T3PlanetCredits_Server.md`](FEATURE_T3PlanetCredits_Server.md) (full spec) and this repo under `composer/API/AI/*`.  
+**Audience:** Developers implementing Credits mode in **`ns_t3af`** (TYPO3 customer sites). 
+**Server reference:** [`FEATURE_T3PlanetCredits_Server.md`](FEATURE_T3PlanetCredits_Server.md) (full spec) and this repo under `composer/API/AI/*`. 
 **Canonical model:** Bearer identity = `ns_ai_token.token`; balances = `ns_ai_account`; license proof = `ns_product_license` + [`DomainMatcher`](composer/API/Utils/DomainMatcher.php). **Credits HTTP calls must not go through `ns_license`** — only this plain-PHP API.
 
 ---
@@ -22,7 +22,7 @@
 
 ## 2. Endpoints implemented today (wire these)
 
-All are **`POST`** unless noted. Send **`Content-Type: application/json`**.  
+All are **`POST`** unless noted. Send **`Content-Type: application/json`**. 
 Bearer endpoints require header: `Authorization: Bearer <64-char-hex-token>`.
 
 | Script | Purpose |
@@ -128,7 +128,7 @@ Per checklist **D.2.3** and spec §1.6 / §9:
 
 ### 8.1 Server allowlist (until general availability)
 
-Composer host may gate AI endpoints with **`API_AI_CREDITS_ALLOWLIST_ENABLED`** and CSV allowlists — see [`composer/API/.env.example`](composer/API/.env.example).  
+Composer host may gate AI endpoints with **`API_AI_CREDITS_ALLOWLIST_ENABLED`** and CSV allowlists — see [`composer/API/.env.example`](composer/API/.env.example). 
 Before **production GA**, disable allowlist (**checklist D.2.2**) so any active customer token works.
 
 ### 8.2 Local / DDEV

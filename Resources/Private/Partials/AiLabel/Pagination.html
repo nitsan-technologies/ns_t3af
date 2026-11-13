@@ -52,12 +52,19 @@
         </f:if>
         <li class="page-item">
             <span class="page-link aiu-ai-usage__pagination-records">
-                <f:translate key="{ll}:module.aiUsage.pagination.records"
-                             arguments="{0: aiLabelPagination.pagination.startRecordNumber, 1: aiLabelPagination.pagination.endRecordNumber, 2: listTotalCount}"
-                             default="Records %1$s–%2$s of %3$s" />
-                <span class="aiu-ai-usage__pagination-sep">|</span>
-                <f:translate key="{ll}:module.aiUsage.pagination.page" default="Page" />
-                {aiLabelPagination.paginator.currentPageNumber} / {aiLabelPagination.pagination.lastPageNumber}
+                <f:if condition="{listTotalCount} > 0">
+                    <f:then>
+                        <f:translate key="{ll}:module.aiUsage.pagination.records"
+                                     arguments="{0: aiLabelPagination.pagination.startRecordNumber, 1: aiLabelPagination.pagination.endRecordNumber, 2: listTotalCount}"
+                                     default="Records %1$s–%2$s of %3$s" />
+                        <span class="aiu-ai-usage__pagination-sep">|</span>
+                        <f:translate key="{ll}:module.aiUsage.pagination.page" default="Page" />
+                        {aiLabelPagination.paginator.currentPageNumber} / {aiLabelPagination.pagination.lastPageNumber}
+                    </f:then>
+                    <f:else>
+                        <f:translate key="{ll}:module.aiLabel.pagination.empty" default="0 records" />
+                    </f:else>
+                </f:if>
             </span>
         </li>
         <f:if condition="{aiLabelPagination.pagination.nextPageNumber} && {aiLabelPagination.pagination.nextPageNumber} <= {aiLabelPagination.pagination.lastPageNumber}">

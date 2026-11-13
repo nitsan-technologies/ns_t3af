@@ -1,7 +1,7 @@
 # Feature — AI Providers
 
-**Status:** Done (v2.x)  
-**Deep spec:** [`FEATURE_AiProviderManagement.md`](../specs/FEATURE_AiProviderManagement.md)  
+**Status:** Done (v2.x) 
+**Deep spec:** [`FEATURE_AiProviderManagement.md`](../specs/FEATURE_AiProviderManagement.md) 
 **User docs:** `Documentation/Developer/CustomProviders.rst`, `Documentation/Configuration/Index.rst`
 
 ---

@@ -23,7 +23,7 @@ use NITSAN\NsT3AF\Mcp\Service\Backend\McpToolLogRepository;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
- * Agent audit rows: correlation id + argument hash, no payloads (T17).
+ * Agent audit rows: correlation id + argument hash, no payloads.
  *
  * @internal
  */

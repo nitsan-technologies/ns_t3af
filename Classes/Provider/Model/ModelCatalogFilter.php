@@ -34,6 +34,8 @@ final class ModelCatalogFilter
      */
     private const DENYLIST = [
         'claude-sonnet-4-20250514',
+        'gemini-2.5-flash',
+        'gemini-2.5-pro',
         'gemini-2.5-flash-lite-preview-09-2025',
     ];
 
@@ -118,6 +120,11 @@ final class ModelCatalogFilter
             'gemini-2.5',
             'gemini-3',
         ])) {
+            return true;
+        }
+
+        // Gemini 2.5 chat ids are retired for new Google users when a 3.x catalog exists.
+        if (preg_match('/^gemini-2\\.5-/', $lower) === 1 && $this->hasAnyPrefix($lookup, ['gemini-3'])) {
             return true;
         }
 

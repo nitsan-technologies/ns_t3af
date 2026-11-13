@@ -187,13 +187,36 @@ final class BeGroupAccessService
     {
         $alerts = [];
         $enabledCount = count(array_filter($config->modules));
-        if ($config->configured && $enabledCount > 0) {
+        $childKeys = ['t3ai', 't3aa', 't3cs', 't3ac', 't3as', 't3al'];
+        $childModulesOn = false;
+        foreach ($childKeys as $childKey) {
+            if (!empty($config->modules[$childKey])) {
+                $childModulesOn = true;
+                break;
+            }
+        }
+        $adminModuleOn = false;
+        foreach (array_keys(ModuleAccessCatalog::ADMIN_MODULES) as $adminKey) {
+            if (!empty($config->modules[$adminKey])) {
+                $adminModuleOn = true;
+                break;
+            }
+        }
+        // Warn when product modules are on but the AI Foundation shell is missing —
+        // including groups that never finished the wizard (`configured` false), and when
+        // shell mods exist but no AI Foundation admin tab is enabled.
+        if ($enabledCount > 0 || $childModulesOn) {
             $groupMods = $this->parseCsvField($beGroupRow['groupMods'] ?? '');
+            $missingShell = false;
             foreach (ModuleAccessCatalog::SHELL_GROUP_MODS as $shellMod) {
                 if (!in_array($shellMod, $groupMods, true)) {
-                    $alerts[] = 'This group is missing AI Foundation backend module access. Re-apply the wizard configuration so editors can open the AI Foundation menu.';
+                    $missingShell = true;
                     break;
                 }
+            }
+            $missingAdminTab = $childModulesOn && !$adminModuleOn;
+            if ($missingShell || $missingAdminTab) {
+                $alerts[] = 'This group is missing AI Foundation backend module access. Re-apply the wizard configuration so editors can open the AI Foundation menu.';
             }
         }
         if (!empty($config->modules['t3ai'])) {

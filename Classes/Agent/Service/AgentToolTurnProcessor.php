@@ -20,6 +20,8 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
+use NITSAN\NsT3AF\Domain\Model\Provider;
+use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
 use NITSAN\NsT3AF\Mcp\Dto\PreviewResult;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Exception\NoChangeRequiredException;
@@ -29,6 +31,8 @@ use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use NITSAN\NsT3AF\Service\SiteStorageContext;
+use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
@@ -1577,11 +1581,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 
         return preg_match(
             '/(?:'
-            . 'what did you (?:change|save)'
-            . '|what was (?:changed|saved)'
-            . '|what changed in this conversation'
-            . '|was hast du (?:geändert|geaendert|gespeichert)'
-            . '|was wurde (?:geändert|geaendert|gespeichert)'
+            . 'what did you (?:\w+\s+){0,3}(?:change|save|apply)'
+            . '|what was (?:\w+\s+){0,3}(?:changed|saved|applied)'
+            . '|what (?:just )?(?:changed|was saved) in this conversation'
+            . '|was hast du (?:\w+\s+){0,3}(?:geändert|geaendert|gespeichert)'
+            . '|was wurde (?:\w+\s+){0,3}(?:geändert|geaendert|gespeichert)'
             . ')/u',
             $text,
         ) === 1;
@@ -2944,7 +2948,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($quoted !== []) {
             return $quoted[0];
         }
-        if (preg_match('/\b(?:to|zu|in)\s+(.+)/iu', $message, $match) !== 1) {
+        if (preg_match('/\b(?:to|zu|in)\s+(.+?)\s*$/iu', $message, $match) !== 1) {
             return '';
         }
         $title = trim((string) $match[1], ' .');
@@ -4433,6 +4437,15 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             (string) ($body['provider'] ?? ''),
             self::requestTextFromBody($body),
         );
+        $imageBlocked = $this->imageGenerationBlockedByProvider(
+            $toolName,
+            $arguments,
+            (string) ($body['provider'] ?? ''),
+            $correlationId,
+        );
+        if ($imageBlocked !== null) {
+            return $imageBlocked;
+        }
         /** @var list<array<string, mixed>> $history */
         $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
@@ -5351,9 +5364,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
-     * DeepL and Google Translate are not agent providers. When the editor asks for one, the card must
-     * say which provider is really used instead of leaving the editor to assume.
+     * Translate-only adapters (DeepL / Google) are not agent providers. When the editor asks for one,
+     * or AI Features / the site default is one of them, the card must say which provider is really used.
      *
+     * @var array<string, string>
+     */
+    private const TRANSLATE_ONLY_ADAPTER_LABELS = [
+        'ns_t3ai.deepl_translate' => 'DeepL',
+        'ns_t3ai.google_translate' => 'Google Translate',
+    ];
+
+    /**
      * @param array<string, mixed> $arguments
      */
     private function translationProviderNotice(string $toolName, array $arguments, string $requestQuery): string
@@ -5361,27 +5382,212 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if (!self::isTranslateTool($toolName)) {
             return '';
         }
-        if (preg_match('/\b(deepl|google\s*translate|google)\b/iu', $requestQuery, $match) !== 1) {
+        $requested = self::translateOnlyNameFromQuery($requestQuery)
+            ?? $this->translateOnlyNameFromConfiguration($arguments);
+        if ($requested === null) {
             return '';
         }
         $used = trim((string) ($arguments['aiProvider'] ?? ''));
-        if ($used === '') {
+        if ($used === '' || strtolower($used) === 'default') {
             $used = $this->translator->translate('agent.translate.defaultProvider');
             if ($used === 'agent.translate.defaultProvider') {
                 $used = 'your default AI provider';
             }
         }
-        $label = $this->translator->translate('agent.translate.providerNotice', [$match[1], $used]);
+        $label = $this->translator->translate('agent.translate.providerNotice', [$requested, $used]);
         if ($label === 'agent.translate.providerNotice') {
             $label = sprintf(
                 "%s can't be used in the agent, so this translation uses %s. For %s, use the page translation dialog.",
-                $match[1],
+                $requested,
                 $used,
-                $match[1],
+                $requested,
             );
         }
 
         return "\n\n" . $label;
+    }
+
+    /**
+     * @internal Exposed for unit tests.
+     */
+    public static function translateOnlyNameFromQuery(string $requestQuery): ?string
+    {
+        if (preg_match('/\b(deepl|google\s*translate|google)\b/iu', $requestQuery, $match) !== 1) {
+            return null;
+        }
+
+        return $match[1];
+    }
+
+    /**
+     * @internal Exposed for unit tests.
+     */
+    public static function translateOnlyNameFromAdapterType(string $adapterType): ?string
+    {
+        $type = Provider::normalizeAdapterType($adapterType);
+
+        return self::TRANSLATE_ONLY_ADAPTER_LABELS[$type] ?? null;
+    }
+
+    /**
+     * Selected chat provider cannot make images → no confirm card; ask the editor to switch.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function imageGenerationBlockedByProvider(
+        string $toolName,
+        array $arguments,
+        string $sessionProvider,
+        string $correlationId,
+    ): ?array {
+        if (strtolower(trim($toolName)) !== 't3ai_generate_image') {
+            return null;
+        }
+        $providerId = trim((string) ($arguments['aiProvider'] ?? ''));
+        if ($providerId === '' || $providerId === AgentProviderOptions::DEFAULT) {
+            $providerId = trim($sessionProvider);
+        }
+        $provider = self::resolveProviderForImageGate($providerId, $arguments);
+        if ($provider === null || $provider->canGenerateImages()) {
+            return null;
+        }
+
+        $title = trim($provider->title);
+        $label = $title !== '' ? $title : $provider->identifier;
+
+        $content = $this->translator->translate('agent.turn.imageProviderCannotGenerate', [$label]);
+        if ($content === '' || $content === 'agent.turn.imageProviderCannotGenerate') {
+            $content = sprintf(
+                '%s cannot create images. Switch the AI Agent provider to OpenAI, Stability AI or MidJourney (or enable T3Planet Credits), then ask again. No image was prepared.',
+                $label,
+            );
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $content,
+            'meta' => [
+                'type' => 'info',
+                'tool' => $toolName,
+                'success' => false,
+                'imageGenerationUnavailable' => true,
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private static function resolveProviderForImageGate(string $providerIdentifier, array $arguments): ?Provider
+    {
+        try {
+            $lookup = GeneralUtility::makeInstance(ProviderLookupInterface::class);
+            $storagePid = null;
+            $pageId = (int) ($arguments['pageId'] ?? $arguments['pid'] ?? 0);
+            if ($pageId > 0) {
+                try {
+                    $storagePid = GeneralUtility::makeInstance(SiteStorageContext::class)
+                        ->resolveStoragePidFromPageId($pageId);
+                } catch (\Throwable) {
+                    $storagePid = null;
+                }
+            }
+            $providerIdentifier = trim($providerIdentifier);
+            if ($providerIdentifier !== '' && $providerIdentifier !== AgentProviderOptions::DEFAULT) {
+                return $lookup->findByIdentifier($providerIdentifier, $storagePid);
+            }
+
+            return $lookup->findDefault($storagePid);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private static function providerIdentifierCanGenerateImages(string $providerIdentifier): bool
+    {
+        $provider = self::resolveProviderForImageGate($providerIdentifier, []);
+
+        return $provider instanceof Provider && $provider->canGenerateImages();
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private function translateOnlyNameFromConfiguration(array $arguments): ?string
+    {
+        $pageId = self::pageIdFromTranslateArguments($arguments);
+        if ($pageId <= 0) {
+            return null;
+        }
+
+        try {
+            $storagePid = GeneralUtility::makeInstance(SiteStorageContext::class)
+                ->resolveStoragePidFromPageId($pageId);
+            if ($storagePid === null || $storagePid <= 0) {
+                return null;
+            }
+
+            $providers = GeneralUtility::makeInstance(ProviderLookupInterface::class);
+            $candidates = [];
+            $configuredId = $this->configuredTranslationProviderIdentifier($storagePid);
+            if ($configuredId !== null) {
+                $candidates[] = $providers->findByIdentifier($configuredId, $storagePid);
+            }
+            $candidates[] = $providers->findDefault($storagePid);
+
+            foreach ($candidates as $provider) {
+                if (!$provider instanceof Provider || !$provider->isEnabled) {
+                    continue;
+                }
+                $label = self::translateOnlyNameFromAdapterType($provider->adapterType);
+                if ($label !== null) {
+                    return $label;
+                }
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return null;
+    }
+
+    private function configuredTranslationProviderIdentifier(int $storagePid): ?string
+    {
+        try {
+            $settings = GeneralUtility::makeInstance(ExtensionSettingsService::class)
+                ->getAll('ns_t3ai', $storagePid);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $value = trim((string) ($settings['defaultProviderForTranslation'] ?? 'default'));
+        if ($value === '' || strtolower($value) === 'default') {
+            return null;
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @internal Exposed for unit tests.
+     */
+    public static function pageIdFromTranslateArguments(array $arguments): int
+    {
+        foreach (['pageId', 'pid'] as $key) {
+            $pageId = (int) ($arguments[$key] ?? 0);
+            if ($pageId > 0) {
+                return $pageId;
+            }
+        }
+        if (isset($arguments['pageIds']) && is_array($arguments['pageIds'])) {
+            return (int) ($arguments['pageIds'][0] ?? 0);
+        }
+
+        return 0;
     }
 
     /**
@@ -5665,11 +5871,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         // Agent provider selection → MCP McpInvocationContext (`aiProvider` arg).
+        // Do not stamp a chat-only provider onto image generation — the confirm card would lie.
+        // Translate tools must not inherit the chat provider (T3AF-PVD-14): MCP honors
+        // defaultProviderForTranslation (DeepL/Google) when aiProvider is left unset.
         $provider = trim($providerIdentifier);
         if (
             $provider !== ''
             && $provider !== AgentProviderOptions::DEFAULT
             && (!isset($arguments['aiProvider']) || trim((string) $arguments['aiProvider']) === '')
+            && !($toolName === 't3ai_generate_image' && !self::providerIdentifierCanGenerateImages($provider))
+            && !self::isTranslateTool($toolName)
         ) {
             $arguments['aiProvider'] = $provider;
         }

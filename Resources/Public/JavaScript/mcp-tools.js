@@ -553,7 +553,9 @@ function openToolDrawerFromTag(root, tag) {
   );
 
   drawer.querySelector('[data-mcp-tools-drawer-name]')?.replaceChildren(document.createTextNode(toolName));
-  const subtitle = tag.getAttribute('data-tool-short-title') ?? '';
+  const severity = (tag.getAttribute('data-tool-severity') ?? '').trim();
+  const shortTitle = tag.getAttribute('data-tool-short-title') ?? '';
+  const subtitle = [severity, shortTitle].filter(Boolean).join(' · ');
   drawer.querySelector('[data-mcp-tools-drawer-subtitle]')?.replaceChildren(document.createTextNode(subtitle));
 
   const body = drawer.querySelector('[data-mcp-tools-drawer-body]');

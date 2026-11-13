@@ -42,9 +42,19 @@ final class InstalledModelCatalog
         return self::restrictsAdapter($adapterType);
     }
 
+    /**
+     * Stability AI image modes (ns_t3ai) — not Symfony-catalog backed, but still a fixed set.
+     *
+     * @var list<string>
+     */
+    private const STABILITY_AI_MODELS = ['core', 'sd3', 'ultra'];
+
     public static function restrictsAdapter(string $adapterType): bool
     {
         $adapterType = Provider::normalizeAdapterType($adapterType);
+        if ($adapterType === 'ns_t3ai.stability_ai') {
+            return true;
+        }
         if (!str_starts_with($adapterType, 'symfony.')) {
             return false;
         }
@@ -66,7 +76,12 @@ final class InstalledModelCatalog
             return [];
         }
 
-        $vendor = substr(Provider::normalizeAdapterType($adapterType), strlen('symfony.'));
+        $adapterType = Provider::normalizeAdapterType($adapterType);
+        if ($adapterType === 'ns_t3ai.stability_ai') {
+            return self::STABILITY_AI_MODELS;
+        }
+
+        $vendor = substr($adapterType, strlen('symfony.'));
         $ids = [];
         foreach ($this->reader->read($vendor) as $model) {
             if ($model->id !== '') {
@@ -88,8 +103,16 @@ final class InstalledModelCatalog
             return null;
         }
 
+        $adapterType = Provider::normalizeAdapterType($adapterType);
         $ids = $this->ids($adapterType);
-        if ($ids === [] || in_array($modelId, $ids, true)) {
+        if ($ids === []) {
+            return null;
+        }
+        // Stability modes are case-insensitive (platform normalizes to lowercase).
+        if ($adapterType === 'ns_t3ai.stability_ai') {
+            $modelId = strtolower($modelId);
+        }
+        if (in_array($modelId, $ids, true)) {
             return null;
         }
 

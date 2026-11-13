@@ -27,7 +27,7 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 
 /**
- * Server-side context resolution for AI Agent turns (T3, R9, R10).
+ * Server-side context resolution for AI Agent turns.
  *
  * @internal
  */

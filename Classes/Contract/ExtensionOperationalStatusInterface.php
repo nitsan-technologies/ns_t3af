@@ -22,7 +22,7 @@ namespace NITSAN\NsT3AF\Contract;
 /**
  * Self-report hook for child extensions consumed by the AI Agent entitlement layer.
  *
- * The agent implements no licence check of its own (R16); it mirrors this answer.
+ * The agent implements no licence check of its own; it mirrors this answer.
  *
  * @api
  */

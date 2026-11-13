@@ -49,6 +49,11 @@
     color-mix(in srgb, var(--typo3-overlay-bg, #000) 72%, transparent)
   );
   z-index: 1080;
+  /* Dim only — do not trap clicks. Editors must still reach module UI (e.g. Pages starter
+     Start) so a second openWithContext can replace the prompt. Close via × / Escape
+     (and the panel itself). Click-on-scrim close stays wired but never fires while
+     pointer-events are none. */
+  pointer-events: none;
 }
 
 .nst3af-agent-panel {
@@ -383,7 +388,6 @@
 }
 
 .nst3af-agent-stream--empty {
-  justify-content: center;
   align-items: center;
   padding: 2rem 1.5rem;
 }
@@ -405,6 +409,10 @@
 }
 
 .nst3af-agent-msg--user p {
+  margin: 0 0 8px;
+}
+
+.nst3af-agent-msg--user p:last-child {
   margin-bottom: 0;
 }
 
@@ -1479,6 +1487,7 @@
 .nst3af-agent-empty {
   width: 100%;
   max-width: 30rem;
+  margin-block: auto;
   text-align: center;
 }
 
@@ -1952,6 +1961,7 @@
 }
 
 .nst3af-agent-suggestions__current {
+  white-space: pre-wrap;
   color: var(--nst3af-agent-text-muted);
 }
 
@@ -1983,6 +1993,15 @@
 .nst3af-agent-suggestions__option-text {
   color: var(--nst3af-agent-text-strong);
   word-break: break-word;
+  /* Schema / page-structure formatters emit newlines — keep them visible. */
+  white-space: pre-wrap;
+}
+
+.nst3af-agent-suggestions__option-text--schema {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  max-height: 16rem;
+  overflow: auto;
 }
 
 .nst3af-agent-suggestions__option textarea {

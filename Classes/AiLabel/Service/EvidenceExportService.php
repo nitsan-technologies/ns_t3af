@@ -98,7 +98,7 @@ final class EvidenceExportService
             return '';
         }
 
-        fputcsv($handle, ['table', 'uid', 'involvement', 'decision', 'reason_code', 'actor', 'timestamp', 'source']);
+        fputcsv($handle, ['table', 'uid', 'involvement', 'decision', 'reason_code', 'actor', 'timestamp', 'source'], ',', '"', '\\');
         foreach ($rows as $row) {
             fputcsv($handle, [
                 $row['table'],
@@ -109,7 +109,7 @@ final class EvidenceExportService
                 $row['actor'],
                 $row['timestamp'],
                 $row['source'],
-            ]);
+            ], ',', '"', '\\');
         }
 
         rewind($handle);

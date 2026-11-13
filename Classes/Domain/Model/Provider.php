@@ -114,6 +114,26 @@ final readonly class Provider
     }
 
     /**
+     * Whether this connected provider can actually generate images (not merely chat).
+     * Keep in sync with {@see \NITSAN\NsT3Ai\Mcp\Service\McpImageSourceResolver::sourceOfProvider()}.
+     */
+    public function canGenerateImages(): bool
+    {
+        if (!$this->isEnabled) {
+            return false;
+        }
+        $adapterType = self::normalizeAdapterType($this->adapterType);
+        if ($adapterType === 'ns_t3ai.stability_ai' || $adapterType === 'ns_t3ai.midjourney') {
+            return true;
+        }
+        if (!self::adapterSupportsImageGeneration($adapterType)) {
+            return false;
+        }
+
+        return $this->hasCapability(Capability::IMAGE_GENERATION);
+    }
+
+    /**
      * Drop image_generation when the adapter cannot generate (legacy rows kept the tick).
      *
      * @param list<string> $capabilities

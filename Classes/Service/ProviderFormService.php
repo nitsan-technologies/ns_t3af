@@ -197,14 +197,27 @@ final class ProviderFormService
             $errors['api_key'] = $apiKeyError;
         }
 
+        $modelId = $this->stringValue($input, 'model_id');
+        $embeddingModelId = $this->stringValue($input, 'embedding_model_id');
+        // Translate-only adapters (DeepL / Google) may omit models; LLM/media need chat
+        // and/or embedding model (embedding-only rows are valid).
+        if ($adapterType !== ''
+            && $this->adapters->has($adapterType)
+            && !$this->adapterAllowsEmptyCapabilities($adapterType)
+            && $modelId === ''
+            && $embeddingModelId === ''
+        ) {
+            $errors['model_id'] = 'Chat / completion model is required.';
+        }
+
         $stored = $uid > 0 ? $this->repository->findByUid($uid) : null;
         $adapterChanging = $stored instanceof Provider && trim($stored->adapterType) !== $adapterType;
-        if ($adapterType !== '' && !$adapterChanging && $this->adapters->has($adapterType)) {
-            $chatModelError = $this->installedModels->rejection($adapterType, $this->stringValue($input, 'model_id'));
+        if ($adapterType !== '' && !$adapterChanging && $this->adapters->has($adapterType) && !isset($errors['model_id'])) {
+            $chatModelError = $this->installedModels->rejection($adapterType, $modelId);
             if ($chatModelError !== null) {
                 $errors['model_id'] = $chatModelError;
             }
-            $embeddingModelError = $this->installedModels->rejection($adapterType, $this->stringValue($input, 'embedding_model_id'));
+            $embeddingModelError = $this->installedModels->rejection($adapterType, $embeddingModelId);
             if ($embeddingModelError !== null) {
                 $errors['embedding_model_id'] = $embeddingModelError;
             }
@@ -237,6 +250,12 @@ final class ProviderFormService
         }
         $wantDefault = ((int) ($payload['is_default'] ?? 0)) === 1;
         if ($wantDefault) {
+            $adapterForDefault = trim((string) ($payload['adapter_type'] ?? $adapterType));
+            if ($this->isTranslateOnlyAdapter($adapterForDefault)) {
+                return ProviderFormResult::errors([
+                    'is_default' => 'Translation-only providers (e.g. DeepL / Google Translate) cannot be the site default. Choose a chat-capable provider instead.',
+                ]);
+            }
             // Avoid save(is_default=1) + setDefault() double-write lock races / deadlocks.
             unset($payload['is_default']);
         }
@@ -274,6 +293,14 @@ final class ProviderFormService
      * in ns_t3ai) are translate-only and must not be forced to pick chat/completion flags.
      */
     private function adapterAllowsEmptyCapabilities(string $adapterType): bool
+    {
+        return $this->isTranslateOnlyAdapter($adapterType);
+    }
+
+    /**
+     * Translate-only adapters must not be the site default (Agent / chat features need LLM).
+     */
+    public function isTranslateOnlyAdapter(string $adapterType): bool
     {
         if ($adapterType === '' || !$this->adapters->has($adapterType)) {
             return false;

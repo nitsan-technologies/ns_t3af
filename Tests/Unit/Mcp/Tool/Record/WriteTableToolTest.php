@@ -393,6 +393,24 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
+    public function mistralNewsPayloadWithRawBreaksAndHtmlQuotesIsAccepted(): void
+    {
+        // Shape seen when Mistral drafts tx_news_domain_model_news via write_table:
+        // raw newlines in teaser/bodytext, unescaped href quotes, and a stray `\` + newline.
+        $raw = '{"pid":32,"title":"T3Planet Updates: Enhancing TYPO3 with AI","teaser":"Ship faster.
+Stay sharp.","bodytext":"<p>Read more at <a href="https://t3planet.com">T3Planet</a>.</p>","author":"T3Planet\\
+Team"}';
+
+        $payload = WriteTableTool::decodeData($raw, 'create');
+
+        self::assertSame(32, $payload['pid']);
+        self::assertSame('T3Planet Updates: Enhancing TYPO3 with AI', $payload['title']);
+        self::assertStringContainsString('Ship faster', (string) $payload['teaser']);
+        self::assertStringContainsString('https://t3planet.com', (string) $payload['bodytext']);
+        self::assertStringContainsString('Team', (string) $payload['author']);
+    }
+
+    #[Test]
     public function deleteNeedsNoDataAndBadDataIsExplained(): void
     {
         self::assertSame([], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('', 'delete'));

@@ -53,8 +53,8 @@ final class ModelCatalogFilterTest extends TestCase
         $catalog = [
             'claude-sonnet-4-5-20250929',
             'claude-haiku-4-5-20251001',
-            'gemini-2.5-flash',
-            'gemini-2.5-pro',
+            'gemini-3.1-pro',
+            'gemini-3.7-flash',
             'gpt-4o-mini',
             'text-embedding-3-small',
         ];
@@ -62,6 +62,15 @@ final class ModelCatalogFilterTest extends TestCase
         foreach ($catalog as $id) {
             self::assertTrue($this->filter->isListedModelId($id, $catalog), $id);
         }
+    }
+
+    #[Test]
+    public function retiredGemini25FlashIsHidden(): void
+    {
+        $catalog = ['gemini-2.5-flash', 'gemini-3.1-pro', 'gpt-4o'];
+
+        self::assertFalse($this->filter->isListedModelId('gemini-2.5-flash', $catalog));
+        self::assertTrue($this->filter->isListedModelId('gemini-3.1-pro', $catalog));
     }
 
     #[Test]
@@ -100,10 +109,11 @@ final class ModelCatalogFilterTest extends TestCase
             'claude-sonnet-4-5-20250929',
             'gemini-2.5-flash-lite-preview-09-2025',
             'gemini-2.5-pro',
+            'gemini-3.1-pro',
         ];
 
         self::assertSame(
-            ['claude-sonnet-4-5-20250929', 'gemini-2.5-pro'],
+            ['claude-sonnet-4-5-20250929', 'gemini-3.1-pro'],
             $this->filter->filterListedModelIds($ids),
         );
     }

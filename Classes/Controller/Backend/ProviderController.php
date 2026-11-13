@@ -486,6 +486,13 @@ final class ProviderController extends AbstractAiUniverseModuleController
             return new JsonResponse(['ok' => false, 'message' => 'Provider not found.'], 404);
         }
 
+        if ($this->formService->isTranslateOnlyAdapter($provider->adapterType)) {
+            return new JsonResponse([
+                'ok' => false,
+                'message' => 'Translation-only providers (e.g. DeepL / Google Translate) cannot be the site default. Choose a chat-capable provider instead.',
+            ], 400);
+        }
+
         $this->providerRepository->setDefault($uid, $resolution->storagePid);
         $this->activityLogService->logProviderSetDefault($provider->identifier, $provider->title);
 
@@ -658,7 +665,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
     }
 
     /**
-     * @return list<array{type: string, label: string, defaultEndpoint: string, requiresEndpoint: bool}>
+     * @return list<array{type: string, label: string, defaultEndpoint: string, requiresEndpoint: bool, requiresModel: bool}>
      */
     private function buildAdapterRows(): array
     {
@@ -670,6 +677,8 @@ final class ProviderController extends AbstractAiUniverseModuleController
                 'label' => $this->formatAdapterUiLabel($type, $adapter->getDisplayName()),
                 'defaultEndpoint' => $adapter->getDefaultEndpoint(),
                 'requiresEndpoint' => Provider::adapterRequiresEndpoint($type),
+                // Translate-only adapters advertise no default capabilities and may omit model_id.
+                'requiresModel' => $adapter->getDefaultCapabilities() !== [],
             ];
         }
 
