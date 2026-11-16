@@ -233,6 +233,23 @@ TXT;
     }
 
     #[Test]
+    public function giveBulletPointsAboutATopicDoesNotOpenCreateBullets(): void
+    {
+        foreach ([
+            'Give three bullet points about accessibility',
+            'Give three bullet points about accessibility in this chat only, do not create content',
+            'Write two sentences intro about this site in chat',
+        ] as $request) {
+            self::assertTrue(AgentRequestChecklist::isChatOnlyWritingRequest($request), $request);
+            self::assertSame([], AgentRequestChecklist::parse($request), $request);
+            self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork([], [], $request), $request);
+        }
+
+        self::assertNotSame([], AgentRequestChecklist::parse('Add a Bullets element with three points about accessibility'));
+        self::assertNotSame([], AgentRequestChecklist::parse('Add a Bullets content element to this page'));
+    }
+
+    #[Test]
     public function createRequestsStillYieldAChecklist(): void
     {
         $steps = AgentRequestChecklist::parse('Add a header and a table to this page');

@@ -234,16 +234,54 @@ final class AgentRequestChecklist
         if (preg_match('/\b(?:don\'?t|do\s+not|without|never|nicht)\s+(?:save|store|persist|speicher\w*)\b/u', $s) === 1) {
             return true;
         }
-        if (preg_match('/\b(?:just|only|nur)\s+(?:show|give|tell|display|zeig\w*|schick\w*)\b/u', $s) === 1
-            && preg_match('/\b(?:in\s+(?:the\s+)?chat|here\b|in\s+this\s+(?:chat|window|panel)|hier\b|im\s+chat)\b/u', $s) === 1) {
+        $inChat = preg_match(
+            '/\b(?:in\s+(?:the\s+|this\s+)?chat|here\b|in\s+this\s+(?:window|panel)|hier\b|im\s+chat)\b/u',
+            $s,
+        ) === 1;
+        if (preg_match('/\b(?:just|only|nur)\s+(?:show|give|tell|display|zeig\w*|schick\w*)\b/u', $s) === 1 && $inChat) {
             return true;
         }
-        if (preg_match('/\b(?:show|give)\s+me\s+the\s+text\s+(?:here|in\s+the\s+chat)\b/u', $s) === 1) {
+        if (preg_match('/\b(?:show|give)\s+me\s+the\s+text\s+(?:here|in\s+(?:the|this)\s+chat)\b/u', $s) === 1) {
+            return true;
+        }
+        // "in this chat … do not create content" (QA phrasing; "this" was missing before).
+        if ($inChat
+            && preg_match('/\b(?:don\'?t|do\s+not|not|nicht)\s+(?:save|add|create|insert|speicher\w*|erstell\w*)\b/u', $s) === 1) {
+            return true;
+        }
+        // "Give three bullet points about X" / "write two sentences …" — reply in chat, not a CE.
+        // Do not match bare "bullets"/"list" alone: those appear in real multi-create plans ("3. **Bullets** – list.").
+        if (!self::asksToCreatePageContent($s)
+            && preg_match('/\b(?:give|show|write|tell|gib|zeig|schreib)\b/u', $s) === 1
+            && preg_match(
+                '/\b(?:bullet\s*points?|short\s+list|numbered\s+(?:list|points?)'
+                . '|(?:\d+|two|three|four|five|a\s+few)\s+sentences?)\b/u',
+                $s,
+            ) === 1) {
             return true;
         }
 
-        return preg_match('/\b(?:in\s+the\s+chat|im\s+chat)\b/u', $s) === 1
-            && preg_match('/\b(?:don\'?t|not|nicht)\s+(?:save|add|create|insert|speicher\w*|erstell\w*)\b/u', $s) === 1;
+        return false;
+    }
+
+    /**
+     * True when the editor asks to add/create a content element (or content) on a page.
+     */
+    private static function asksToCreatePageContent(string $lowerMessage): bool
+    {
+        if (preg_match('/\b(?:add|create|insert|put|place|anlegen|erstellen|hinzufüg\w*|hinzufueg\w*)\b/u', $lowerMessage) === 1
+            && preg_match(
+                '/\b(?:(?:content\s+)?elements?|tt_content|on\s+(?:this\s+)?page|auf\s+dieser\s+seite|inhalt(?:s?elemente?)?)\b/u',
+                $lowerMessage,
+            ) === 1) {
+            return true;
+        }
+
+        return preg_match(
+            '/\b(?:add|create|erstell\w*|hinzufüg\w*|hinzufueg\w*)\s+(?:a\s+|an\s+|eine?[nrs]?\s+)?'
+            . '(?:bullets?|text(?:\s*&\s*media)?|header|table|textmedia)\b/u',
+            $lowerMessage,
+        ) === 1;
     }
 
     /**
