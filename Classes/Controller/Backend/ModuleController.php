@@ -64,6 +64,7 @@ use NITSAN\NsT3AF\Service\AiPromptsService;
 use NITSAN\NsT3AF\Service\AiUniverseActivityLogService;
 use NITSAN\NsT3AF\Service\AiUsageAnalyticsService;
 use NITSAN\NsT3AF\Service\BrandContextDashboardPresenter;
+use NITSAN\NsT3AF\Service\BrandContextService;
 use NITSAN\NsT3AF\Service\DashboardAnalyticsService;
 use NITSAN\NsT3AF\Service\DashboardChartConfigurator;
 use NITSAN\NsT3AF\Service\DashboardModuleHealthService;
@@ -167,6 +168,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         WizardExtensionCatalogService $wizardExtensionCatalog,
         SiteStorageContext $siteStorageContext,
         WizardProgressService $wizardProgress,
+        BrandContextService $brandContextService,
     ) {
         parent::__construct(
             $moduleTemplateFactory,
@@ -180,6 +182,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             $wizardExtensionCatalog,
             $siteStorageContext,
             $wizardProgress,
+            $brandContextService,
         );
     }
 

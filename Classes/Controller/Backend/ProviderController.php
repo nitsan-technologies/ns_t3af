@@ -40,6 +40,7 @@ use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
 use NITSAN\NsT3AF\Provider\Model\ModelDiscoveryServiceInterface;
 use NITSAN\NsT3AF\Service\AiUniverseActivityLogService;
+use NITSAN\NsT3AF\Service\BrandContextService;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use NITSAN\NsT3AF\Service\ModuleStateService;
 use NITSAN\NsT3AF\Service\ProviderFormService;
@@ -96,6 +97,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
         WizardExtensionCatalogService $wizardExtensionCatalog,
         SiteStorageContext $siteStorageContext,
         WizardProgressService $wizardProgress,
+        BrandContextService $brandContextService,
         private readonly ProviderImportService $providerImportService,
         private readonly RecordAccessGate $recordAccessGate,
         private readonly ExtensionAvailability $extensionAvailability,
@@ -113,6 +115,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
             $wizardExtensionCatalog,
             $siteStorageContext,
             $wizardProgress,
+            $brandContextService,
         );
     }
 

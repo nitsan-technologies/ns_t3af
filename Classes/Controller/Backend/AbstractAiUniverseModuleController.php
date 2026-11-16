@@ -67,6 +67,7 @@ abstract class AbstractAiUniverseModuleController
         protected readonly WizardExtensionCatalogService $wizardExtensionCatalog,
         protected readonly SiteStorageContext $siteStorageContext,
         protected readonly WizardProgressService $wizardProgress,
+        protected readonly BrandContextService $brandContextService,
     ) {}
 
     protected function createModuleView(ServerRequestInterface $request, string $activeTabKey): ModuleTemplate
@@ -351,7 +352,7 @@ abstract class AbstractAiUniverseModuleController
     private function encodeWizardBrandContextJson(int $storagePid): string
     {
         $payload = $storagePid > 0
-            ? GeneralUtility::makeInstance(BrandContextService::class)->wizardPrefillPayload($storagePid)
+            ? $this->brandContextService->wizardPrefillPayload($storagePid)
             : [];
 
         return json_encode(

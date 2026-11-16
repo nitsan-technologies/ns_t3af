@@ -58,7 +58,7 @@ final class BrandContextController extends AbstractAiUniverseModuleController
         WizardExtensionCatalogService $wizardExtensionCatalog,
         SiteStorageContext $siteStorageContext,
         WizardProgressService $wizardProgress,
-        private readonly BrandContextService $brandContextService,
+        BrandContextService $brandContextService,
         private readonly RecordAccessEnforcer $recordAccessEnforcer,
     ) {
         parent::__construct(
@@ -73,6 +73,7 @@ final class BrandContextController extends AbstractAiUniverseModuleController
             $wizardExtensionCatalog,
             $siteStorageContext,
             $wizardProgress,
+            $brandContextService,
         );
     }
 

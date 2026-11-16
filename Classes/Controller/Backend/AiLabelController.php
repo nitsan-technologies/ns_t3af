@@ -36,6 +36,7 @@ use NITSAN\NsT3AF\AiLabel\Service\EuIconManifestService;
 use NITSAN\NsT3AF\AiLabel\Service\EvidenceExportService;
 use NITSAN\NsT3AF\AiLabel\Service\OriginRecorder;
 use NITSAN\NsT3AF\Pagination\FixedTotalPaginator;
+use NITSAN\NsT3AF\Service\BrandContextService;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Http\RedirectResponse;
@@ -57,6 +58,7 @@ final class AiLabelController extends AbstractAiUniverseModuleController
         \NITSAN\NsT3AF\Service\WizardExtensionCatalogService $wizardExtensionCatalog,
         \NITSAN\NsT3AF\Service\SiteStorageContext $siteStorageContext,
         \NITSAN\NsT3AF\Service\WizardProgressService $wizardProgress,
+        BrandContextService $brandContextService,
         private readonly AiLabelStatisticsService $statisticsService,
         private readonly CoverageScoreService $coverageScoreService,
         private readonly EuIconManifestService $iconManifest,
@@ -84,6 +86,7 @@ final class AiLabelController extends AbstractAiUniverseModuleController
             $wizardExtensionCatalog,
             $siteStorageContext,
             $wizardProgress,
+            $brandContextService,
         );
     }
 
