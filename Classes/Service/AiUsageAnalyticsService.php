@@ -203,10 +203,15 @@ final class AiUsageAnalyticsService
         $entries = $this->requestLogs->findFiltered($filters, $from, $to, $scope, $perPage, $offset, $providerUids);
         $formatted = [];
         foreach ($entries as $entry) {
-            $entry['cost_formatted'] = $this->moneyFormatter->format(
-                (float) ($entry['estimated_cost'] ?? 0),
-                (string) ($entry['currency'] ?? 'USD'),
-            );
+            $cost = (float) ($entry['estimated_cost'] ?? 0);
+            $tokens = (int) ($entry['total_tokens'] ?? 0);
+            $isCredits = (string) ($entry['provider_identifier'] ?? '') === 't3planet_credits';
+            // Own-keys rows with tokens but $0.00 usually mean provider pricing fields were never set.
+            $pricingUnconfigured = !$isCredits && $cost <= 0.0 && $tokens > 0;
+            $entry['pricing_unconfigured'] = $pricingUnconfigured ? 1 : 0;
+            $entry['cost_formatted'] = $pricingUnconfigured
+                ? ''
+                : $this->moneyFormatter->format($cost, (string) ($entry['currency'] ?? 'USD'));
             $formatted[] = $entry;
         }
 

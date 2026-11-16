@@ -277,6 +277,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $finalText = AgentPromptBuilder::stripLeakedToolCall($finalText);
         $finalText = AgentPromptBuilder::collapseRepeatedReply($finalText);
         $finalText = AgentPromptBuilder::stripGluedToolResultPrefix($finalText);
+        $finalText = AgentPromptBuilder::stripNoToolPreface($finalText);
 
         // Model wrote ask_clarification as JSON text instead of calling the tool — show buttons.
         $embeddedClarification = AskClarificationTool::parseEmbeddedClarification($finalText);

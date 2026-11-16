@@ -64,4 +64,49 @@ final class McpDatabasePromptHandlerTest extends TestCase
         $this->expectExceptionMessage('must be a positive page UID');
         $handler->get(['pid' => 'abc'], $this->createMock(ClientGateway::class));
     }
+
+    #[Test]
+    public function rejectsZeroPidAsInvalidPositiveUidNotAsMissing(): void
+    {
+        $recordService = $this->createMock(RecordService::class);
+        $handler = new McpDatabasePromptHandler(
+            'Audit page {{pid}}',
+            [['name' => 'pid', 'required' => true]],
+            $recordService,
+        );
+
+        $this->expectException(PromptGetException::class);
+        $this->expectExceptionMessage('must be a positive page UID');
+        $handler->get(['pid' => '0'], $this->createMock(ClientGateway::class));
+    }
+
+    #[Test]
+    public function rejectsNegativePid(): void
+    {
+        $recordService = $this->createMock(RecordService::class);
+        $handler = new McpDatabasePromptHandler(
+            'Audit page {{pid}}',
+            [['name' => 'pid', 'required' => true]],
+            $recordService,
+        );
+
+        $this->expectException(PromptGetException::class);
+        $this->expectExceptionMessage('must be a positive page UID');
+        $handler->get(['pid' => '-5'], $this->createMock(ClientGateway::class));
+    }
+
+    #[Test]
+    public function rejectsOversizedPidWithoutOverflowingToPhpIntMax(): void
+    {
+        $recordService = $this->createMock(RecordService::class);
+        $handler = new McpDatabasePromptHandler(
+            'Audit page {{pid}}',
+            [['name' => 'pid', 'required' => true]],
+            $recordService,
+        );
+
+        $this->expectException(PromptGetException::class);
+        $this->expectExceptionMessage('Page ID is too large');
+        $handler->get(['pid' => '99999999999999999999'], $this->createMock(ClientGateway::class));
+    }
 }

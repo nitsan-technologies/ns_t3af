@@ -738,18 +738,24 @@ final class ModuleController extends AbstractAiUniverseModuleController
     private function buildCliConfigJson(): string
     {
         if ($this->isDdevProject()) {
+            $ddevServer = [
+                'command' => 'ddev',
+                'args' => [
+                    'exec',
+                    'php',
+                    'vendor/bin/typo3',
+                    'nst3af:mcp:serve',
+                    '--transport=stdio',
+                ],
+            ];
+            $cwd = $this->resolveLocalCliWorkingDirectory();
+            if ($cwd !== '') {
+                $ddevServer['cwd'] = $cwd;
+            }
+
             return json_encode([
                 'mcpServers' => [
-                    'typo3-ai-foundation' => [
-                        'command' => 'ddev',
-                        'args' => [
-                            'exec',
-                            'php',
-                            'vendor/bin/typo3',
-                            'nst3af:mcp:serve',
-                            '--transport=stdio',
-                        ],
-                    ],
+                    'typo3-ai-foundation' => $ddevServer,
                 ],
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
         }

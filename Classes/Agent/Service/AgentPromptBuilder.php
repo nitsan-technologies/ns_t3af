@@ -98,6 +98,7 @@ readonly class AgentPromptBuilder
             'A new record with its text (a news article, a page, one content element) is ONE create call that already holds the title, teaser and text. Never plan or offer a second step to add content to a record you just created.',
             'To rewrite or change the text of a content element, start from that element\'s own current text (read it first) and never use the text of another element. Keep the meaning and every fact of the original: change only the wording, tone or length the editor asked for, and add no new claims, offers or promises.',
             'Write for editors: plain language, no tool names, ids only where they help to identify a record.',
+            'When the editor asks only for text in the chat (an intro, bullets, a short list) and no write or tool is needed: answer with that text alone. Never preface with tool talk such as "Since no tool was called" or "I will show you the text". If they ask for bullet or numbered points, use markdown list lines (- or 1.).',
             'Only some tools are offered at first. If none fits the request, call find_tools with a short description of the task before you say that something is not possible.',
             'For a request that needs three or more steps (for example create a page, add content, then translate it), call update_plan first with the steps (the first one in_progress), and again after every finished step (mark it completed, start the next). Never for a simple request; never as a substitute for doing the work.',
             'When the editor asks for several content elements of different types (e.g. Text & Media, Text, Bullets), call update_plan with one step per type (and a step to attach an image when they asked for one). After each apply, do the next distinct CType — never create another element of the same CType you just applied. Do not say the request is finished while the plan still has pending or in_progress steps, or while an image still needs attaching.',
@@ -1403,6 +1404,35 @@ readonly class AgentPromptBuilder
      * After a real tool call, models sometimes paste "[Search pages] … [3]The page is already…"
      * into the final answer with no space. Keep the human sentence; drop the glued prefix.
      */
+    /**
+     * Drop meta prefaces such as "Since no tool was called, I'll show you the text right away:".
+     */
+    public static function stripNoToolPreface(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return $text;
+        }
+
+        $stripped = preg_replace(
+            '/^Since\s+no\s+tool\s+was\s+called[^:\n]*:\s*/iu',
+            '',
+            $text,
+            1,
+        );
+        if (!is_string($stripped)) {
+            return $text;
+        }
+        $stripped = preg_replace(
+            '/^I(?:\'ll| will)\s+show\s+you\s+the\s+text(?:\s+right\s+away)?\s*:\s*/iu',
+            '',
+            trim($stripped),
+            1,
+        );
+
+        return is_string($stripped) ? trim($stripped) : $text;
+    }
+
     public static function stripGluedToolResultPrefix(string $text): string
     {
         $text = trim($text);

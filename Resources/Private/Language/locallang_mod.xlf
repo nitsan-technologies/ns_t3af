@@ -1272,6 +1272,9 @@
       <trans-unit id="module.mcpServer.cli.infoLocal" resname="module.mcpServer.cli.infoLocal">
         <source>Local only: Only works when your client has shell access to TYPO3</source>
       </trans-unit>
+      <trans-unit id="module.mcpServer.cli.infoCwd" resname="module.mcpServer.cli.infoCwd">
+        <source>Project folder: Run the client from your TYPO3 project root (where .ddev/ lives), or wrap with: sh -c 'cd /path/to/project &amp;&amp; ddev exec …'. The JSON may include a cwd when the host path is known.</source>
+      </trans-unit>
       <trans-unit id="module.mcpServer.cli.considerationsTitle" resname="module.mcpServer.cli.considerationsTitle">
         <source>Important considerations:</source>
       </trans-unit>
@@ -2498,6 +2501,12 @@
       </trans-unit>
       <trans-unit id="module.aiUsage.intro" resname="module.aiUsage.intro">
         <source>Inspect request logs, usage analytics, and export usage data.</source>
+      </trans-unit>
+      <trans-unit id="module.aiUsage.pricingNotSet" resname="module.aiUsage.pricingNotSet">
+        <source>Pricing not set</source>
+      </trans-unit>
+      <trans-unit id="module.aiUsage.pricingNotSet.hint" resname="module.aiUsage.pricingNotSet.hint">
+        <source>Open AI Providers and set Pricing fields</source>
       </trans-unit>
       <trans-unit id="module.aiLogs.heading" resname="module.aiLogs.heading">
         <source>AI Logs</source>

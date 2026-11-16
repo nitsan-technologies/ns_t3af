@@ -308,7 +308,7 @@ final class WizardController
             return new JsonResponse(['ok' => false, 'message' => $validationError], 400);
         }
 
-        $uid = $this->brandContextService->createWizardProfile($storagePid, $brandContext);
+        $uid = $this->brandContextService->upsertWizardProfile($storagePid, $brandContext);
         if ($uid === null || $uid <= 0) {
             return new JsonResponse(['ok' => false, 'message' => 'Could not save brand context profile.'], 500);
         }

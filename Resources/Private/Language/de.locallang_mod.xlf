@@ -1435,6 +1435,10 @@
                 <source>Local only: Only works when your client has shell access to TYPO3</source>
                 <target>Nur lokal: Funktioniert nur, wenn Ihr Client Shell-Zugriff auf TYPO3 hat</target>
             </trans-unit>
+            <trans-unit id="module.mcpServer.cli.infoCwd">
+                <source>Project folder: Run the client from your TYPO3 project root (where .ddev/ lives), or wrap with: sh -c 'cd /path/to/project &amp;&amp; ddev exec …'. The JSON may include a cwd when the host path is known.</source>
+                <target>Projektordner: Starten Sie den Client im TYPO3-Projektstamm (dort liegt .ddev/), oder wrappen Sie mit: sh -c 'cd /pfad/zum/projekt &amp;&amp; ddev exec …'. Das JSON kann ein cwd enthalten, wenn der Host-Pfad bekannt ist.</target>
+            </trans-unit>
             <trans-unit id="module.mcpServer.cli.considerationsTitle">
                 <source>Important considerations:</source>
                 <target>Wichtige Überlegungen:</target>
@@ -3038,6 +3042,14 @@
             <trans-unit id="module.aiUsage.intro">
                 <source>Inspect request logs, usage analytics, and export usage data.</source>
                 <target>Überprüfen Sie Anforderungsprotokolle, Nutzungsanalysen und exportieren Sie Nutzungsdaten.</target>
+            </trans-unit>
+            <trans-unit id="module.aiUsage.pricingNotSet">
+                <source>Pricing not set</source>
+                <target>Preise nicht gesetzt</target>
+            </trans-unit>
+            <trans-unit id="module.aiUsage.pricingNotSet.hint">
+                <source>Open AI Providers and set Pricing fields</source>
+                <target>Öffnen Sie AI Providers und setzen Sie die Preisfelder</target>
             </trans-unit>
             <trans-unit id="module.aiLogs.heading">
                 <source>AI Logs</source>

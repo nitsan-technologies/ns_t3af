@@ -78,7 +78,16 @@ function initSetupWizard() {
   let step = 1;
   let maxReachedStep = 1;
 
-  /** @type {{ mode: 'credits'|'ownkeys', providerCatalogId: string, providerUid: number|null, modelId: string, connectionOk: boolean, extensionToggles: Record<string, Record<string, boolean>>, brandContext: { brandName: string, industry: string, toneTags: string[], voiceDescription: string, skipped: boolean }, mcp: boolean }} */
+  const brandPrefillRaw = readJsonScript('aiu-wizard-json-brand-context');
+  /** @type {{ uid?: number, brandName?: string, industry?: string, toneTags?: string[], voiceDescription?: string }} */
+  const brandPrefill =
+    typeof brandPrefillRaw === 'object' && brandPrefillRaw !== null
+      ? /** @type {{ uid?: number, brandName?: string, industry?: string, toneTags?: string[], voiceDescription?: string }} */ (
+          brandPrefillRaw
+        )
+      : {};
+
+  /** @type {{ mode: 'credits'|'ownkeys', providerCatalogId: string, providerUid: number|null, modelId: string, connectionOk: boolean, extensionToggles: Record<string, Record<string, boolean>>, brandContext: { uid: number|null, brandName: string, industry: string, toneTags: string[], voiceDescription: string, skipped: boolean }, mcp: boolean }} */
   const state = {
     mode: 'ownkeys',
     providerCatalogId: catalog[0]?.id ?? 'openai',
@@ -87,6 +96,7 @@ function initSetupWizard() {
     connectionOk: true,
     extensionToggles: buildExtensionTogglesFromDefaults(extensionsCatalog.defaults ?? {}),
     brandContext: {
+      uid: null,
       brandName: '',
       industry: '',
       toneTags: [],
@@ -218,24 +228,34 @@ function initSetupWizard() {
     });
   }
 
-  function resetBrandContextDom() {
-    if (brandNameInput instanceof HTMLInputElement) {
-      brandNameInput.value = '';
-    }
-    if (industrySelect instanceof HTMLSelectElement) {
-      industrySelect.value = '';
-    }
-    if (voiceNotesInput instanceof HTMLTextAreaElement) {
-      voiceNotesInput.value = '';
-    }
+  function applyBrandPrefill() {
+    const uid = Number(brandPrefill.uid ?? 0);
+    const toneTags = Array.isArray(brandPrefill.toneTags)
+      ? brandPrefill.toneTags.filter((t) => typeof t === 'string')
+      : [];
     state.brandContext = {
-      brandName: '',
-      industry: '',
-      toneTags: [],
-      voiceDescription: '',
+      uid: Number.isFinite(uid) && uid > 0 ? uid : null,
+      brandName: typeof brandPrefill.brandName === 'string' ? brandPrefill.brandName : '',
+      industry: typeof brandPrefill.industry === 'string' ? brandPrefill.industry : '',
+      toneTags,
+      voiceDescription:
+        typeof brandPrefill.voiceDescription === 'string' ? brandPrefill.voiceDescription : '',
       skipped: false,
     };
+    if (brandNameInput instanceof HTMLInputElement) {
+      brandNameInput.value = state.brandContext.brandName;
+    }
+    if (industrySelect instanceof HTMLSelectElement) {
+      industrySelect.value = state.brandContext.industry;
+    }
+    if (voiceNotesInput instanceof HTMLTextAreaElement) {
+      voiceNotesInput.value = state.brandContext.voiceDescription;
+    }
     syncTonePills();
+  }
+
+  function resetBrandContextDom() {
+    applyBrandPrefill();
   }
 
   function brandContextSummaryDetail() {
