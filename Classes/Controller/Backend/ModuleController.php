@@ -748,9 +748,10 @@ final class ModuleController extends AbstractAiUniverseModuleController
                     '--transport=stdio',
                 ],
             ];
-            $cwd = $this->resolveLocalCliWorkingDirectory();
-            if ($cwd !== '') {
-                $ddevServer['cwd'] = $cwd;
+            // Only host paths — never the container project path (/var/www/html).
+            $hostProject = getenv('DDEV_HOST_PROJECT_PATH');
+            if (is_string($hostProject) && $hostProject !== '') {
+                $ddevServer['cwd'] = $hostProject;
             }
 
             return json_encode([
