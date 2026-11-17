@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Tool\Record;
 
 use Mcp\Exception\ToolCallException;
+use Mcp\Server\ClientGateway;
 use NITSAN\NsT3AF\Mcp\Attribute\McpAgentHidden;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
@@ -78,6 +79,8 @@ final class RecordsApplyToolTest extends TestCase
                 [['table' => 'tt_content', 'uids' => [1, 2], 'set' => ['hidden' => 1]]],
                 'records_apply',
                 '',
+                '',
+                null,
             )
             ->willReturn(new RecordsApplyResult('ra-abc', true, false, ['NEWc' => 41], [], ['tt_content' => ['create' => 1, 'delete' => 1]], []));
 
@@ -111,10 +114,43 @@ final class RecordsApplyToolTest extends TestCase
     {
         $this->service->expects(self::once())
             ->method('apply')
-            ->with([], [], false, true, true, [], 'records_apply', '')
+            ->with([], [], false, true, true, [], 'records_apply', '', '', null)
             ->willReturn(new RecordsApplyResult('ra-abc', false, true, [], [], [], []));
 
         $this->tool->execute();
+    }
+
+    #[Test]
+    public function itSucceedsWithoutAClientGateway(): void
+    {
+        $this->service->method('apply')->willReturn(new RecordsApplyResult('ra-abc', false, true, [], [], [], []));
+
+        $response = json_decode($this->tool->execute('{}'), true);
+
+        self::assertTrue($response['ok']);
+    }
+
+    #[Test]
+    public function itForwardsTheClientGatewayToTheService(): void
+    {
+        $gateway = $this->createMock(ClientGateway::class);
+        $this->service->expects(self::once())
+            ->method('apply')
+            ->with(
+                self::anything(),
+                self::anything(),
+                self::anything(),
+                self::anything(),
+                self::anything(),
+                self::anything(),
+                'records_apply',
+                '',
+                '',
+                $gateway,
+            )
+            ->willReturn(new RecordsApplyResult('ra-abc', false, true, [], [], [], []));
+
+        json_decode($this->tool->execute('{}', gateway: $gateway), true);
     }
 
     #[Test]
@@ -141,7 +177,7 @@ final class RecordsApplyToolTest extends TestCase
     {
         $this->service->expects(self::once())
             ->method('apply')
-            ->with([], [], false, true, true, [], 'records_apply', 'import-2026-10-05')
+            ->with([], [], false, true, true, [], 'records_apply', 'import-2026-10-05', '', null)
             ->willReturn(new RecordsApplyResult('ra-abc', false, true, [], [], [], []));
 
         $this->tool->execute('{}', '{}', false, true, true, '[]', '  import-2026-10-05 ');
@@ -179,6 +215,8 @@ final class RecordsApplyToolTest extends TestCase
                 [['table' => 'tt_content', 'uids' => [1], 'set' => ['hidden' => 1]]],
                 'records_apply',
                 '',
+                '',
+                null,
             )
             ->willReturn(new RecordsApplyResult('ra-abc', false, true, ['NEWc' => 41], [], [], []));
 

@@ -107,6 +107,7 @@ readonly class AgentPromptBuilder
             'Never reply with lines that look like history notes such as "[Prepared change: …]" or "Review the proposed changes for …" — those are internal records of past drafts, not answers. Call a write tool or write a normal sentence.',
             'If a tool result says a tool is not available or was not executed, tell the editor in one sentence instead of retrying it.',
             'Use pageId/pid/uid from context when a tool accepts a page or storage folder id.',
+            'To read a backend user group: when the editor did not give a be_groups uid, call backend_group_list (or ask_clarification with the listed groups) first — never call backend_group_get with uid 0, and never reuse the open page id as a group uid.',
             'Read results earlier in this conversation are still valid: do not read the same record or run the same search again; use what you have. The SEO queue and the translation queue are the exception: list them again when the editor asks to see them.',
             'Do not ask the editor in text whether you should make a change ("Shall we proceed?"): call the write tool; it only prepares the change, and the editor confirms or declines it in the window. If no offered tool can make the change, call find_tools first.',
             'Read only what you need, then act. To create or change something, call the write tool as soon as you know the target; the editor reviews it before anything is saved.',

@@ -68,7 +68,9 @@ readonly class BackendGroupGetTool implements McpNonAiToolInterface
     #[McpTool(
         name: 'backend_group_get',
         description: 'Get a single backend user group (be_groups) by uid. Restricted to admin backend users.'
-            . ' Returns an error for soft-deleted or missing groups.',
+            . ' Requires a positive be_groups uid — never use pageId or 0.'
+            . ' When the editor did not name a group uid, call backend_group_list (or ask) first.'
+            . ' Fails for uid ≤ 0, soft-deleted, or missing groups.',
     )]
     public function execute(int $uid): string
     {
@@ -76,10 +78,17 @@ readonly class BackendGroupGetTool implements McpNonAiToolInterface
             throw new ToolCallException('Admin access required');
         }
 
+        if ($uid <= 0) {
+            throw new ToolCallException(
+                'backend_group_get requires a positive be_groups uid.'
+                . ' Call backend_group_list first or ask which group — never pass 0 or a page id.',
+            );
+        }
+
         $row = $this->recordService->findByUid('be_groups', $uid, self::DETAIL_FIELDS);
 
         if ($row === null || (int) ($row['deleted'] ?? 0) === 1) {
-            return json_encode(['error' => 'Backend group not found', 'uid' => $uid], JSON_THROW_ON_ERROR);
+            throw new ToolCallException('Backend group not found for uid ' . $uid);
         }
 
         return json_encode($row, JSON_THROW_ON_ERROR);

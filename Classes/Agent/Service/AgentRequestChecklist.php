@@ -105,6 +105,26 @@ final class AgentRequestChecklist
             $unique[] = $step;
         }
 
+        // "Text only" / "only one Text" after a multi-type question must not keep Text & Media / Bullets.
+        $exclusive = self::exclusiveContentChoice($message);
+        if ($exclusive !== null) {
+            $kept = [];
+            foreach ($unique as $step) {
+                if ((string) ($step['cType'] ?? '') === $exclusive) {
+                    $kept[] = $step;
+                }
+            }
+            if ($kept === []) {
+                $kept[] = [
+                    'kind' => 'create',
+                    'cType' => $exclusive,
+                    'title' => self::titleForCreate($exclusive, $message),
+                    'status' => 'pending',
+                ];
+            }
+            $unique = $kept;
+        }
+
         $needsImage = self::messageNeedsImage($message, $unique);
         if ($needsImage) {
             $unique[] = [
@@ -453,6 +473,66 @@ final class AgentRequestChecklist
         $found = self::detectCTypesInOrder($segment);
 
         return $found[0] ?? null;
+    }
+
+    /**
+     * Last-line / short replies that pick one CType ("Text only", "only one Text", "Create Text element").
+     * When set, Progress must not invent sibling CTypes from an earlier multi-type question.
+     */
+    public static function exclusiveContentChoice(string $message): ?string
+    {
+        $lines = preg_split('/\R/u', trim($message)) ?: [];
+        $focus = '';
+        for ($i = count($lines) - 1; $i >= 0; --$i) {
+            $line = trim((string) $lines[$i]);
+            if ($line !== '') {
+                $focus = $line;
+                break;
+            }
+        }
+        if ($focus === '') {
+            return null;
+        }
+        $s = mb_strtolower($focus);
+
+        // Prefer the more specific media phrases before bare "text".
+        $exclusivePatterns = [
+            'textmedia' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+|ein(?:en|e)?\s+)?)?(?:text\s*(?:&|and|und)\s*(?:media|medien)|textmedia)(?:\s+(?:element|ce|content(?:\s+element)?))?(?:\s+only|\s+nur)?$/u',
+            'textpic' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+)?)?(?:text\s*(?:&|and|und)\s*(?:images|bilder)|textpic|images?)(?:\s+(?:element|ce))?(?:\s+only|\s+nur)?$/u',
+            'bullets' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+)?)?(?:bullets?|bullet\s*points?|liste|aufzählung|aufzaehlung)(?:\s+(?:element|ce))?(?:\s+only|\s+nur)?$/u',
+            'table' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+)?)?(?:tables?|tabelle)(?:\s+(?:element|ce))?(?:\s+only|\s+nur)?$/u',
+            'header' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+)?)?(?:headers?|headline|überschrift|ueberschrift)(?:\s+(?:element|ce))?(?:\s+only|\s+nur)?$/u',
+            'text' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+|ein(?:en|e)?\s+)?)?(?:create\s+)?text(?:\s+(?:element|ce|content(?:\s+element)?))?(?:\s+only|\s+nur)?$/u',
+        ];
+        foreach ($exclusivePatterns as $cType => $pattern) {
+            if (preg_match($pattern, $s) === 1) {
+                return $cType;
+            }
+        }
+
+        // "only one Text" / "nur ein Text" embedded in a longer last line
+        if (preg_match('/\b(?:only|just|nur)\s+(?:one\s+|a\s+|ein(?:en|e)?\s+)?text(?:\s+(?:element|ce))?\b/u', $s) === 1
+            && preg_match('/\b(text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|textmedia|textpic|bullets?|tables?)\b/u', $s) !== 1
+        ) {
+            return 'text';
+        }
+        if (preg_match('/\btext(?:\s+(?:element|ce))?\s+only\b/u', $s) === 1
+            && preg_match('/\b(text\s*(?:&|and|und)\s*(?:media|medien)|textmedia)\b/u', $s) !== 1
+        ) {
+            return 'text';
+        }
+
+        return null;
+    }
+
+    /**
+     * Short clarification answers that name one content type — do not glue earlier multi-type wording.
+     */
+    public static function isContentTypeChoiceReply(string $message): bool
+    {
+        return self::exclusiveContentChoice($message) !== null
+            && mb_strlen(trim($message)) < 80
+            && substr_count(trim($message), "\n") === 0;
     }
 
     /**

@@ -84,6 +84,7 @@ export const turnMethods = {
 
       this.isRunning = true;
       if (continuation === null) {
+        this.planDismissed = false;
         this.input.value = '';
         this.resizeComposerInput?.();
         this.syncSendButtonEnabled?.();
@@ -189,6 +190,10 @@ export const turnMethods = {
           const discardReply = replies.find((reply) => reply?.meta?.discardOpenDrafts === true);
           if (discardReply) {
             this.discardOpenDraftsQuietly(discardReply.meta?.draftId ?? '');
+          }
+          if (replies.some((reply) => reply?.meta?.planDismissed === true)) {
+            this.planDismissed = true;
+            this.livePlan = null;
           }
         }
         this.context = payload.context ?? this.context;
@@ -461,6 +466,10 @@ export const turnMethods = {
           reply.content = String(meta.turnGuardWarning) + '\n\n' + String(reply.content);
         }
         this.messages.push(reply);
+        if (meta.planDismissed === true) {
+          this.planDismissed = true;
+          this.livePlan = null;
+        }
       };
 
       const flushEvent = (eventName, dataText) => {
@@ -501,6 +510,7 @@ export const turnMethods = {
         }
 
         if (eventName === 'plan') {
+          this.planDismissed = false;
           this.livePlan = Array.isArray(data.steps) ? data.steps : [];
           this.renderPlan();
           return;

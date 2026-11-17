@@ -215,17 +215,45 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
             $openDraft = self::openDraftFollowUp($userMessage, $historyMessages);
             if ($openDraft !== null) {
+                $meta = [
+                    'type' => 'nl_reply',
+                    'correlationId' => $correlationId,
+                    'orchestratorPause' => true,
+                    'discardOpenDrafts' => $openDraft['discard'],
+                    'draftId' => $openDraft['draftId'],
+                ];
+                if ($openDraft['discard'] === true) {
+                    $openPlan = AgentPlan::latest($historyMessages);
+                    if (AgentPlan::hasOpenSteps($openPlan)) {
+                        $meta['plan'] = AgentPlan::dismissOpen($openPlan);
+                        $meta['planDismissed'] = true;
+                    }
+                }
+
                 return $this->single($emitEvent, [
                     'role' => 'assistant',
                     'content' => $this->translator->translate($openDraft['label']),
-                    'meta' => [
-                        'type' => 'nl_reply',
-                        'correlationId' => $correlationId,
-                        'orchestratorPause' => true,
-                        'discardOpenDrafts' => $openDraft['discard'],
-                        'draftId' => $openDraft['draftId'],
-                    ],
+                    'meta' => $meta,
                 ]);
+            }
+            // Cancel / never mind with no open card: still clear a stuck Progress checklist.
+            if (self::isPlanCancellation($userMessage)) {
+                $openPlan = AgentPlan::latest($historyMessages);
+                $checklist = AgentRequestChecklist::reconcile($historyMessages);
+                $effective = $checklist !== [] ? AgentRequestChecklist::toPlan($checklist) : $openPlan;
+                if (AgentPlan::hasOpenSteps($effective)) {
+                    return $this->single($emitEvent, [
+                        'role' => 'assistant',
+                        'content' => $this->translator->translate('agent.plan.cancelled'),
+                        'meta' => [
+                            'type' => 'nl_reply',
+                            'correlationId' => $correlationId,
+                            'orchestratorPause' => true,
+                            'plan' => AgentPlan::dismissOpen($effective),
+                            'planDismissed' => true,
+                        ],
+                    ]);
+                }
             }
             $prepared = $this->directPreparedChange(
                 $userMessage,
@@ -831,6 +859,15 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     /**
      * Asks to write or draft a new news article (not to change, list or delete one).
      */
+    public static function isBlogCreateRequest(string $query): bool
+    {
+        $s = mb_strtolower(trim($query));
+
+        return preg_match('/\b(blog\s*posts?|blogbeitr\w*|blogartikel)\b/u', $s) === 1
+            && preg_match('/\b(write|create|generate|draft|compose|add|make|new|schreib\w*|erstell\w*|generier\w*|anleg\w*)\b/u', $s) === 1
+            && preg_match('/\b(delete|remove|list|show|l[öo]sch\w*|zeig\w*)\b/u', $s) !== 1;
+    }
+
     public static function isNewsCreateRequest(string $query): bool
     {
         $s = mb_strtolower($query);
@@ -1617,6 +1654,24 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if ($newsCreate) {
             $found = [...self::newsCreateTools($executableTools, $offeredNames), ...$found];
         }
+        if (self::asksForNewPage($query)) {
+            $found = [...self::pageCreateTools($executableTools, $offeredNames), ...$found];
+        }
+        if (self::isBlogCreateRequest($query)) {
+            $found = [...self::blogCreateTools($executableTools, $offeredNames), ...$found];
+        }
+        if (
+            preg_match('/\b(analy[sz]\w*|analysis|content\s*analysis|inhaltsanalyse|auswert\w*)\b/iu', $query) === 1
+        ) {
+            $found = [...self::contentAnalysisTools($executableTools, $offeredNames), ...$found];
+        }
+        if (
+            preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $query) === 1
+            && !self::isAltTextMetadataRequest($query)
+            && !isset($notAskedFor['t3ai_generate_image'])
+        ) {
+            $found = [...self::toolsByName(['t3ai_generate_image'], $executableTools, $offeredNames), ...$found];
+        }
         if ($schemaRequest) {
             $found = [...self::schemaTools($executableTools, $offeredNames), ...$found];
         }
@@ -2264,6 +2319,66 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function pageCreateTools(array $executableTools, array $alreadyOffered = []): array
+    {
+        $wanted = array_flip(self::PAGE_CREATE_TOOL_NAMES);
+        $picked = [];
+        foreach ($executableTools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name === '' || !isset($wanted[$name]) || isset($alreadyOffered[$name]) || isset($picked[$name])) {
+                continue;
+            }
+            $picked[$name] = $tool;
+        }
+
+        return array_values($picked);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function blogCreateTools(array $executableTools, array $alreadyOffered = []): array
+    {
+        $wanted = ['t3ai_create_blog_simple' => true, 't3ai_create_blog_advanced' => true];
+        $picked = [];
+        foreach ($executableTools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name === '' || !isset($wanted[$name]) || isset($alreadyOffered[$name]) || isset($picked[$name])) {
+                continue;
+            }
+            $picked[$name] = $tool;
+        }
+
+        return array_values($picked);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function contentAnalysisTools(array $executableTools, array $alreadyOffered = []): array
+    {
+        $wanted = ['t3ai_apply_content_analysis' => true, 't3ai_analyze_content' => true];
+        $picked = [];
+        foreach ($executableTools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name === '' || !isset($wanted[$name]) || isset($alreadyOffered[$name]) || isset($picked[$name])) {
+                continue;
+            }
+            $picked[$name] = $tool;
+        }
+
+        return array_values($picked);
+    }
+
+    /**
      * News create uses write_table (DualMode create-news tools stay agent-hidden without Previewable).
      * Still picks those create tools if they ever appear in the executable catalog.
      *
@@ -2725,6 +2840,29 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * Explicit stop phrases that clear Progress even without an open Apply card.
+     * Omits bare "no" / "nein" so clarification answers do not wipe the plan.
+     */
+    public static function isPlanCancellation(string $message): bool
+    {
+        return in_array(self::plainReply($message), [
+            'never mind',
+            'never mind go back',
+            'nevermind',
+            'cancel',
+            'vergiss es',
+            'egal',
+            'abbrechen',
+            'lass es',
+            'forget it',
+            'doch nicht',
+            'dismiss',
+            'schließen',
+            'schliessen',
+        ], true);
+    }
+
+    /**
      * The capability overview must not be glued onto the next short message ("help" already returns early).
      *
      * @param list<array<string, mixed>> $historyMessages
@@ -2816,6 +2954,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         // previous turn: gluing the earlier question and answer to it would turn words from them (content
         // element names, for example) into steps of a request nobody made.
         if (!$isContinuation && self::isStandaloneRequest($message)) {
+            return $message;
+        }
+        // "Text only" / "Create Text element" after a multi-type question must not re-import sibling CTypes.
+        if (!$isContinuation && AgentRequestChecklist::isContentTypeChoiceReply($message)) {
             return $message;
         }
 

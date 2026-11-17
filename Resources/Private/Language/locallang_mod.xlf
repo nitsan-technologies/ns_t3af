@@ -1456,7 +1456,7 @@
         <source>Streamable HTTP URL (use this)</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.cursor.npx.step1" resname="module.mcpServer.snippet.cursor.npx.step1">
-        <source>In Cursor → Settings → MCP, add a new server and choose command/stdio.</source>
+        <source>In Cursor → Customize → MCPs, add a new server and choose command/stdio.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.cursor.npx.step2" resname="module.mcpServer.snippet.cursor.npx.step2">
         <source>Paste the mcp-remote configuration below (local bridge to TYPO3 streamable HTTP).</source>
@@ -1471,13 +1471,13 @@
         <source>Start the SSH tunnel command above and keep the session open.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.cursor.sshtunnel.step2" resname="module.mcpServer.snippet.cursor.sshtunnel.step2">
-        <source>In Cursor → Settings → MCP, add a remote server using the tunneled URL %s.</source>
+        <source>In Cursor → Customize → MCPs, add a remote server using the tunneled URL %s.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.cursor.mcpremote.step1" resname="module.mcpServer.snippet.cursor.mcpremote.step1">
         <source>Issue an mcp-remote token URL from the Local Bridge panel if your client needs the token in the query string.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.cursor.mcpremote.step2" resname="module.mcpServer.snippet.cursor.mcpremote.step2">
-        <source>Paste the mcp-remote stdio configuration below into Cursor → Settings → MCP.</source>
+        <source>Paste the mcp-remote stdio configuration below into Cursor → Customize → MCPs (or edit mcp.json).</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.transport.badge.docsOnly" resname="module.mcpServer.transport.badge.docsOnly">
         <source>Docs only</source>
@@ -1519,7 +1519,7 @@
         <source>With the SSH tunnel active, use the local MCP URL %s in your client JSON.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.cursor.stdio.step1" resname="module.mcpServer.snippet.cursor.stdio.step1">
-        <source>Open Cursor → Settings → MCP and add a stdio server.</source>
+        <source>Open Cursor → Customize → MCPs and add a stdio server.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.cursor.stdio.step2" resname="module.mcpServer.snippet.cursor.stdio.step2">
         <source>Paste the configuration below. Run the command from your TYPO3 project root (where vendor/bin/typo3 exists).</source>
@@ -1753,7 +1753,7 @@
         <source>Degraded</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.cursor.step1" resname="module.mcpServer.snippet.cursor.step1">
-        <source>Open Cursor Settings → MCP.</source>
+        <source>Open Cursor → Customize → MCPs.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.cursor.step2" resname="module.mcpServer.snippet.cursor.step2">
         <source>Add server URL: %1$s</source>

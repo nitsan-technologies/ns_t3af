@@ -19,7 +19,17 @@
          data-aiu-nav-replace-callback="aiuReinitDashboardRoot">
 
         <div class="aiu-providers">
-        <f:render partial="Module/TabPageHeader" arguments="{headingClass: 'aiu-dashboard__heading', tabHeading: tabHeading, tabIntro: tabIntro, currentPageId: currentPageId, pagePathData: pagePathData, rootPageUid: rootPageUid, rootPageTitle: rootPageTitle}" />
+        <div class="aiu-dashboard__header-row d-flex flex-wrap align-items-start justify-content-between gap-3">
+            <div class="min-w-0 flex-grow-1">
+                <f:render partial="Module/TabPageHeader" arguments="{headingClass: 'aiu-dashboard__heading', tabHeading: tabHeading, tabIntro: tabIntro, currentPageId: currentPageId, pagePathData: pagePathData, rootPageUid: rootPageUid, rootPageTitle: rootPageTitle}" />
+            </div>
+            <button type="button"
+                    class="btn btn-primary aiu-dashboard__agent-cta"
+                    data-nst3af-agent-open
+                    title="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:agent.launch.title', default: 'Open AI Agent')}">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:agent.launch.label" default="Ask AI Agent" />
+            </button>
+        </div>
 
             <f:render partial="Credits/PaymentFlash" arguments="{flash: flash}" />
 

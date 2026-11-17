@@ -160,6 +160,24 @@ final class AgentPlan
     }
 
     /**
+     * Editor dismissed Progress or sent a stop phrase: open steps become failed so the panel can hide.
+     *
+     * @param list<array{title: string, status: string}> $steps
+     * @return list<array{title: string, status: string}>
+     */
+    public static function dismissOpen(array $steps): array
+    {
+        return array_map(static function (array $step): array {
+            $status = (string) ($step['status'] ?? 'pending');
+            if ($status === 'completed' || $status === 'failed') {
+                return ['title' => $step['title'], 'status' => $status];
+            }
+
+            return ['title' => $step['title'], 'status' => 'failed'];
+        }, $steps);
+    }
+
+    /**
      * @param list<array{title: string, status: string}> $steps
      */
     public static function promptBlock(array $steps): string

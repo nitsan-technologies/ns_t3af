@@ -184,6 +184,10 @@ export const chromeMethods = {
           const card = target.closest('[data-nst3af-agent-handoff]');
           card?.remove();
         }
+        if (target.closest('[data-nst3af-agent-plan-dismiss]')) {
+          event.preventDefault();
+          this.dismissPlan();
+        }
       });
 
       document.addEventListener('keydown', (event) => {

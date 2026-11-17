@@ -453,4 +453,34 @@ TXT;
 
         self::assertSame([150], AgentPromptBuilder::unattachedFileUids($history));
     }
+
+    #[Test]
+    public function textOnlyChoiceDoesNotKeepSiblingContentTypes(): void
+    {
+        self::assertSame(
+            ['Create Text element'],
+            array_column(AgentRequestChecklist::parse('Text only'), 'title'),
+        );
+        self::assertSame(
+            ['Create Text element'],
+            array_column(AgentRequestChecklist::parse('only one Text'), 'title'),
+        );
+        self::assertSame(
+            ['Create Text element'],
+            array_column(
+                AgentRequestChecklist::parse("Add Text, Text & Media and Bullets with an image\nText only"),
+                'title',
+            ),
+        );
+        self::assertSame(
+            ['Create Text element'],
+            array_column(
+                AgentRequestChecklist::parse("I can create Text, Text & Media, or Bullets.\nCreate Text element"),
+                'title',
+            ),
+        );
+        self::assertTrue(AgentRequestChecklist::isContentTypeChoiceReply('Text only'));
+        self::assertTrue(AgentRequestChecklist::isContentTypeChoiceReply('Create Text element'));
+        self::assertFalse(AgentRequestChecklist::isContentTypeChoiceReply('Add a text and a bullets element'));
+    }
 }

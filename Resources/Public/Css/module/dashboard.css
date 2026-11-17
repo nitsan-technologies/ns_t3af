@@ -21,6 +21,15 @@
     margin-bottom: .5rem;
 }
 
+.aiu-dashboard__header-row {
+    margin-bottom: .5rem;
+}
+
+.aiu-dashboard__agent-cta {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
 .aiu-dashboard__heading + .aiu-dashboard__checklist-slot {
     margin-top: 0;
 }

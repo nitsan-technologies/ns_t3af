@@ -962,7 +962,9 @@ final class T3afToolbox implements ToolboxInterface
         }
         $this->state->addMessage($message);
         // The step that was running failed: the Progress list shows it instead of spinning on.
-        if (($message['meta']['type'] ?? '') === 'error' && $this->state->plan !== []) {
+        $toolFailed = ($message['meta']['type'] ?? '') === 'error'
+            || (($message['meta']['type'] ?? '') === 'tool_result' && ($message['meta']['success'] ?? true) === false);
+        if ($toolFailed && $this->state->plan !== []) {
             $this->state->setPlan(AgentPlan::failCurrent($this->state->plan));
             $this->state->attachPendingPlan();
         }
