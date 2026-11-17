@@ -54,7 +54,9 @@ final class AgentRequestChecklist
             return [];
         }
 
-        $segments = self::requestSegments($message);
+        // "Do not create Text & Media…" must not invent those steps; strip before CType / exclusive scoring.
+        $forDetection = self::withoutNegatedContentMentions($message);
+        $segments = self::requestSegments($forDetection);
         // "Rename the header of element 5" changes an existing record; the word "header" must not turn it
         // into a request to create a header element that then stays open forever.
         if (count($segments) === 1 && self::isChangeOfExistingRecord($message)) {
@@ -106,7 +108,7 @@ final class AgentRequestChecklist
         }
 
         // "Text only" / "only one Text" after a multi-type question must not keep Text & Media / Bullets.
-        $exclusive = self::exclusiveContentChoice($message);
+        $exclusive = self::exclusiveContentChoice($forDetection);
         if ($exclusive !== null) {
             $kept = [];
             foreach ($unique as $step) {
@@ -476,11 +478,40 @@ final class AgentRequestChecklist
     }
 
     /**
+     * Drop "Do not create Text & Media / Bullets / images" clauses so they cannot invent Progress steps
+     * or block exclusive "only Text" matching.
+     */
+    public static function withoutNegatedContentMentions(string $message): string
+    {
+        $ctype = '(?:text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|textmedia|textpic|bullets?|bullet\s*points?'
+            . '|liste|aufzählung|aufzaehlung|tables?|tabelle|headers?|headline|überschrift|ueberschrift'
+            . '|images?|bilder|text(?:\s+(?:element|ce|content(?:\s+element)?))?)';
+        $neg = '(?:do\s+not|don\'?t|dont|never|kein(?:e|en|er)?|nicht)';
+        $sep = '(?:,|[/]|and|und|or|oder|,?\s*and|,?\s*und|,?\s*or|,?\s*oder)';
+        $list = $ctype . '(?:\s*' . $sep . '\s*(?:' . $neg . '\s+)?' . $ctype . ')*';
+        $pattern = '#\b(?:' . $neg . '\s+(?:(?:create|add|insert|make|build|erstell\w*|hinzu\w*|anleg\w*|f(?:ü|ue)ge?\w*)\s+)?'
+            . '|(?:create|add|insert|make|build|erstell\w*|hinzu\w*|anleg\w*|f(?:ü|ue)ge?\w*)\s+' . $neg . '\s+)'
+            . $list
+            . '(?:\s*(?:content\s+)?elements?)?#iu';
+        $stripped = $message;
+        for ($i = 0; $i < 4; ++$i) {
+            $next = (string) preg_replace($pattern, ' ', $stripped);
+            if ($next === $stripped) {
+                break;
+            }
+            $stripped = $next;
+        }
+
+        return trim((string) preg_replace('/[ \t]{2,}/u', ' ', $stripped));
+    }
+
+    /**
      * Last-line / short replies that pick one CType ("Text only", "only one Text", "Create Text element").
      * When set, Progress must not invent sibling CTypes from an earlier multi-type question.
      */
     public static function exclusiveContentChoice(string $message): ?string
     {
+        $message = self::withoutNegatedContentMentions($message);
         $lines = preg_split('/\R/u', trim($message)) ?: [];
         $focus = '';
         for ($i = count($lines) - 1; $i >= 0; --$i) {
@@ -491,9 +522,14 @@ final class AgentRequestChecklist
             }
         }
         if ($focus === '') {
+            // Whole message may still say "only one Text" across lines after stripping.
+            $focus = trim($message);
+        }
+        if ($focus === '') {
             return null;
         }
         $s = mb_strtolower($focus);
+        $whole = mb_strtolower(trim($message));
 
         // Prefer the more specific media phrases before bare "text".
         $exclusivePatterns = [
@@ -510,14 +546,14 @@ final class AgentRequestChecklist
             }
         }
 
-        // "only one Text" / "nur ein Text" embedded in a longer last line
-        if (preg_match('/\b(?:only|just|nur)\s+(?:one\s+|a\s+|ein(?:en|e)?\s+)?text(?:\s+(?:element|ce))?\b/u', $s) === 1
-            && preg_match('/\b(text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|textmedia|textpic|bullets?|tables?)\b/u', $s) !== 1
+        // "only one Text" / "nur ein Text" / "Only Text." in a longer prompt (negations already stripped).
+        if (preg_match('/\b(?:only|just|nur)\s+(?:one\s+|a\s+|ein(?:en|e)?\s+)?text(?:\s+(?:element|ce|content(?:\s+element)?))?\b/u', $whole) === 1
+            && preg_match('/\b(text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|textmedia|textpic|bullets?|tables?)\b/u', $whole) !== 1
         ) {
             return 'text';
         }
-        if (preg_match('/\btext(?:\s+(?:element|ce))?\s+only\b/u', $s) === 1
-            && preg_match('/\b(text\s*(?:&|and|und)\s*(?:media|medien)|textmedia)\b/u', $s) !== 1
+        if (preg_match('/\btext(?:\s+(?:element|ce))?\s+only\b/u', $whole) === 1
+            && preg_match('/\b(text\s*(?:&|and|und)\s*(?:media|medien)|textmedia)\b/u', $whole) !== 1
         ) {
             return 'text';
         }

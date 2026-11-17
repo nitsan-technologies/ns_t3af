@@ -483,4 +483,38 @@ TXT;
         self::assertTrue(AgentRequestChecklist::isContentTypeChoiceReply('Create Text element'));
         self::assertFalse(AgentRequestChecklist::isContentTypeChoiceReply('Add a text and a bullets element'));
     }
+
+    #[Test]
+    public function negationOfSiblingTypesDoesNotInventProgressSteps(): void
+    {
+        $prompt = 'add ONLY one Text content element. Do not create Text & Media, Bullets, or images. Only Text.';
+        self::assertSame(
+            ['Create Text element'],
+            array_column(AgentRequestChecklist::parse($prompt), 'title'),
+            $prompt,
+        );
+        self::assertSame('text', AgentRequestChecklist::exclusiveContentChoice($prompt));
+        self::assertSame(
+            ['Create Text element'],
+            array_column(
+                AgentRequestChecklist::parse(
+                    'Erstelle nur ein Text Element. Erstelle kein Text & Media, keine Bullets und keine Bilder.',
+                ),
+                'title',
+            ),
+        );
+        // Affirmative multi-create must still keep distinct asked types.
+        self::assertSame(
+            ['textmedia', 'text'],
+            array_column(
+                array_filter(
+                    AgentRequestChecklist::parse(
+                        'Create two elements: a text & media element and a text element about the coast',
+                    ),
+                    static fn(array $s): bool => ($s['kind'] ?? '') === 'create',
+                ),
+                'cType',
+            ),
+        );
+    }
 }
