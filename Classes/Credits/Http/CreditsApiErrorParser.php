@@ -29,7 +29,7 @@ use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
  * Handles the flat envelope ({status:false, error_code, …}), the OpenAI envelope
  * ({error:{message, type, code, param, …}}) and SSE usage payloads, and keeps the
  * diagnostic extras (param, model, upstream_error_code, …) for translated messages
- * and retry decisions.
+ * and retry decisions. Vendor upstream text stays in extras — not in getMessage().
  *
  * @internal
  */
@@ -113,16 +113,22 @@ final class CreditsApiErrorParser
             $code = CreditsApiErrorCodes::CONTEXT_LENGTH_EXCEEDED;
         }
 
+        // Keep upstream/vendor detail in extras for logs — never in getMessage() (editors see resolver labels).
         foreach (self::DETAIL_KEYS as $detailKey) {
             $detail = trim((string) ($decoded[$detailKey] ?? ($nested[$detailKey] ?? '')));
-            if ($detail !== '' && !str_contains($message, $detail)) {
-                $message = $message !== '' && $message !== $code
-                    ? $message . ' — ' . $detail
-                    : $detail;
+            if ($detail !== '') {
+                $extra[$detailKey] ??= $detail;
             }
         }
-        if ($message === '') {
+
+        $rawMessage = trim($message);
+        if ($rawMessage === '' || $rawMessage === $code) {
             $message = $code;
+        } elseif (self::shouldHideRawMessage($code, $rawMessage, $extra)) {
+            $extra['detail'] ??= $rawMessage;
+            $message = $code;
+        } else {
+            $message = $rawMessage;
         }
 
         $topupUrl = (string) ($nested['topup_url'] ?? $decoded['topup_url'] ?? '');
@@ -146,5 +152,31 @@ final class CreditsApiErrorParser
         }
 
         return new CreditsApiException($code, $status, $message, $extra, $previous);
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private static function shouldHideRawMessage(string $code, string $rawMessage, array $extra): bool
+    {
+        if (isset($extra['upstream_message']) || isset($extra['upstream_error']) || isset($extra['upstream_body_snippet'])) {
+            return true;
+        }
+
+        if (in_array($code, [
+            CreditsApiErrorCodes::UPSTREAM_AI_ERROR,
+            CreditsApiErrorCodes::UPSTREAM_AI_TIMEOUT,
+            CreditsApiErrorCodes::RATE_LIMITED,
+            CreditsApiErrorCodes::CHARGE_IN_PROGRESS,
+            CreditsApiErrorCodes::STREAM_IN_PROGRESS,
+            CreditsApiErrorCodes::DAILY_CAP_EXCEEDED,
+        ], true)) {
+            return true;
+        }
+
+        return preg_match(
+            '/platform\.openai\.com|no credits remaining|insufficient[_ ]quota|billing\/|credit_balance_exhausted/i',
+            $rawMessage,
+        ) === 1;
     }
 }

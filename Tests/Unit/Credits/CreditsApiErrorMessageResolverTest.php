@@ -37,6 +37,8 @@ final class CreditsApiErrorMessageResolverTest extends TestCase
                 return match (true) {
                     str_contains($label, 'rate_limited') => 'Wait %s.',
                     str_contains($label, 'tools_unsupported') => 'Model {model} lacks {param}.',
+                    str_contains($label, 'stream_in_progress') => 'Stream still running.',
+                    str_contains($label, 'upstream_ai_error') => 'Upstream AI failed.',
                     str_contains($label, 'api_error') => 'Generic API error.',
                     default => '',
                 };
@@ -105,5 +107,30 @@ final class CreditsApiErrorMessageResolverTest extends TestCase
         ));
 
         self::assertSame('Model gpt-x lacks tools.', $message);
+    }
+
+    public function testResolveStreamInProgressLabel(): void
+    {
+        $resolver = new CreditsApiErrorMessageResolver();
+        $message = $resolver->resolve(new CreditsApiException(
+            'stream_in_progress',
+            409,
+            'stream_in_progress',
+        ));
+
+        self::assertSame('Stream still running.', $message);
+    }
+
+    public function testResolveUpstreamAiErrorIgnoresRawExceptionMessage(): void
+    {
+        $resolver = new CreditsApiErrorMessageResolver();
+        $message = $resolver->resolve(new CreditsApiException(
+            'upstream_ai_error',
+            502,
+            'You have no credits remaining at https://platform.openai.com/billing/',
+        ));
+
+        self::assertSame('Upstream AI failed.', $message);
+        self::assertStringNotContainsString('platform.openai.com', $message);
     }
 }
