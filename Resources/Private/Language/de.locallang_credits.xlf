@@ -51,6 +51,10 @@
                 <source>This request was already processed with different data. Start a new AI request.</source>
                 <target>Diese Anfrage wurde bereits mit anderen Daten bearbeitet. Start a new AI request.</target>
             </trans-unit>
+            <trans-unit id="credits.api.error.stream_in_progress">
+                <source>A T3Planet Credits stream with this request ID is still in progress. Wait for it to finish or start a new request.</source>
+                <target>Ein T3Planet-Credits-Stream mit dieser Anfrage-ID läuft noch. Warten Sie, bis er fertig ist, oder starten Sie eine neue Anfrage.</target>
+            </trans-unit>
             <trans-unit id="credits.api.error.feature_unknown">
                 <source>The requested AI feature is not available on your T3Planet Credits plan.</source>
                 <target>Die angeforderte KI-Funktion ist in Ihrem T3Planet Credits-Plan nicht verfügbar.</target>

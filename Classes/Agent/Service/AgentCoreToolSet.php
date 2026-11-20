@@ -99,6 +99,7 @@ final readonly class AgentCoreToolSet
 
     public function __construct(
         private AgentToolDocumentBuilder $documentBuilder,
+        private ?AgentToolSearch $toolSearch = null,
     ) {}
 
     /**
@@ -140,7 +141,24 @@ final readonly class AgentCoreToolSet
                     $byCategory[$name] = $tool;
                 }
             }
-            $picked += array_slice($declared + $byCategory, 0, self::MAX_MODULE_TOOLS, true);
+            $moduleCandidates = $declared + $byCategory;
+            if (trim($requestQuery) !== '' && $this->toolSearch !== null) {
+                $ranked = $this->toolSearch->rankForModuleCap($requestQuery, array_values($moduleCandidates));
+                $sliced = [];
+                foreach ($ranked as $tool) {
+                    $name = (string) ($tool['name'] ?? '');
+                    if ($name === '') {
+                        continue;
+                    }
+                    $sliced[$name] = $tool;
+                    if (count($sliced) >= self::MAX_MODULE_TOOLS) {
+                        break;
+                    }
+                }
+                $picked += $sliced;
+            } else {
+                $picked += array_slice($moduleCandidates, 0, self::MAX_MODULE_TOOLS, true);
+            }
         }
 
         $skipRecentDeletes = self::isCreateContentRequest($requestQuery);

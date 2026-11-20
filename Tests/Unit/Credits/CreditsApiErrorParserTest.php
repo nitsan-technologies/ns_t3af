@@ -101,4 +101,19 @@ final class CreditsApiErrorParserTest extends TestCase
         self::assertSame(3, $e->extra['cost_units']);
         self::assertSame(502, $e->httpStatus);
     }
+
+    public function testUpstreamDetailStaysOutOfExceptionMessage(): void
+    {
+        $e = CreditsApiErrorParser::toException([
+            'error_code' => 'upstream_ai_error',
+            'message' => 'You have no credits remaining. Add credits at https://platform.openai.com/settings/organization/billing/.',
+            'upstream_message' => 'You have no credits remaining. Add credits at https://platform.openai.com/settings/organization/billing/.',
+        ], 502);
+
+        self::assertSame(CreditsApiErrorCodes::UPSTREAM_AI_ERROR, $e->errorCode);
+        self::assertSame(CreditsApiErrorCodes::UPSTREAM_AI_ERROR, $e->getMessage());
+        self::assertStringNotContainsString('platform.openai.com', $e->getMessage());
+        self::assertStringContainsString('platform.openai.com', (string) ($e->extra['upstream_message'] ?? ''));
+        self::assertStringContainsString('platform.openai.com', (string) ($e->extra['detail'] ?? ''));
+    }
 }

@@ -64,6 +64,7 @@ use NITSAN\NsT3AF\Service\AiPromptsService;
 use NITSAN\NsT3AF\Service\AiUniverseActivityLogService;
 use NITSAN\NsT3AF\Service\AiUsageAnalyticsService;
 use NITSAN\NsT3AF\Service\BrandContextDashboardPresenter;
+use NITSAN\NsT3AF\Service\BrandContextService;
 use NITSAN\NsT3AF\Service\DashboardAnalyticsService;
 use NITSAN\NsT3AF\Service\DashboardChartConfigurator;
 use NITSAN\NsT3AF\Service\DashboardModuleHealthService;
@@ -167,6 +168,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         WizardExtensionCatalogService $wizardExtensionCatalog,
         SiteStorageContext $siteStorageContext,
         WizardProgressService $wizardProgress,
+        BrandContextService $brandContextService,
     ) {
         parent::__construct(
             $moduleTemplateFactory,
@@ -180,6 +182,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             $wizardExtensionCatalog,
             $siteStorageContext,
             $wizardProgress,
+            $brandContextService,
         );
     }
 
@@ -738,18 +741,25 @@ final class ModuleController extends AbstractAiUniverseModuleController
     private function buildCliConfigJson(): string
     {
         if ($this->isDdevProject()) {
+            $ddevServer = [
+                'command' => 'ddev',
+                'args' => [
+                    'exec',
+                    'php',
+                    'vendor/bin/typo3',
+                    'nst3af:mcp:serve',
+                    '--transport=stdio',
+                ],
+            ];
+            // Only host paths — never the container project path (/var/www/html).
+            $hostProject = getenv('DDEV_HOST_PROJECT_PATH');
+            if (is_string($hostProject) && $hostProject !== '') {
+                $ddevServer['cwd'] = $hostProject;
+            }
+
             return json_encode([
                 'mcpServers' => [
-                    'typo3-ai-foundation' => [
-                        'command' => 'ddev',
-                        'args' => [
-                            'exec',
-                            'php',
-                            'vendor/bin/typo3',
-                            'nst3af:mcp:serve',
-                            '--transport=stdio',
-                        ],
-                    ],
+                    'typo3-ai-foundation' => $ddevServer,
                 ],
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
         }

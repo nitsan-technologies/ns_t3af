@@ -2678,6 +2678,12 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.plan.waiting" resname="agent.plan.waiting">
         <source>Waiting for your approval</source>
       </trans-unit>
+      <trans-unit id="agent.plan.dismiss" resname="agent.plan.dismiss">
+        <source>Dismiss</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.cancelled" resname="agent.plan.cancelled">
+        <source>Progress cleared.</source>
+      </trans-unit>
       <trans-unit id="agent.context.pageValue" resname="agent.context.pageValue">
         <source>%1$s (ID %2$s)</source>
       </trans-unit>

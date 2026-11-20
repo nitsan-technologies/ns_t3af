@@ -210,6 +210,79 @@ final class BrandContextService
     }
 
     /**
+     * Prefill payload for Quick Setup step 6 (empty object when no default profile).
+     *
+     * @return array{uid?: int, brandName?: string, industry?: string, toneTags?: list<string>, voiceDescription?: string}
+     */
+    public function wizardPrefillPayload(int $storagePid): array
+    {
+        if ($storagePid <= 0) {
+            return [];
+        }
+
+        $profile = $this->profiles->findDefault($storagePid);
+        if ($profile === null) {
+            return [];
+        }
+
+        return [
+            'uid' => $profile->uid,
+            'brandName' => $profile->brandName,
+            'industry' => $profile->industry,
+            'toneTags' => $profile->toneTags,
+            'voiceDescription' => $profile->voiceNotes,
+        ];
+    }
+
+    /**
+     * Upsert wizard brand fields only — never wipe personas, rules, keywords, etc.
+     *
+     * @param array<string, mixed> $payload
+     */
+    public function upsertWizardProfile(int $storagePid, array $payload): ?int
+    {
+        if ($storagePid <= 0) {
+            return null;
+        }
+
+        $brandName = trim((string) ($payload['brandName'] ?? $payload['brand_name'] ?? ''));
+        $industry = trim((string) ($payload['industry'] ?? ''));
+        $voiceNotes = trim((string) ($payload['voiceDescription'] ?? $payload['voiceNotes'] ?? $payload['voice_notes'] ?? ''));
+        $toneTags = $this->normalizeStringList(
+            $payload['toneTags'] ?? $payload['tone_tags'] ?? [],
+            BrandContextProfile::TONE_TAGS,
+            5,
+        );
+
+        if ($brandName === '' && $industry === '' && $voiceNotes === '' && $toneTags === []) {
+            return null;
+        }
+
+        $targetUid = (int) ($payload['uid'] ?? 0);
+        if ($targetUid > 0 && !$this->profiles->belongsToStorage($targetUid, $storagePid)) {
+            $targetUid = 0;
+        }
+        if ($targetUid <= 0) {
+            $default = $this->profiles->findDefault($storagePid);
+            $targetUid = $default !== null ? $default->uid : 0;
+        }
+
+        if ($targetUid <= 0) {
+            return $this->createWizardProfile($storagePid, $payload);
+        }
+
+        $this->profiles->save($targetUid, [
+            'brand_name' => $this->truncate($brandName, 60),
+            'industry' => $this->truncate($industry, 128),
+            'tone_tags' => BrandContextProfile::encodeJsonList($toneTags),
+            'voice_notes' => $this->truncate($voiceNotes, 300),
+        ]);
+        $this->refreshCompleteness($targetUid);
+
+        return $targetUid;
+    }
+
+    /**
      * @param array<string, mixed> $payload
      *
      * @return array<string, int|float|string|null>

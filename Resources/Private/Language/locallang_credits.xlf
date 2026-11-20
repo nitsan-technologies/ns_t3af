@@ -51,6 +51,9 @@
       <trans-unit id="credits.api.error.charge_in_progress" resname="credits.api.error.charge_in_progress">
         <source>A T3Planet Credits charge with this request ID is still in progress. Wait or start a new request.</source>
       </trans-unit>
+      <trans-unit id="credits.api.error.stream_in_progress" resname="credits.api.error.stream_in_progress">
+        <source>A T3Planet Credits stream with this request ID is still in progress. Wait for it to finish or start a new request.</source>
+      </trans-unit>
       <trans-unit id="credits.api.error.daily_cap_exceeded" resname="credits.api.error.daily_cap_exceeded">
         <source>Your T3Planet Credits daily usage cap has been reached. Try again tomorrow or upgrade your plan.</source>
       </trans-unit>

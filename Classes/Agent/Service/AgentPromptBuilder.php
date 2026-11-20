@@ -98,6 +98,7 @@ readonly class AgentPromptBuilder
             'A new record with its text (a news article, a page, one content element) is ONE create call that already holds the title, teaser and text. Never plan or offer a second step to add content to a record you just created.',
             'To rewrite or change the text of a content element, start from that element\'s own current text (read it first) and never use the text of another element. Keep the meaning and every fact of the original: change only the wording, tone or length the editor asked for, and add no new claims, offers or promises.',
             'Write for editors: plain language, no tool names, ids only where they help to identify a record.',
+            'When the editor asks only for text in the chat (an intro, "bullet points", a short list) and does not ask to add or create page content: answer with that text alone — never call write_table, never create tt_content, and never treat "bullets" / "bullet points" as CType bullets. Never preface with tool talk such as "Since no tool was called" or "I will show you the text". For bullet or numbered points in chat, use markdown list lines (- or 1.). Only create a Bullets content element when they explicitly ask to add/create that element (or Bullets) on the page.',
             'Only some tools are offered at first. If none fits the request, call find_tools with a short description of the task before you say that something is not possible.',
             'For a request that needs three or more steps (for example create a page, add content, then translate it), call update_plan first with the steps (the first one in_progress), and again after every finished step (mark it completed, start the next). Never for a simple request; never as a substitute for doing the work.',
             'When the editor asks for several content elements of different types (e.g. Text & Media, Text, Bullets), call update_plan with one step per type (and a step to attach an image when they asked for one). After each apply, do the next distinct CType — never create another element of the same CType you just applied. Do not say the request is finished while the plan still has pending or in_progress steps, or while an image still needs attaching.',
@@ -106,6 +107,7 @@ readonly class AgentPromptBuilder
             'Never reply with lines that look like history notes such as "[Prepared change: …]" or "Review the proposed changes for …" — those are internal records of past drafts, not answers. Call a write tool or write a normal sentence.',
             'If a tool result says a tool is not available or was not executed, tell the editor in one sentence instead of retrying it.',
             'Use pageId/pid/uid from context when a tool accepts a page or storage folder id.',
+            'To read a backend user group: when the editor did not give a be_groups uid, call backend_group_list (or ask_clarification with the listed groups) first — never call backend_group_get with uid 0, and never reuse the open page id as a group uid.',
             'Read results earlier in this conversation are still valid: do not read the same record or run the same search again; use what you have. The SEO queue and the translation queue are the exception: list them again when the editor asks to see them.',
             'Do not ask the editor in text whether you should make a change ("Shall we proceed?"): call the write tool; it only prepares the change, and the editor confirms or declines it in the window. If no offered tool can make the change, call find_tools first.',
             'Read only what you need, then act. To create or change something, call the write tool as soon as you know the target; the editor reviews it before anything is saved.',
@@ -1403,6 +1405,35 @@ readonly class AgentPromptBuilder
      * After a real tool call, models sometimes paste "[Search pages] … [3]The page is already…"
      * into the final answer with no space. Keep the human sentence; drop the glued prefix.
      */
+    /**
+     * Drop meta prefaces such as "Since no tool was called, I'll show you the text right away:".
+     */
+    public static function stripNoToolPreface(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return $text;
+        }
+
+        $stripped = preg_replace(
+            '/^Since\s+no\s+tool\s+was\s+called[^:\n]*:\s*/iu',
+            '',
+            $text,
+            1,
+        );
+        if (!is_string($stripped)) {
+            return $text;
+        }
+        $stripped = preg_replace(
+            '/^I(?:\'ll| will)\s+show\s+you\s+the\s+text(?:\s+right\s+away)?\s*:\s*/iu',
+            '',
+            trim($stripped),
+            1,
+        );
+
+        return is_string($stripped) ? trim($stripped) : $text;
+    }
+
     public static function stripGluedToolResultPrefix(string $text): string
     {
         $text = trim($text);

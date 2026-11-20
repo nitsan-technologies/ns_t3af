@@ -233,6 +233,23 @@ TXT;
     }
 
     #[Test]
+    public function giveBulletPointsAboutATopicDoesNotOpenCreateBullets(): void
+    {
+        foreach ([
+            'Give three bullet points about accessibility',
+            'Give three bullet points about accessibility in this chat only, do not create content',
+            'Write two sentences intro about this site in chat',
+        ] as $request) {
+            self::assertTrue(AgentRequestChecklist::isChatOnlyWritingRequest($request), $request);
+            self::assertSame([], AgentRequestChecklist::parse($request), $request);
+            self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork([], [], $request), $request);
+        }
+
+        self::assertNotSame([], AgentRequestChecklist::parse('Add a Bullets element with three points about accessibility'));
+        self::assertNotSame([], AgentRequestChecklist::parse('Add a Bullets content element to this page'));
+    }
+
+    #[Test]
     public function createRequestsStillYieldAChecklist(): void
     {
         $steps = AgentRequestChecklist::parse('Add a header and a table to this page');
@@ -435,5 +452,69 @@ TXT;
         ];
 
         self::assertSame([150], AgentPromptBuilder::unattachedFileUids($history));
+    }
+
+    #[Test]
+    public function textOnlyChoiceDoesNotKeepSiblingContentTypes(): void
+    {
+        self::assertSame(
+            ['Create Text element'],
+            array_column(AgentRequestChecklist::parse('Text only'), 'title'),
+        );
+        self::assertSame(
+            ['Create Text element'],
+            array_column(AgentRequestChecklist::parse('only one Text'), 'title'),
+        );
+        self::assertSame(
+            ['Create Text element'],
+            array_column(
+                AgentRequestChecklist::parse("Add Text, Text & Media and Bullets with an image\nText only"),
+                'title',
+            ),
+        );
+        self::assertSame(
+            ['Create Text element'],
+            array_column(
+                AgentRequestChecklist::parse("I can create Text, Text & Media, or Bullets.\nCreate Text element"),
+                'title',
+            ),
+        );
+        self::assertTrue(AgentRequestChecklist::isContentTypeChoiceReply('Text only'));
+        self::assertTrue(AgentRequestChecklist::isContentTypeChoiceReply('Create Text element'));
+        self::assertFalse(AgentRequestChecklist::isContentTypeChoiceReply('Add a text and a bullets element'));
+    }
+
+    #[Test]
+    public function negationOfSiblingTypesDoesNotInventProgressSteps(): void
+    {
+        $prompt = 'add ONLY one Text content element. Do not create Text & Media, Bullets, or images. Only Text.';
+        self::assertSame(
+            ['Create Text element'],
+            array_column(AgentRequestChecklist::parse($prompt), 'title'),
+            $prompt,
+        );
+        self::assertSame('text', AgentRequestChecklist::exclusiveContentChoice($prompt));
+        self::assertSame(
+            ['Create Text element'],
+            array_column(
+                AgentRequestChecklist::parse(
+                    'Erstelle nur ein Text Element. Erstelle kein Text & Media, keine Bullets und keine Bilder.',
+                ),
+                'title',
+            ),
+        );
+        // Affirmative multi-create must still keep distinct asked types.
+        self::assertSame(
+            ['textmedia', 'text'],
+            array_column(
+                array_filter(
+                    AgentRequestChecklist::parse(
+                        'Create two elements: a text & media element and a text element about the coast',
+                    ),
+                    static fn(array $s): bool => ($s['kind'] ?? '') === 'create',
+                ),
+                'cType',
+            ),
+        );
     }
 }

@@ -463,7 +463,7 @@
 }
 
 .aiu-mcp-oauth-settings__options {
-    background: var(--aiu-bg-soft);
+    background: light-dark(#fff, #262626);
     border: 1px solid var(--aiu-border);
     border-radius: var(--aiu-radius-md);
     padding: 1rem 1.25rem;

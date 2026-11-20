@@ -23,6 +23,7 @@ use NITSAN\NsT3AF\Credits\Service\CreditOverviewLineService;
 use NITSAN\NsT3AF\Credits\Service\CreditsReleaseGate;
 use NITSAN\NsT3AF\Domain\Model\BrandContextProfile;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
+use NITSAN\NsT3AF\Service\BrandContextService;
 use NITSAN\NsT3AF\Service\EnvironmentRequirementService;
 use NITSAN\NsT3AF\Service\ModuleStateService;
 use NITSAN\NsT3AF\Service\SiteStorageContext;
@@ -66,6 +67,7 @@ abstract class AbstractAiUniverseModuleController
         protected readonly WizardExtensionCatalogService $wizardExtensionCatalog,
         protected readonly SiteStorageContext $siteStorageContext,
         protected readonly WizardProgressService $wizardProgress,
+        protected readonly BrandContextService $brandContextService,
     ) {}
 
     protected function createModuleView(ServerRequestInterface $request, string $activeTabKey): ModuleTemplate
@@ -272,6 +274,7 @@ abstract class AbstractAiUniverseModuleController
                 'wizardCatalogJson' => $this->encodeWizardCatalogJson(),
                 'wizardExtensionsJson' => $this->encodeWizardExtensionsJson(),
                 'wizardUiJson' => $this->encodeWizardUiJson(),
+                'wizardBrandContextJson' => $this->encodeWizardBrandContextJson($resolution->storagePid),
                 'wizardProvidersAllDisabled' => self::fluidFlag(
                     $this->siteHasOnlyDisabledProviders($resolution->storagePid),
                 ),
@@ -344,6 +347,18 @@ abstract class AbstractAiUniverseModuleController
         );
 
         return json_encode($rows, JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    }
+
+    private function encodeWizardBrandContextJson(int $storagePid): string
+    {
+        $payload = $storagePid > 0
+            ? $this->brandContextService->wizardPrefillPayload($storagePid)
+            : [];
+
+        return json_encode(
+            $payload === [] ? new \stdClass() : $payload,
+            JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
+        );
     }
 
     private function encodeWizardProvidersJson(int $storagePid = 0): string

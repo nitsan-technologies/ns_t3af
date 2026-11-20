@@ -50,7 +50,17 @@ final readonly class McpDatabasePromptHandler implements PromptHandlerInterface
                 continue;
             }
             $value = $arguments[$name] ?? null;
-            if ($value === null || $value === '' || $value === 0 || $value === '0') {
+            if ($value === null || $value === '') {
+                throw new PromptGetException(sprintf('Argument "%s" is required.', $name));
+            }
+            // Page IDs: 0 is present but invalid — same message as -5 / abc (not "required").
+            if (
+                in_array($name, self::PAGE_UID_ARGUMENTS, true)
+                && ($value === 0 || $value === '0')
+            ) {
+                throw new PromptGetException(sprintf('Argument "%s" must be a positive page UID.', $name));
+            }
+            if ($value === 0 || $value === '0') {
                 throw new PromptGetException(sprintf('Argument "%s" is required.', $name));
             }
         }
@@ -86,10 +96,17 @@ final readonly class McpDatabasePromptHandler implements PromptHandlerInterface
             if (is_int($raw)) {
                 $raw = (string) $raw;
             }
-            if (!is_string($raw) || !ctype_digit($raw) || (int) $raw <= 0) {
+            if (!is_string($raw) || !ctype_digit($raw)) {
                 throw new PromptGetException(sprintf('Argument "%s" must be a positive page UID.', $name));
             }
+            $max = (string) PHP_INT_MAX;
+            if (strlen($raw) > strlen($max) || (strlen($raw) === strlen($max) && $raw > $max)) {
+                throw new PromptGetException(sprintf('Argument "%s" Page ID is too large.', $name));
+            }
             $uid = (int) $raw;
+            if ($uid <= 0) {
+                throw new PromptGetException(sprintf('Argument "%s" must be a positive page UID.', $name));
+            }
             if (!$this->recordService->parentPageExists($uid)) {
                 throw new PromptGetException(sprintf('Page %d was not found or is not accessible.', $uid));
             }

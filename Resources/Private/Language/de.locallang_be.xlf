@@ -3425,6 +3425,14 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>Waiting for your approval</source>
                 <target>Wartet auf Ihre Zustimmung</target>
             </trans-unit>
+            <trans-unit id="agent.plan.dismiss">
+                <source>Dismiss</source>
+                <target>Schließen</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.cancelled">
+                <source>Progress cleared.</source>
+                <target>Fortschritt verworfen.</target>
+            </trans-unit>
             <trans-unit id="agent.context.pageValue">
                 <source>%1$s (ID %2$s)</source>
                 <target>%1$s (ID %2$s)</target>

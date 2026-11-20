@@ -54,7 +54,9 @@ final class AgentRequestChecklist
             return [];
         }
 
-        $segments = self::requestSegments($message);
+        // "Do not create Text & Media…" must not invent those steps; strip before CType / exclusive scoring.
+        $forDetection = self::withoutNegatedContentMentions($message);
+        $segments = self::requestSegments($forDetection);
         // "Rename the header of element 5" changes an existing record; the word "header" must not turn it
         // into a request to create a header element that then stays open forever.
         if (count($segments) === 1 && self::isChangeOfExistingRecord($message)) {
@@ -103,6 +105,26 @@ final class AgentRequestChecklist
             }
             $seen[$key] = true;
             $unique[] = $step;
+        }
+
+        // "Text only" / "only one Text" after a multi-type question must not keep Text & Media / Bullets.
+        $exclusive = self::exclusiveContentChoice($forDetection);
+        if ($exclusive !== null) {
+            $kept = [];
+            foreach ($unique as $step) {
+                if ((string) ($step['cType'] ?? '') === $exclusive) {
+                    $kept[] = $step;
+                }
+            }
+            if ($kept === []) {
+                $kept[] = [
+                    'kind' => 'create',
+                    'cType' => $exclusive,
+                    'title' => self::titleForCreate($exclusive, $message),
+                    'status' => 'pending',
+                ];
+            }
+            $unique = $kept;
         }
 
         $needsImage = self::messageNeedsImage($message, $unique);
@@ -234,16 +256,54 @@ final class AgentRequestChecklist
         if (preg_match('/\b(?:don\'?t|do\s+not|without|never|nicht)\s+(?:save|store|persist|speicher\w*)\b/u', $s) === 1) {
             return true;
         }
-        if (preg_match('/\b(?:just|only|nur)\s+(?:show|give|tell|display|zeig\w*|schick\w*)\b/u', $s) === 1
-            && preg_match('/\b(?:in\s+(?:the\s+)?chat|here\b|in\s+this\s+(?:chat|window|panel)|hier\b|im\s+chat)\b/u', $s) === 1) {
+        $inChat = preg_match(
+            '/\b(?:in\s+(?:the\s+|this\s+)?chat|here\b|in\s+this\s+(?:window|panel)|hier\b|im\s+chat)\b/u',
+            $s,
+        ) === 1;
+        if (preg_match('/\b(?:just|only|nur)\s+(?:show|give|tell|display|zeig\w*|schick\w*)\b/u', $s) === 1 && $inChat) {
             return true;
         }
-        if (preg_match('/\b(?:show|give)\s+me\s+the\s+text\s+(?:here|in\s+the\s+chat)\b/u', $s) === 1) {
+        if (preg_match('/\b(?:show|give)\s+me\s+the\s+text\s+(?:here|in\s+(?:the|this)\s+chat)\b/u', $s) === 1) {
+            return true;
+        }
+        // "in this chat … do not create content" (QA phrasing; "this" was missing before).
+        if ($inChat
+            && preg_match('/\b(?:don\'?t|do\s+not|not|nicht)\s+(?:save|add|create|insert|speicher\w*|erstell\w*)\b/u', $s) === 1) {
+            return true;
+        }
+        // "Give three bullet points about X" / "write two sentences …" — reply in chat, not a CE.
+        // Do not match bare "bullets"/"list" alone: those appear in real multi-create plans ("3. **Bullets** – list.").
+        if (!self::asksToCreatePageContent($s)
+            && preg_match('/\b(?:give|show|write|tell|gib|zeig|schreib)\b/u', $s) === 1
+            && preg_match(
+                '/\b(?:bullet\s*points?|short\s+list|numbered\s+(?:list|points?)'
+                . '|(?:\d+|two|three|four|five|a\s+few)\s+sentences?)\b/u',
+                $s,
+            ) === 1) {
             return true;
         }
 
-        return preg_match('/\b(?:in\s+the\s+chat|im\s+chat)\b/u', $s) === 1
-            && preg_match('/\b(?:don\'?t|not|nicht)\s+(?:save|add|create|insert|speicher\w*|erstell\w*)\b/u', $s) === 1;
+        return false;
+    }
+
+    /**
+     * True when the editor asks to add/create a content element (or content) on a page.
+     */
+    private static function asksToCreatePageContent(string $lowerMessage): bool
+    {
+        if (preg_match('/\b(?:add|create|insert|put|place|anlegen|erstellen|hinzufüg\w*|hinzufueg\w*)\b/u', $lowerMessage) === 1
+            && preg_match(
+                '/\b(?:(?:content\s+)?elements?|tt_content|on\s+(?:this\s+)?page|auf\s+dieser\s+seite|inhalt(?:s?elemente?)?)\b/u',
+                $lowerMessage,
+            ) === 1) {
+            return true;
+        }
+
+        return preg_match(
+            '/\b(?:add|create|erstell\w*|hinzufüg\w*|hinzufueg\w*)\s+(?:a\s+|an\s+|eine?[nrs]?\s+)?'
+            . '(?:bullets?|text(?:\s*&\s*media)?|header|table|textmedia)\b/u',
+            $lowerMessage,
+        ) === 1;
     }
 
     /**
@@ -415,6 +475,100 @@ final class AgentRequestChecklist
         $found = self::detectCTypesInOrder($segment);
 
         return $found[0] ?? null;
+    }
+
+    /**
+     * Drop "Do not create Text & Media / Bullets / images" clauses so they cannot invent Progress steps
+     * or block exclusive "only Text" matching.
+     */
+    public static function withoutNegatedContentMentions(string $message): string
+    {
+        $ctype = '(?:text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|textmedia|textpic|bullets?|bullet\s*points?'
+            . '|liste|aufzählung|aufzaehlung|tables?|tabelle|headers?|headline|überschrift|ueberschrift'
+            . '|images?|bilder|text(?:\s+(?:element|ce|content(?:\s+element)?))?)';
+        $neg = '(?:do\s+not|don\'?t|dont|never|kein(?:e|en|er)?|nicht)';
+        $sep = '(?:,|[/]|and|und|or|oder|,?\s*and|,?\s*und|,?\s*or|,?\s*oder)';
+        $list = $ctype . '(?:\s*' . $sep . '\s*(?:' . $neg . '\s+)?' . $ctype . ')*';
+        $pattern = '#\b(?:' . $neg . '\s+(?:(?:create|add|insert|make|build|erstell\w*|hinzu\w*|anleg\w*|f(?:ü|ue)ge?\w*)\s+)?'
+            . '|(?:create|add|insert|make|build|erstell\w*|hinzu\w*|anleg\w*|f(?:ü|ue)ge?\w*)\s+' . $neg . '\s+)'
+            . $list
+            . '(?:\s*(?:content\s+)?elements?)?#iu';
+        $stripped = $message;
+        for ($i = 0; $i < 4; ++$i) {
+            $next = (string) preg_replace($pattern, ' ', $stripped);
+            if ($next === $stripped) {
+                break;
+            }
+            $stripped = $next;
+        }
+
+        return trim((string) preg_replace('/[ \t]{2,}/u', ' ', $stripped));
+    }
+
+    /**
+     * Last-line / short replies that pick one CType ("Text only", "only one Text", "Create Text element").
+     * When set, Progress must not invent sibling CTypes from an earlier multi-type question.
+     */
+    public static function exclusiveContentChoice(string $message): ?string
+    {
+        $message = self::withoutNegatedContentMentions($message);
+        $lines = preg_split('/\R/u', trim($message)) ?: [];
+        $focus = '';
+        for ($i = count($lines) - 1; $i >= 0; --$i) {
+            $line = trim((string) $lines[$i]);
+            if ($line !== '') {
+                $focus = $line;
+                break;
+            }
+        }
+        if ($focus === '') {
+            // Whole message may still say "only one Text" across lines after stripping.
+            $focus = trim($message);
+        }
+        if ($focus === '') {
+            return null;
+        }
+        $s = mb_strtolower($focus);
+        $whole = mb_strtolower(trim($message));
+
+        // Prefer the more specific media phrases before bare "text".
+        $exclusivePatterns = [
+            'textmedia' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+|ein(?:en|e)?\s+)?)?(?:text\s*(?:&|and|und)\s*(?:media|medien)|textmedia)(?:\s+(?:element|ce|content(?:\s+element)?))?(?:\s+only|\s+nur)?$/u',
+            'textpic' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+)?)?(?:text\s*(?:&|and|und)\s*(?:images|bilder)|textpic|images?)(?:\s+(?:element|ce))?(?:\s+only|\s+nur)?$/u',
+            'bullets' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+)?)?(?:bullets?|bullet\s*points?|liste|aufzählung|aufzaehlung)(?:\s+(?:element|ce))?(?:\s+only|\s+nur)?$/u',
+            'table' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+)?)?(?:tables?|tabelle)(?:\s+(?:element|ce))?(?:\s+only|\s+nur)?$/u',
+            'header' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+)?)?(?:headers?|headline|überschrift|ueberschrift)(?:\s+(?:element|ce))?(?:\s+only|\s+nur)?$/u',
+            'text' => '/^(?:(?:only|just|nur)\s+(?:one\s+|a\s+|ein(?:en|e)?\s+)?)?(?:create\s+)?text(?:\s+(?:element|ce|content(?:\s+element)?))?(?:\s+only|\s+nur)?$/u',
+        ];
+        foreach ($exclusivePatterns as $cType => $pattern) {
+            if (preg_match($pattern, $s) === 1) {
+                return $cType;
+            }
+        }
+
+        // "only one Text" / "nur ein Text" / "Only Text." in a longer prompt (negations already stripped).
+        if (preg_match('/\b(?:only|just|nur)\s+(?:one\s+|a\s+|ein(?:en|e)?\s+)?text(?:\s+(?:element|ce|content(?:\s+element)?))?\b/u', $whole) === 1
+            && preg_match('/\b(text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|textmedia|textpic|bullets?|tables?)\b/u', $whole) !== 1
+        ) {
+            return 'text';
+        }
+        if (preg_match('/\btext(?:\s+(?:element|ce))?\s+only\b/u', $whole) === 1
+            && preg_match('/\b(text\s*(?:&|and|und)\s*(?:media|medien)|textmedia)\b/u', $whole) !== 1
+        ) {
+            return 'text';
+        }
+
+        return null;
+    }
+
+    /**
+     * Short clarification answers that name one content type — do not glue earlier multi-type wording.
+     */
+    public static function isContentTypeChoiceReply(string $message): bool
+    {
+        return self::exclusiveContentChoice($message) !== null
+            && mb_strlen(trim($message)) < 80
+            && substr_count(trim($message), "\n") === 0;
     }
 
     /**

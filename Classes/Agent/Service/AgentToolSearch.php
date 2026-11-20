@@ -113,6 +113,46 @@ final readonly class AgentToolSearch
     }
 
     /**
+     * Rank module tools for the start-of-turn cap (BM25 only — no embedding index).
+     * Tools with no keyword hit keep their input order after the ranked ones.
+     *
+     * @param list<array<string, mixed>> $tools
+     * @return list<array<string, mixed>>
+     */
+    public function rankForModuleCap(string $query, array $tools): array
+    {
+        if (trim($query) === '' || $tools === []) {
+            return $tools;
+        }
+        $byName = [];
+        foreach ($tools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name !== '') {
+                $byName[$name] = $tool;
+            }
+        }
+        if ($byName === []) {
+            return $tools;
+        }
+
+        $rankedNames = $this->keywordRanking($query, $byName);
+        $ordered = [];
+        foreach ($rankedNames as $name) {
+            $ordered[] = $byName[$name];
+            unset($byName[$name]);
+        }
+        foreach ($tools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name !== '' && isset($byName[$name])) {
+                $ordered[] = $tool;
+                unset($byName[$name]);
+            }
+        }
+
+        return $ordered;
+    }
+
+    /**
      * @param array<string, array<string, mixed>> $byName
      * @return list<string> tool names, best first
      */

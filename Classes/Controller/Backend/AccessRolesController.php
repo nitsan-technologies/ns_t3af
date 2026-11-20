@@ -29,6 +29,7 @@ use NITSAN\NsT3AF\Credits\Service\CreditOverviewLineService;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Registry\FeatureAccessBindingRegistry;
 use NITSAN\NsT3AF\Service\BeGroupAccessService;
+use NITSAN\NsT3AF\Service\BrandContextService;
 use NITSAN\NsT3AF\Service\ModuleStateService;
 use NITSAN\NsT3AF\Service\PermissionMatrixService;
 use NITSAN\NsT3AF\Service\SiteStorageContext;
@@ -56,6 +57,7 @@ final class AccessRolesController extends AbstractAiUniverseModuleController
         WizardExtensionCatalogService $wizardExtensionCatalog,
         SiteStorageContext $siteStorageContext,
         WizardProgressService $wizardProgress,
+        BrandContextService $brandContextService,
         private readonly BeGroupAccessService $beGroupAccessService,
         private readonly PermissionMatrixService $permissionMatrixService,
         private readonly GroupPresetRegistry $presetRegistry,
@@ -78,6 +80,7 @@ final class AccessRolesController extends AbstractAiUniverseModuleController
             $wizardExtensionCatalog,
             $siteStorageContext,
             $wizardProgress,
+            $brandContextService,
         );
     }
 

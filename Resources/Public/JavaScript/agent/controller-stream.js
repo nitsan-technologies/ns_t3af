@@ -287,6 +287,9 @@ export const streamMethods = {
      * @returns {Array<{title: string, status: string}>}
      */
     currentPlan() {
+      if (this.planDismissed === true) {
+        return [];
+      }
       if (Array.isArray(this.livePlan)) {
         return this.livePlan;
       }
@@ -298,6 +301,23 @@ export const streamMethods = {
         }
       }
       return [];
+    },
+
+    /**
+     * Hide Progress and drop remaining steps for the newest request (Dismiss / cancel).
+     */
+    dismissPlan() {
+      this.planDismissed = true;
+      this.livePlan = null;
+      const since = this.latestRequestIndex();
+      for (let i = this.messages.length - 1; i > since; i--) {
+        const meta = this.messages[i]?.meta;
+        if (meta && Array.isArray(meta.plan)) {
+          meta.plan = [];
+          meta.planDismissed = true;
+        }
+      }
+      this.renderPlan();
     },
 
   /**
@@ -347,11 +367,15 @@ export const streamMethods = {
           + `<span class="nst3af-agent-plan__title">${escapeHtml(String(step.title ?? ''))}</span></li>`;
       }).join('');
       this.planPanel.hidden = false;
-      this.planPanel.innerHTML = `<details class="nst3af-agent-plan__details"${open ? ' open' : ''}>`
+      const dismissLabel = escapeHtml(lang('agent.plan.dismiss', 'Dismiss'));
+      this.planPanel.innerHTML = `<div class="nst3af-agent-plan__bar">`
+        + `<details class="nst3af-agent-plan__details"${open ? ' open' : ''}>`
         + `<summary class="nst3af-agent-plan__summary"><span>${escapeHtml(lang('agent.plan.title', 'Progress'))}</span>`
         + (waiting ? `<span class="nst3af-agent-plan__waiting">${escapeHtml(lang('agent.plan.waiting', 'Waiting for your approval'))}</span>` : '')
         + `<span class="nst3af-agent-plan__count">${done}/${steps.length}</span></summary>`
-        + `<ol class="nst3af-agent-plan__list">${items}</ol></details>`;
+        + `<ol class="nst3af-agent-plan__list">${items}</ol></details>`
+        + `<button type="button" class="btn btn-default btn-sm nst3af-agent-plan__dismiss" data-nst3af-agent-plan-dismiss>${dismissLabel}</button>`
+        + `</div>`;
     },
 
   renderStream() {

@@ -125,4 +125,19 @@ final class AgentPlanTest extends TestCase
         self::assertTrue(AgentPlan::hasOpenSteps($open));
         self::assertStringContainsString('Do not claim the request is finished', AgentPlan::promptBlock($open));
     }
+
+    #[Test]
+    public function dismissOpenFailsPendingAndInProgressSteps(): void
+    {
+        $steps = [
+            ['title' => 'Create Text element', 'status' => 'completed'],
+            ['title' => 'Create Bullets element', 'status' => 'in_progress'],
+            ['title' => 'Attach an image', 'status' => 'pending'],
+        ];
+
+        self::assertSame(
+            ['completed', 'failed', 'failed'],
+            array_column(AgentPlan::dismissOpen($steps), 'status'),
+        );
+    }
 }

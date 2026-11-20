@@ -24,6 +24,7 @@ use const JSON_THROW_ON_ERROR;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Exception\ToolCallException;
 use Mcp\Schema\ToolAnnotations;
+use Mcp\Server\ClientGateway;
 use NITSAN\NsT3AF\Mcp\Attribute\McpAgentHidden;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
@@ -87,6 +88,7 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
         string $requestId = '',
         int $fromFile = 0,
         string $fromPayloadId = '',
+        ?ClientGateway $gateway = null,
     ): string {
         $fromPayloadId = trim($fromPayloadId);
         if ($fromFile > 0 && $fromPayloadId !== '') {
@@ -120,7 +122,7 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
         }
 
         try {
-            $result = $this->service->apply($datamap, $cmdmap, $dryRun, $strict, $append, $bulkEntries, 'records_apply', trim($requestId));
+            $result = $this->service->apply($datamap, $cmdmap, $dryRun, $strict, $append, $bulkEntries, 'records_apply', trim($requestId), '', $gateway);
         } catch (RecordsApplyValidationException $exception) {
             $payload = [
                 'ok' => false,

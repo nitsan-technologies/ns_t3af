@@ -346,7 +346,12 @@ function buildUsageDetailContent(scope, button) {
   const latencyDisplay = latency !== '' ? `${latency} ms` : '';
   const cost = button.getAttribute('data-cost') || '';
   const costFormatted = button.getAttribute('data-cost-formatted') || '';
-  const costDisplay = costFormatted !== '' ? costFormatted : (cost !== '' ? `$${cost}` : '');
+  const pricingUnconfigured = button.getAttribute('data-pricing-unconfigured') === '1';
+  const pricingUnconfiguredLabel =
+    button.getAttribute('data-pricing-unconfigured-label') || 'Pricing not set';
+  const costDisplay = pricingUnconfigured
+    ? pricingUnconfiguredLabel
+    : (costFormatted !== '' ? costFormatted : (cost !== '' ? `$${cost}` : ''));
   const errorCode = (button.getAttribute('data-error-code') || '').trim();
   const errorClass = (button.getAttribute('data-error-class') || '').trim();
   const errorMessage = typeof meta.message === 'string' ? meta.message.trim() : '';

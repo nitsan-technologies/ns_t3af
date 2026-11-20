@@ -624,6 +624,16 @@ final class AgentSessionContextTest extends TestCase
             ),
         );
         self::assertSame('Plain answer.', AgentPromptBuilder::stripGluedToolResultPrefix('Plain answer.'));
+        self::assertSame(
+            'A warm bakery opens at dawn.',
+            AgentPromptBuilder::stripNoToolPreface(
+                'Since no tool was called, I\'ll show you the text right away: A warm bakery opens at dawn.',
+            ),
+        );
+        self::assertSame(
+            'A warm bakery opens at dawn.',
+            AgentPromptBuilder::stripNoToolPreface('A warm bakery opens at dawn.'),
+        );
     }
 
     #[Test]

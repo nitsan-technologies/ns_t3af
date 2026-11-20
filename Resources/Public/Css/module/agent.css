@@ -2625,6 +2625,22 @@
   display: none;
 }
 
+.nst3af-agent-plan__bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.nst3af-agent-plan__bar .nst3af-agent-plan__details {
+  flex: 1;
+  min-width: 0;
+}
+
+.nst3af-agent-plan__dismiss {
+  flex-shrink: 0;
+  margin: 6px 8px 0 0;
+}
+
 .nst3af-agent-plan__summary {
   display: flex;
   align-items: center;

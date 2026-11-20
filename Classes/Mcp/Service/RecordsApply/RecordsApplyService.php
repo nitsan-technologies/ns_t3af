@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Exception\ToolCallException;
+use Mcp\Server\ClientGateway;
 use NITSAN\NsT3AF\Mcp\Authentication\McpBackendUserAuthentication;
 use NITSAN\NsT3AF\Mcp\Service\McpSiteRequestBootstrap;
 use NITSAN\NsT3AF\Mcp\Service\McpSlugRedirectGuard;
@@ -85,7 +86,7 @@ readonly class RecordsApplyService
      * @throws RecordsApplyValidationException when the request is refused before anything is written
      * @throws ToolCallException when DataHandler refuses or fails; everything is rolled back
      */
-    public function apply(array $datamap, array $cmdmap, bool $dryRun, bool $strict, bool $append, array $bulk = [], string $tool = 'records_apply', string $requestId = '', string $batchId = ''): RecordsApplyResult
+    public function apply(array $datamap, array $cmdmap, bool $dryRun, bool $strict, bool $append, array $bulk = [], string $tool = 'records_apply', string $requestId = '', string $batchId = '', ?ClientGateway $gateway = null): RecordsApplyResult
     {
         $batchId = $batchId !== '' ? $batchId : 'ra-' . bin2hex(random_bytes(10));
 
@@ -117,6 +118,8 @@ readonly class RecordsApplyService
         $cmdmap = $checked['cmdmap'];
         $operations = self::operations($datamap, $cmdmap);
         $fieldNames = self::fieldNames($datamap);
+        $progressTotal = (float) max(1, self::batchRecordCount($datamap, $cmdmap));
+        $gateway?->progress(0.0, $progressTotal, 'Applying batch');
 
         // Belt-and-suspenders until MariaDB staging proves the cache-flush guard on every path
         // (nested DataHandler, EXT:news TRUNCATE, …). Copy dryRun is covered by the guard itself.
@@ -181,13 +184,14 @@ readonly class RecordsApplyService
 
         try {
             try {
+                $gateway?->progress(0.0, $progressTotal, 'Running DataHandler');
                 $dataHandler->start($datamap, $cmdmap);
                 $dataHandler->setCorrelationId(CorrelationId::forScope($batchId));
                 $dataHandler->process_datamap();
                 if ($dataHandler->errorLog === []) {
                     $dataHandler->process_cmdmap();
                     $createdInBatch = self::createdFromDataHandler($dataHandler);
-                    $this->applyCollectionParents($connection, $datamap, $createdInBatch);
+                    $this->applyCollectionParents($connection, $datamap, $createdInBatch, $gateway, $progressTotal);
                     $this->fileReferenceParentSync->syncAfterBatch($datamap, $createdInBatch);
                 }
             } catch (\Throwable $throwable) {
@@ -356,6 +360,8 @@ readonly class RecordsApplyService
         }
 
         $this->audit->log($tool, $batchId, $dryRun, true, $dryRun ? 'dry-run' : 'applied', $operations, $fieldNames);
+
+        $gateway?->progress($progressTotal, $progressTotal, $dryRun ? 'Dry run complete' : 'Batch complete');
 
         return $result->withAiLabelled($aiLabelled);
     }
@@ -625,14 +631,25 @@ readonly class RecordsApplyService
      * @param array<mixed> $datamap
      * @param array<string, int> $created
      */
-    private function applyCollectionParents(Connection $connection, array $datamap, array $created): void
-    {
-        foreach ($this->collectionParents->updates($datamap, $created) as $update) {
+    private function applyCollectionParents(
+        Connection $connection,
+        array $datamap,
+        array $created,
+        ?ClientGateway $gateway = null,
+        float $progressTotal = 1.0,
+    ): void {
+        $updates = $this->collectionParents->updates($datamap, $created);
+        $count = count($updates);
+        foreach ($updates as $index => $update) {
             $connection->update(
                 $update['table'],
                 [$update['field'] => $update['value']],
                 ['uid' => $update['uid']],
             );
+            if ($count > 0) {
+                $done = min($progressTotal, $progressTotal * ($index + 1) / $count);
+                $gateway?->progress($done, $progressTotal, 'Updating collection parents');
+            }
         }
     }
 
@@ -671,20 +688,56 @@ readonly class RecordsApplyService
      * @param array<string, array<int, array<string, int>>> $cmdmap
      * @return array<string, array<string, int>>
      */
+    /**
+     * @param array<mixed> $datamap
+     * @param array<mixed> $cmdmap
+     */
+    private static function batchRecordCount(array $datamap, array $cmdmap): int
+    {
+        $count = 0;
+        foreach ($datamap as $records) {
+            if (is_array($records)) {
+                $count += count($records);
+            }
+        }
+        foreach ($cmdmap as $records) {
+            if (is_array($records)) {
+                $count += count($records);
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * @param array<string, array<string|int, mixed>> $datamap
+     * @param array<string, array<string|int, mixed>> $cmdmap
+     * @return array<string, array<string, int>>
+     */
     private static function operations(array $datamap, array $cmdmap): array
     {
         $operations = [];
         foreach ($datamap as $table => $records) {
+            if (!is_array($records)) {
+                continue;
+            }
             foreach (array_keys($records) as $id) {
                 $kind = str_starts_with((string) $id, 'NEW') ? 'create' : 'update';
-                $operations[$table][$kind] = ($operations[$table][$kind] ?? 0) + 1;
+                $operations[(string) $table][$kind] = ($operations[(string) $table][$kind] ?? 0) + 1;
             }
         }
 
         foreach ($cmdmap as $table => $records) {
+            if (!is_array($records)) {
+                continue;
+            }
             foreach ($records as $commands) {
+                if (!is_array($commands)) {
+                    continue;
+                }
                 foreach (array_keys($commands) as $command) {
-                    $operations[$table][$command] = ($operations[$table][$command] ?? 0) + 1;
+                    $key = (string) $command;
+                    $operations[(string) $table][$key] = ($operations[(string) $table][$key] ?? 0) + 1;
                 }
             }
         }

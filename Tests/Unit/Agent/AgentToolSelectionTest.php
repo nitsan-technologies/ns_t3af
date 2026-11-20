@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Agent\Contract\EmbeddingSourceInterface;
 use NITSAN\NsT3AF\Agent\Embedding\EmbeddingSourceResolver;
 use NITSAN\NsT3AF\Agent\Embedding\ProviderEmbeddingSource;
 use NITSAN\NsT3AF\Agent\Service\AgentCoreToolSet;
+use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentSettingsService;
 use NITSAN\NsT3AF\Agent\Service\AgentToolDocumentBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentToolEditorLabelService;
@@ -185,12 +186,20 @@ final class AgentToolSelectionTest extends TestCase
     }
 
     /**
+     * @param list<string> $verbs
+     * @param list<string> $nouns
      * @param list<string> $modules
      * @param list<string> $examples
      * @return array<string, mixed>
      */
-    private function tool(string $name, array $modules = [], array $examples = [], string $category = ''): array
-    {
+    private function tool(
+        string $name,
+        array $modules = [],
+        array $examples = [],
+        string $category = '',
+        array $verbs = [],
+        array $nouns = [],
+    ): array {
         return [
             'name' => $name,
             'description' => '',
@@ -200,8 +209,8 @@ final class AgentToolSelectionTest extends TestCase
                 'examples' => $examples,
                 'summary' => '',
                 'category' => $category,
-                'verbs' => [],
-                'nouns' => [],
+                'verbs' => $verbs,
+                'nouns' => $nouns,
                 'requiresPage' => false,
             ],
         ];
@@ -212,11 +221,6 @@ final class AgentToolSelectionTest extends TestCase
         $translator = (new \ReflectionClass(AgentTranslator::class))->newInstanceWithoutConstructor();
 
         return new AgentToolDocumentBuilder(new AgentToolEditorLabelService($translator), new McpToolMetadataService());
-    }
-
-    private function coreSet(): AgentCoreToolSet
-    {
-        return new AgentCoreToolSet($this->documents());
     }
 
     private function search(?AgentToolIndexInterface $index = null, string $embeddingMode = 'none'): AgentToolSearch
@@ -262,5 +266,104 @@ final class AgentToolSelectionTest extends TestCase
         self::assertTrue(AgentToolSearch::asksForRecordChange('rename the page title'));
         self::assertFalse(AgentToolSearch::asksForRecordChange('clear the cache'));
         self::assertFalse(AgentToolSearch::asksForRecordChange('list backend users'));
+    }
+
+    #[Test]
+    public function moduleCapRanksMatchingToolsAheadOfFillers(): void
+    {
+        $catalog = [...$this->oversizedWebLayoutCatalog(), $this->tool('pages_get')];
+        $context = ['module' => 'web_layout'];
+
+        $schemaNames = $this->toolNamesFromCoreSet($catalog, $context, 'add structured data to this page');
+        self::assertContains('t3ai_apply_schema_markup', $schemaNames);
+
+        $pageNames = $this->toolNamesFromCoreSet($catalog, $context, 'create page Careers under Home');
+        self::assertContains('t3ai_create_page_simple', $pageNames);
+
+        $newsNames = $this->toolNamesFromCoreSet($catalog, $context, 'create news about the product launch');
+        self::assertContains('t3ai_create_news_simple', $newsNames);
+    }
+
+    #[Test]
+    public function forceOfferHelpersPickToolsTheModuleCapMayDrop(): void
+    {
+        $catalog = $this->oversizedWebLayoutCatalog();
+        self::assertContains('t3ai_apply_schema_markup', $this->toolNames(AgentRunner::schemaTools($catalog)));
+        self::assertContains('t3ai_create_page_simple', $this->toolNames(AgentRunner::pageCreateTools($catalog)));
+        self::assertContains('t3ai_create_news_simple', $this->toolNames(array_values(AgentRunner::newsCreateTools($catalog))));
+    }
+
+    /**
+     * 25+ web_layout module tools where alphabetical slice would drop t3ai_* tools.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function oversizedWebLayoutCatalog(): array
+    {
+        $tools = [];
+        for ($i = 1; $i <= 22; ++$i) {
+            $tools[] = $this->tool(
+                'filler_seo_' . $i,
+                modules: ['web_layout'],
+                category: 'seo',
+                examples: ['write meta title for this page'],
+            );
+        }
+        $tools[] = $this->tool(
+            't3ai_apply_schema_markup',
+            modules: ['web_layout'],
+            category: 'seo',
+            examples: ['add structured data', 'apply JSON-LD schema markup'],
+        );
+        $tools[] = $this->tool(
+            't3ai_create_page_simple',
+            modules: ['web_layout'],
+            category: 'pages',
+            examples: ['create page Careers', 'create a new subpage'],
+            verbs: ['create'],
+            nouns: ['page'],
+        );
+        $tools[] = $this->tool(
+            't3ai_create_news_simple',
+            modules: ['web_layout'],
+            category: 'content',
+            examples: ['create news', 'write a news article'],
+            verbs: ['create'],
+            nouns: ['news'],
+        );
+
+        return $tools;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $catalog
+     * @param array<string, mixed> $context
+     * @return list<string>
+     */
+    private function toolNamesFromCoreSet(array $catalog, array $context, string $requestQuery): array
+    {
+        return array_map(
+            static fn(array $tool): string => (string) $tool['name'],
+            $this->coreSetWithSearch()->forTurn($catalog, $context, [], $requestQuery),
+        );
+    }
+
+    /**
+     * @param list<array<string, mixed>> $tools
+     * @return list<string>
+     */
+    private function toolNames(array $tools): array
+    {
+        return array_map(static fn(array $tool): string => (string) $tool['name'], $tools);
+    }
+
+    private function coreSet(): AgentCoreToolSet
+    {
+        return new AgentCoreToolSet($this->documents());
+    }
+
+    private function coreSetWithSearch(): AgentCoreToolSet
+    {
+        return new AgentCoreToolSet($this->documents(), $this->search());
     }
 }

@@ -1435,6 +1435,10 @@
                 <source>Local only: Only works when your client has shell access to TYPO3</source>
                 <target>Nur lokal: Funktioniert nur, wenn Ihr Client Shell-Zugriff auf TYPO3 hat</target>
             </trans-unit>
+            <trans-unit id="module.mcpServer.cli.infoCwd">
+                <source>Project folder: Run the client from your TYPO3 project root (where .ddev/ lives), or wrap with: sh -c 'cd /path/to/project &amp;&amp; ddev exec …'. The JSON may include a cwd when the host path is known.</source>
+                <target>Projektordner: Starten Sie den Client im TYPO3-Projektstamm (dort liegt .ddev/), oder wrappen Sie mit: sh -c 'cd /pfad/zum/projekt &amp;&amp; ddev exec …'. Das JSON kann ein cwd enthalten, wenn der Host-Pfad bekannt ist.</target>
+            </trans-unit>
             <trans-unit id="module.mcpServer.cli.considerationsTitle">
                 <source>Important considerations:</source>
                 <target>Wichtige Überlegungen:</target>
@@ -1728,16 +1732,16 @@
                 <target>Mit aktivem SSH-Tunnel verwenden Sie die lokale MCP-URL %s im Client-JSON.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.cursor.stdio.step1">
-                <source>Open Cursor → Settings → MCP and add a stdio server.</source>
-                <target>Öffnen Sie Cursor → Einstellungen → MCP und fügen Sie einen stdio-Server hinzu.</target>
+                <source>Open Cursor → Customize → MCPs and add a stdio server.</source>
+                <target>Öffnen Sie Cursor → Anpassen → MCPs und fügen Sie einen stdio-Server hinzu.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.cursor.stdio.step2">
                 <source>Paste the configuration below. Run the command from your TYPO3 project root (where vendor/bin/typo3 exists).</source>
                 <target>Fügen Sie die Konfiguration unten ein. Führen Sie den Befehl im TYPO3-Projektroot aus (wo vendor/bin/typo3 liegt).</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.cursor.npx.step1">
-                <source>In Cursor → Settings → MCP, add a new server and choose command/stdio.</source>
-                <target>In Cursor → Einstellungen → MCP einen neuen Server hinzufügen und Befehl/stdio wählen.</target>
+                <source>In Cursor → Customize → MCPs, add a new server and choose command/stdio.</source>
+                <target>In Cursor → Anpassen → MCPs einen neuen Server hinzufügen und Befehl/stdio wählen.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.cursor.npx.step2">
                 <source>Paste the mcp-remote configuration below (local bridge to TYPO3 streamable HTTP).</source>
@@ -1756,16 +1760,16 @@
                 <target>Starten Sie den SSH-Tunnel-Befehl oben und halten Sie die Sitzung offen.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.cursor.sshtunnel.step2">
-                <source>In Cursor → Settings → MCP, add a remote server using the tunneled URL %s.</source>
-                <target>In Cursor → Einstellungen → MCP einen Remote-Server mit der getunnelten URL %s hinzufügen.</target>
+                <source>In Cursor → Customize → MCPs, add a remote server using the tunneled URL %s.</source>
+                <target>In Cursor → Anpassen → MCPs einen Remote-Server mit der getunnelten URL %s hinzufügen.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.cursor.mcpremote.step1">
                 <source>Issue an mcp-remote token URL from the Local Bridge panel if your client needs the token in the query string.</source>
                 <target>Erstellen Sie bei Bedarf eine mcp-remote-Token-URL im Panel „Lokale Brücke“, wenn der Client das Token in der Query-String braucht.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.cursor.mcpremote.step2">
-                <source>Paste the mcp-remote stdio configuration below into Cursor → Settings → MCP.</source>
-                <target>Fügen Sie die mcp-remote-stdio-Konfiguration unten in Cursor → Einstellungen → MCP ein.</target>
+                <source>Paste the mcp-remote stdio configuration below into Cursor → Customize → MCPs (or edit mcp.json).</source>
+                <target>Fügen Sie die mcp-remote-stdio-Konfiguration unten in Cursor → Anpassen → MCPs ein.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.transport.docker.title">
                 <source>Docker / Container</source>
@@ -2072,8 +2076,8 @@
                 <target>Degradiert</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.cursor.step1">
-                <source>Open Cursor Settings → MCP.</source>
-                <target>Öffnen Sie Cursoreinstellungen → MCP.</target>
+                <source>Open Cursor → Customize → MCPs.</source>
+                <target>Öffnen Sie Cursor → Anpassen → MCPs.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.cursor.step2">
                 <source>Add server URL: %1$s</source>
@@ -3038,6 +3042,14 @@
             <trans-unit id="module.aiUsage.intro">
                 <source>Inspect request logs, usage analytics, and export usage data.</source>
                 <target>Überprüfen Sie Anforderungsprotokolle, Nutzungsanalysen und exportieren Sie Nutzungsdaten.</target>
+            </trans-unit>
+            <trans-unit id="module.aiUsage.pricingNotSet">
+                <source>Pricing not set</source>
+                <target>Preise nicht gesetzt</target>
+            </trans-unit>
+            <trans-unit id="module.aiUsage.pricingNotSet.hint">
+                <source>Open AI Providers and set Pricing fields</source>
+                <target>Öffnen Sie AI Providers und setzen Sie die Preisfelder</target>
             </trans-unit>
             <trans-unit id="module.aiLogs.heading">
                 <source>AI Logs</source>
