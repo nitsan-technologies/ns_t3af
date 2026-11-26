@@ -2,6 +2,7 @@
 
 Release notes live in the documentation:
 
+- [2.0.8](Documentation/ReleaseNotes/2.0.8/Index.rst) — 26 November 2026 (reasoning-model sampling: omit temperature/top_p, API retry)
 - [2.0.7](Documentation/ReleaseNotes/2.0.7/Index.rst) — 20 November 2026 (AI Agent Must-fix / ranking, Credits stream label, provider/MCP UI)
 - [2.0.6](Documentation/ReleaseNotes/2.0.6/Index.rst) — 5 November 2026 (AI Agent QA, AI Label, Setup, MCP, structured output API)
 - [2.0.5](Documentation/ReleaseNotes/2.0.5/Index.rst) — 30 October 2026 (Agent Apply/Undo, MCP write safety, Credits dashboard)

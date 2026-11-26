@@ -24,6 +24,7 @@ use const JSON_THROW_ON_ERROR;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Provider\Model\VendorModelIdNormalizer;
+use NITSAN\NsT3AF\Provider\ModelSamplingCapability;
 
 /**
  * Wraps a Symfony AI Platform bridge for tool-calling chat completions.
@@ -60,10 +61,10 @@ final class SymfonyAiPlatform
         // Do not set OpenAI-shaped tool_choice here: Gemini rejects it inside
         // generationConfig, Anthropic expects ['type'=>'auto'] (bridge default),
         // and OpenAI-compatible bridges default tool_choice themselves.
-        $options = [
+        $options = ModelSamplingCapability::filterInvokeOptions($modelId, [
             'tools' => $this->normalizeTools($tools),
-        ];
-        if (!$this->isReasoningModel($modelId)) {
+        ]);
+        if (ModelSamplingCapability::supportsTemperature($modelId) && !array_key_exists('temperature', $options)) {
             $options['temperature'] = $this->provider->temperature;
         }
 
@@ -145,7 +146,8 @@ final class SymfonyAiPlatform
 
         $modelId = VendorModelIdNormalizer::canonicalize($modelId, $this->provider->adapterType);
 
-        if (!$this->isReasoningModel($modelId) && !array_key_exists('temperature', $options)) {
+        $options = ModelSamplingCapability::filterInvokeOptions($modelId, $options);
+        if (ModelSamplingCapability::supportsTemperature($modelId) && !array_key_exists('temperature', $options)) {
             $options['temperature'] = $this->provider->temperature;
         }
 
@@ -632,17 +634,5 @@ final class SymfonyAiPlatform
         }
 
         return '';
-    }
-
-    private function isReasoningModel(string $model): bool
-    {
-        $normalized = strtolower(trim($model));
-        foreach (['o1', 'o1-mini', 'o3', 'o3-mini', 'o4-mini', 'gpt-5'] as $prefix) {
-            if ($normalized === $prefix || str_starts_with($normalized, $prefix . '-') || str_starts_with($normalized, $prefix . '.')) {
-                return true;
-            }
-        }
-
-        return str_contains($normalized, 'gpt-5');
     }
 }

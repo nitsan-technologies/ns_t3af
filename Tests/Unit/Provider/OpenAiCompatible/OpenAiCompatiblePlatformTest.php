@@ -48,6 +48,58 @@ final class OpenAiCompatiblePlatformTest extends TestCase
         }
     }
 
+    public function testInvokeOmitsTemperatureForGpt5(): void
+    {
+        $factory = $this->createMock(RequestFactory::class);
+        $factory->expects(self::once())
+            ->method('request')
+            ->with(
+                self::anything(),
+                self::identicalTo('POST'),
+                self::callback(static function (array $options): bool {
+                    return !array_key_exists('temperature', $options['json'] ?? []);
+                }),
+            )
+            ->willReturn(new Response(200, [], '{"choices":[{"message":{"content":"ok"}}]}'));
+
+        $adapter = new OpenAiCompatibleAdapter(new CredentialCipher(), $factory);
+        $provider = $this->makeProvider(
+            adapterType: Provider::ADAPTER_OPENAI_COMPATIBLE,
+            endpointUrl: 'https://api.openai.com/v1',
+            apiKeyCipher: '',
+        );
+
+        $result = $this->platform($adapter, $provider)->invoke('gpt-5', 'hello');
+
+        self::assertSame('ok', $result['content']);
+    }
+
+    public function testInvokeIncludesTemperatureForGpt4o(): void
+    {
+        $factory = $this->createMock(RequestFactory::class);
+        $factory->expects(self::once())
+            ->method('request')
+            ->with(
+                self::anything(),
+                self::identicalTo('POST'),
+                self::callback(static function (array $options): bool {
+                    return ($options['json']['temperature'] ?? null) === 0.7;
+                }),
+            )
+            ->willReturn(new Response(200, [], '{"choices":[{"message":{"content":"ok"}}]}'));
+
+        $adapter = new OpenAiCompatibleAdapter(new CredentialCipher(), $factory);
+        $provider = $this->makeProvider(
+            adapterType: Provider::ADAPTER_OPENAI_COMPATIBLE,
+            endpointUrl: 'https://api.openai.com/v1',
+            apiKeyCipher: '',
+        );
+
+        $result = $this->platform($adapter, $provider)->invoke('gpt-4o', 'hello');
+
+        self::assertSame('ok', $result['content']);
+    }
+
     public function testStreamUsesV1ChatCompletionsForOllamaPortWithoutV1Suffix(): void
     {
         $factory = $this->createMock(RequestFactory::class);

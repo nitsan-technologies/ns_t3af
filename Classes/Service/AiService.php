@@ -35,6 +35,7 @@ use NITSAN\NsT3AF\Exception\UnknownAdapterException;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
 use NITSAN\NsT3AF\Provider\Contract\RequestTimeoutCapableInterface;
+use NITSAN\NsT3AF\Provider\ModelSamplingCapability;
 use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatiblePlatform;
 use NITSAN\NsT3AF\Provider\ProviderCapabilityGuard;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiBridgeAdapter;
@@ -598,7 +599,10 @@ final class AiService implements AiServiceInterface
             ? $this->openAiCompatibleInvokePayloads($prompt, $provider, $options)
             : $this->symfonyPlatformInvokePayloads($prompt, $provider, $modelId, $options);
 
-        $invokeOptions = $this->buildInvokeOptions($options);
+        $invokeOptions = ModelSamplingCapability::filterInvokeOptions(
+            $modelId,
+            $this->buildInvokeOptions($options),
+        );
         if (method_exists($platform, 'invoke')) {
             $result = $this->invokeWithPayloadFallbacks($platform, 'invoke', $modelId, $payloads, $invokeOptions);
         } elseif (method_exists($platform, 'request')) {
@@ -1339,7 +1343,7 @@ final class AiService implements AiServiceInterface
         $lastException = null;
         foreach ($payloads as $payload) {
             try {
-                return $platform->{$method}($modelId, $payload, $invokeOptions);
+                return $this->invokePlatformOnce($platform, $method, $modelId, $payload, $invokeOptions);
             } catch (\Throwable $e) {
                 $lastException = $e;
                 if (!$this->isPayloadShapeError($e)) {
@@ -1349,6 +1353,31 @@ final class AiService implements AiServiceInterface
         }
 
         throw $lastException ?? new AdapterRuntimeException('Unable to invoke platform method.');
+    }
+
+    /**
+     * @param array<string, mixed> $invokeOptions
+     */
+    private function invokePlatformOnce(
+        object $platform,
+        string $method,
+        string $modelId,
+        mixed $payload,
+        array $invokeOptions,
+    ): mixed {
+        try {
+            return $platform->{$method}($modelId, $payload, $invokeOptions);
+        } catch (\Throwable $exception) {
+            if (!ModelSamplingCapability::shouldRetryWithoutSampling($exception, $invokeOptions)) {
+                throw $exception;
+            }
+
+            return $platform->{$method}(
+                $modelId,
+                $payload,
+                ModelSamplingCapability::filterInvokeOptions($modelId, $invokeOptions),
+            );
+        }
     }
 
     private function isPayloadShapeError(\Throwable $throwable): bool

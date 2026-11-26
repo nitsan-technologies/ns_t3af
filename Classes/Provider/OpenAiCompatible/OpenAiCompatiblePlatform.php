@@ -25,6 +25,7 @@ use NITSAN\NsT3AF\Api\TtsOptions;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Exception\CipherException;
+use NITSAN\NsT3AF\Provider\ModelSamplingCapability;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
@@ -85,9 +86,7 @@ final class OpenAiCompatiblePlatform
             'model' => $modelId,
             'messages' => $this->toWireMessages($messages),
         ];
-        if (!$this->isReasoningModel($modelId)) {
-            $body['temperature'] = $this->provider->temperature;
-        }
+        $this->applyChatSampling($modelId, $body);
         if ($tools !== []) {
             $body['tools'] = array_map(
                 static fn(array $tool): array => [
@@ -208,17 +207,13 @@ final class OpenAiCompatiblePlatform
         $body = [
             'model' => $modelId,
             'messages' => $messages,
-            'temperature' => $this->provider->temperature,
         ];
         if (isset($options['response_format']) && is_array($options['response_format'])) {
             $body['response_format'] = $options['response_format'];
         }
-        if (isset($options['temperature']) && is_numeric($options['temperature'])) {
-            $body['temperature'] = (float) $options['temperature'];
-        }
+        $this->applyChatSampling($modelId, $body, $options);
 
-        $response = $this->postJson($this->chatCompletionsPath(), $body);
-        $this->assertOk($response, 'chat/completions');
+        $response = $this->postChatCompletion($modelId, $body, 'chat/completions');
 
         $decoded = $this->decodeJsonBody($response);
         $content = $this->extractChatContent($decoded);
@@ -243,17 +238,16 @@ final class OpenAiCompatiblePlatform
         $body = [
             'model' => $modelId,
             'messages' => $messages,
-            'temperature' => $this->provider->temperature,
             'stream' => true,
         ];
+        $this->applyChatSampling($modelId, $body);
         $this->lastStreamUsage = [];
         if ($this->requestsStreamUsage()) {
             // Ask for the final usage chunk so streamed calls are logged with their tokens and cost.
             $body['stream_options'] = ['include_usage' => true];
         }
 
-        $response = $this->postJson($this->chatCompletionsPath(), $body, streamResponseBody: true);
-        $this->assertOk($response, 'chat/completions (stream)');
+        $response = $this->postChatCompletion($modelId, $body, 'chat/completions (stream)', streamResponseBody: true);
 
         yield from $this->parseSseChatStream($response->getBody());
     }
@@ -569,6 +563,49 @@ final class OpenAiCompatiblePlatform
         return is_string($text) ? $text : '';
     }
 
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function postChatCompletion(
+        string $modelId,
+        array $body,
+        string $context,
+        bool $streamResponseBody = false,
+    ): ResponseInterface {
+        try {
+            $response = $this->postJson($this->chatCompletionsPath(), $body, streamResponseBody: $streamResponseBody);
+            $this->assertOk($response, $context);
+
+            return $response;
+        } catch (AdapterRuntimeException $exception) {
+            if (!ModelSamplingCapability::shouldRetryWithoutSampling($exception, $body)) {
+                throw $exception;
+            }
+            $body = ModelSamplingCapability::filterInvokeOptions($modelId, $body);
+            $response = $this->postJson($this->chatCompletionsPath(), $body, streamResponseBody: $streamResponseBody);
+            $this->assertOk($response, $context);
+
+            return $response;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $options
+     */
+    private function applyChatSampling(string $modelId, array &$body, array $options = []): void
+    {
+        if (!ModelSamplingCapability::supportsTemperature($modelId)) {
+            return;
+        }
+        if (isset($options['temperature']) && is_numeric($options['temperature'])) {
+            $body['temperature'] = (float) $options['temperature'];
+
+            return;
+        }
+        $body['temperature'] = $this->provider->temperature;
+    }
+
     private function assertOk(ResponseInterface $response, string $context): void
     {
         $status = $response->getStatusCode();
@@ -760,15 +797,4 @@ final class OpenAiCompatiblePlatform
         return preg_match('#:11434$#', $base) === 1;
     }
 
-    private function isReasoningModel(string $model): bool
-    {
-        $normalized = strtolower(trim($model));
-        foreach (['o1', 'o1-mini', 'o3', 'o3-mini', 'o4-mini', 'gpt-5'] as $prefix) {
-            if ($normalized === $prefix || str_starts_with($normalized, $prefix . '-') || str_starts_with($normalized, $prefix . '.')) {
-                return true;
-            }
-        }
-
-        return str_contains($normalized, 'gpt-5');
-    }
 }
