@@ -36,6 +36,7 @@ use NITSAN\NsT3AF\Credits\Service\CreditsRetryPolicy;
 use NITSAN\NsT3AF\Credits\Service\T3PlanetCreditsModelsService;
 use NITSAN\NsT3AF\Credits\Service\TokenResolver;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
+use NITSAN\NsT3AF\Provider\ModelSamplingCapability;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiMessageBagFactory;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiResultReader;
 use Symfony\AI\Platform\Tool\ExecutionReference;
@@ -182,6 +183,7 @@ class T3PlanetCreditsChatExecutor
         if ($options->maxTokens !== null && $options->maxTokens > 0) {
             $invokeOptions['max_tokens'] = $options->maxTokens;
         }
+        $invokeOptions = ModelSamplingCapability::filterInvokeOptions($modelAlias, $invokeOptions);
 
         if ($modelAlias === '') {
             throw new AdapterRuntimeException('T3Planet Credits model alias is empty.');

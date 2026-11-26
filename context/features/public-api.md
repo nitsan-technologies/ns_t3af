@@ -54,6 +54,8 @@ $text = $response->content;
 
 **Don't:** Use `BaseClient` or `AiRequestService` in new code (deprecated facades).
 
+**Sampling:** `AiService` and platform adapters omit `temperature` (and related sampling keys) for reasoning models (GPT-5, o-series) via `ModelSamplingCapability`. Child extensions do not need per-feature toggles.
+
 ---
 
 ## Verification

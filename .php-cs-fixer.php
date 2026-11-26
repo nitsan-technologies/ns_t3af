@@ -44,7 +44,9 @@ $finder = PhpCsFixer\Finder::create()
         __DIR__ . '/rector.php',
     ]);
 
+// PHP-CS-Fixer 3.x parses syntax only up to PHP 8.5; allow running the fixer on 8.6+ locally/CI.
 return (new PhpCsFixer\Config())
+    ->setUnsupportedPhpVersionAllowed(true)
     ->setRiskyAllowed(true)
     ->setRules([
         '@PER-CS' => true,
